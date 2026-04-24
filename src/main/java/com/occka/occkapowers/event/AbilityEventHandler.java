@@ -48,7 +48,6 @@ public class AbilityEventHandler {
         if (event.phase != TickEvent.Phase.END) return;
         if (!(event.player instanceof ServerPlayer player)) return;
 
-
         player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
             data.tick();
 
@@ -94,7 +93,8 @@ public class AbilityEventHandler {
                 player.getPersistentData().putInt("occka_echo_ult_ticks", echoTicks - 1);
                 if (echoTicks == 1) {
                     player.setGameMode(GameType.SURVIVAL);
-                    player.sendSystemMessage(Component.literal("Echo Phase ended.").withStyle(ChatFormatting.GREEN));
+                    player.sendSystemMessage(Component.literal("Echo Phase ended.")
+                            .withStyle(ChatFormatting.GREEN));
                 }
             }
 
@@ -143,7 +143,6 @@ public class AbilityEventHandler {
             case FIRE -> player.addEffect(fx(MobEffects.FIRE_RESISTANCE, 200, 0));
             case AIR -> {
                 player.addEffect(fx(MobEffects.SLOW_FALLING, 25, 0));
-                // -1 сердце
                 AttributeInstance hp = player.getAttribute(Attributes.MAX_HEALTH);
                 if (hp != null && hp.getBaseValue() != 18.0) hp.setBaseValue(18.0);
             }

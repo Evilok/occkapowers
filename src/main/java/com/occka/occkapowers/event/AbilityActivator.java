@@ -774,4 +774,4 @@ public class AbilityActivator {
                             .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
         }
     }
-}
+} 
