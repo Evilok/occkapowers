@@ -80,6 +80,11 @@ public class AbilityEventHandler {
                 SuperforceAbility.applyPassive(player);
                 SuperforceAbility.tickUlt(player, level);
             }
+            
+            // Добавить после блока с SUPERFORCE:
+            if (type == PowerType.ADEPT && player.tickCount % 20 == 0) {
+                AdeptAbility.tick(player, level);
+            }
 
             // 10. Синхронизация HUD каждые 10 тиков
             if (player.tickCount % 10 == 0) {

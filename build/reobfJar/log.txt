@@ -167,6 +167,7 @@ Writing Output: D:\occkapowers\occkapowers\build\reobfJar\output.jar
   com/occka/occkapowers/event/AbilityActivator.class
   com/occka/occkapowers/event/AbilityEventHandler$1.class
   com/occka/occkapowers/event/AbilityEventHandler.class
+  com/occka/occkapowers/event/AdeptAbility.class
   com/occka/occkapowers/event/ChaosAbility.class
   com/occka/occkapowers/event/GeoOrbitHandler$OrbitData.class
   com/occka/occkapowers/event/GeoOrbitHandler.class

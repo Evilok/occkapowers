@@ -89,7 +89,7 @@ public class AbilityActivator {
         switch (type) {
             case FIRE -> {
                 // Levitation while shift held (level 1 = gentle lift)
-                player.addEffect(fx(MobEffects.LEVITATION, 25, 1));
+                player.addEffect(fx(MobEffects.LEVITATION, 25, 3));
                 player.resetFallDistance();
                 // Fire particles around player
                 for (int i = 0; i < 10; i++) {
@@ -107,6 +107,7 @@ public class AbilityActivator {
             }
             case CHAOS -> ChaosAbility.activateShift(player, level);
             case SUPERFORCE -> SuperforceAbility.activateAbility(player, level); // punch (no cd)
+            case ADEPT -> AdeptAbility.activateShift(player, level);
             case AIR -> {
                 // Levitate + cloud particles under feet
                 player.addEffect(fx(MobEffects.LEVITATION, 25, 3));
@@ -296,6 +297,7 @@ public class AbilityActivator {
             case WATER -> spawnAquaticMobs(player, level);
             case ICE -> cageNearestEnemy(player, level);
             case LIGHTNING -> strikeLightningAtLookBlock(player, level);
+            case ADEPT -> AdeptAbility.activateAbility(player, level);
             case CHAOS -> ChaosAbility.activateAbility(player, level);
             case LASER -> fireLaserBeam(player, level, 15);
             case GEO -> geoShockwave(player, level, 10);
@@ -366,6 +368,7 @@ public class AbilityActivator {
             }
             case ICE -> iceUltFreeze(player, level);
             case LIGHTNING -> lightningStrikeAll(player, level, 40);
+            case ADEPT -> AdeptAbility.activateUlt(player, level);
             case LASER -> tntAirstrike(player, level);
             case SUPERFORCE -> SuperforceAbility.activateUlt(player, level);
             case GEO -> {
