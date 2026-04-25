@@ -6,6 +6,8 @@ import com.occka.occkapowers.network.NetworkHandler;
 import com.occka.occkapowers.network.PacketSyncPowerData;
 import com.occka.occkapowers.registry.ModCapabilities;
 import com.occka.occkapowers.unlock.UnlockHelper;
+
+import com.occka.occkapowers.event.GeoOrbitHandler;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
@@ -366,7 +368,14 @@ public class AbilityActivator {
             case LIGHTNING -> lightningStrikeAll(player, level, 40);
             case LASER -> tntAirstrike(player, level);
             case SUPERFORCE -> SuperforceAbility.activateUlt(player, level);
-            case GEO -> geoUlt(player, level);
+            case GEO -> {
+                // Спавним орбиту и сразу запускаем таймер — кд ставится здесь же
+                GeoOrbitHandler.startOrbit(player, level);
+                // Кд ставится сразу (не ждём запуска всех свиней)
+                data.setUltCooldown(type.getUltCooldown());
+                syncToClient(player, data);
+                return; // return чтобы не дублировать setUltCooldown в конце метода
+            }
             case CHAOS -> ChaosAbility.activateUlt(player, level);
             case VOID -> voidUlt(player, level, 20);
             case LIGHT -> lightUlt(player, level);
@@ -854,56 +863,57 @@ public class AbilityActivator {
         int count = 2 + rng.nextInt(7); // 2 to 8
 
         net.minecraft.world.entity.EntityType<?>[] aquaticTypes = {
-            net.minecraft.world.entity.EntityType.COD,
-            net.minecraft.world.entity.EntityType.SALMON,
-            net.minecraft.world.entity.EntityType.TROPICAL_FISH,
-            net.minecraft.world.entity.EntityType.SQUID,
-            net.minecraft.world.entity.EntityType.GLOW_SQUID,
-            net.minecraft.world.entity.EntityType.TURTLE,
-            net.minecraft.world.entity.EntityType.DOLPHIN,
+                net.minecraft.world.entity.EntityType.COD,
+                net.minecraft.world.entity.EntityType.SALMON,
+                net.minecraft.world.entity.EntityType.TROPICAL_FISH,
+                net.minecraft.world.entity.EntityType.SQUID,
+                net.minecraft.world.entity.EntityType.GLOW_SQUID,
+                net.minecraft.world.entity.EntityType.TURTLE,
+                net.minecraft.world.entity.EntityType.DOLPHIN,
         };
 
         for (int i = 0; i < count; i++) {
             net.minecraft.world.entity.EntityType<?> type = aquaticTypes[rng.nextInt(aquaticTypes.length)];
             net.minecraft.world.entity.Entity mob = type.create(level);
-            if (mob == null) continue;
+            if (mob == null)
+                continue;
 
             double angle = (i / (double) count) * Math.PI * 2 + rng.nextDouble();
             double r = 1.5 + rng.nextDouble() * 2.5;
             mob.moveTo(
-                player.getX() + r * Math.cos(angle),
-                player.getY() + 0.5,
-                player.getZ() + r * Math.sin(angle),
-                rng.nextFloat() * 360, 0
-            );
+                    player.getX() + r * Math.cos(angle),
+                    player.getY() + 0.5,
+                    player.getZ() + r * Math.sin(angle),
+                    rng.nextFloat() * 360, 0);
             if (mob instanceof net.minecraft.world.entity.Mob m) {
                 m.setPersistenceRequired();
                 m.finalizeSpawn(level,
-                    level.getCurrentDifficultyAt(mob.blockPosition()),
-                    net.minecraft.world.entity.MobSpawnType.MOB_SUMMONED, null, null);
+                        level.getCurrentDifficultyAt(mob.blockPosition()),
+                        net.minecraft.world.entity.MobSpawnType.MOB_SUMMONED, null, null);
             }
             level.addFreshEntity(mob);
 
             // Splash particles at spawn
             level.sendParticles(ParticleTypes.SPLASH,
-                mob.getX(), mob.getY() + 0.5, mob.getZ(),
-                8, 0.3, 0.2, 0.3, 0.1);
+                    mob.getX(), mob.getY() + 0.5, mob.getZ(),
+                    8, 0.3, 0.2, 0.3, 0.1);
         }
 
         // Water burst
         level.sendParticles(ParticleTypes.SPLASH,
-            player.getX(), player.getY() + 1, player.getZ(),
-            40, 3, 1.5, 3, 0.15);
+                player.getX(), player.getY() + 1, player.getZ(),
+                40, 3, 1.5, 3, 0.15);
         level.sendParticles(ParticleTypes.BUBBLE_POP,
-            player.getX(), player.getY() + 1, player.getZ(),
-            20, 2, 1, 2, 0.1);
+                player.getX(), player.getY() + 1, player.getZ(),
+                20, 2, 1, 2, 0.1);
         player.sendSystemMessage(msg("Ocean Summon! (" + count + " creatures)", ChatFormatting.AQUA));
     }
 
     public static List<LivingEntity> getNearbyEnemies(ServerPlayer player, double radius) {
         AABB box = player.getBoundingBox().inflate(radius);
         return player.level().getEntitiesOfClass(LivingEntity.class, box,
-                e -> e != player && !(e instanceof Player p && p.isAlliedTo(player)));
+                // Исключаем только самого себя
+                e -> e != player);
     }
 
     private static void levitateEnemies(ServerPlayer player, double radius, int amp, int dur) {
