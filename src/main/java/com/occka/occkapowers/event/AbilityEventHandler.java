@@ -114,6 +114,11 @@ public class AbilityEventHandler {
                     SuperforceAbility.executeMeteorCrash(player, sfLevel);
                 }
             }
+            
+            // Добавить после блока с SUPERFORCE:
+            if (type == PowerType.ADEPT && player.tickCount % 20 == 0) {
+                AdeptAbility.tick(player, level);
+            }
 
             // Chaos clone cleanup — раз в 20 тиков
             if (tick % 20 == 0) {
