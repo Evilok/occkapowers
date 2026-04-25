@@ -86,33 +86,22 @@ public class AbilityActivator {
 
         switch (type) {
             case FIRE -> {
-                // Левитация 3 секунды (level 2)
-                player.addEffect(fx(MobEffects.LEVITATION, 40, 2)); // 60 тиков = 3 сек
-
-                // Партиклы огня вокруг игрока
-                for (int i = 0; i < 14; i++) {
-                    double angle = (i / 14.0) * Math.PI * 2;
-                    double r = 1.5 + Math.random();
-
+                // Levitation while shift held (level 1 = gentle lift)
+                player.addEffect(fx(MobEffects.LEVITATION, 25, 1));
+                player.resetFallDistance();
+                // Fire particles around player
+                for (int i = 0; i < 10; i++) {
+                    double angle = (i / 10.0) * Math.PI * 2;
+                    double r = 1.2 + Math.random() * 0.8;
                     level.sendParticles(ParticleTypes.FLAME,
                             player.getX() + r * Math.cos(angle),
-                            player.getY() + 0.3 + Math.random() * 1.2,
+                            player.getY() + 0.3 + Math.random(),
                             player.getZ() + r * Math.sin(angle),
-                            1, 0.05, 0.05, 0.05, 0.02);
-
-                    level.sendParticles(ParticleTypes.LAVA,
-                            player.getX() + r * 0.7 * Math.cos(angle + 0.5),
-                            player.getY() + 0.1,
-                            player.getZ() + r * 0.7 * Math.sin(angle + 0.5),
-                            1, 0, 0, 0, 0);
+                            1, 0.04, 0.08, 0.04, 0.015);
                 }
-
-                // Лёгкий дымовой след
                 level.sendParticles(ParticleTypes.LARGE_SMOKE,
-                        player.getX(),
-                        player.getY(),
-                        player.getZ(),
-                        4, 0.2, 0.2, 0.2, 0.01);
+                        player.getX(), player.getY(), player.getZ(),
+                        2, 0.3, 0.2, 0.3, 0.005);
             }
             case CHAOS -> ChaosAbility.activateShift(player, level);
             case SUPERFORCE -> SuperforceAbility.activateAbility(player, level); // punch (no cd)
@@ -169,7 +158,7 @@ public class AbilityActivator {
             }
             case LASER -> {
                 // Glow all nearby enemies while held (1s)
-                getNearbyEnemies(player, 50).forEach(e -> e.addEffect(fx(MobEffects.GLOWING, 25, 0)));
+                getNearbyEnemies(player, 30).forEach(e -> e.addEffect(fx(MobEffects.GLOWING, 25, 0)));
                 // Scanning laser line particles from eyes
                 Vec3 eye = player.getEyePosition();
                 Vec3 look = player.getLookAngle();
@@ -302,22 +291,13 @@ public class AbilityActivator {
             }
             case AIR -> dashForward(player, level, 15);
             case SUPERFORCE -> SuperforceAbility.activateShift(player, level); // ground slam (cd)
-            case WATER -> {
-                levitateEnemies(player, 15, 0, 200);
-                level.sendParticles(ParticleTypes.SPLASH, player.getX(), player.getY() + 1, player.getZ(), 60, 7, 2, 7,
-                        0.1);
-                for (int i = 0; i < 40; i++) {
-                    double a = Math.random() * Math.PI * 2, r = Math.random() * 15;
-                    level.sendParticles(ParticleTypes.DAMAGE_INDICATOR, player.getX() + r * Math.cos(a),
-                            player.getY() + 1 + Math.random() * 3, player.getZ() + r * Math.sin(a), 1, 0, 0.1, 0, 0.05);
-                }
-            }
+            case WATER -> spawnAquaticMobs(player, level);
             case ICE -> cageNearestEnemy(player, level);
             case LIGHTNING -> strikeLightningAtLookBlock(player, level);
             case CHAOS -> ChaosAbility.activateAbility(player, level);
             case LASER -> fireLaserBeam(player, level, 15);
             case GEO -> geoShockwave(player, level, 10);
-            case VOID -> voidBlind(player, level, 15);
+            case VOID -> voidBlind(player, level, 10);
             case LIGHT -> {
                 // Glow + haste for self and nearby
                 AABB box = player.getBoundingBox().inflate(15);
@@ -362,7 +342,7 @@ public class AbilityActivator {
         switch (type) {
             case FIRE -> startFireUlt(player, level, data);
             case AIR -> {
-                levitateEnemies(player, 20, 21, 40);
+                levitateEnemies(player, 15, 21, 40);
                 for (int i = 0; i < 80; i++) {
                     double a = Math.random() * Math.PI * 2, p = (Math.random() - 0.5) * Math.PI, r = Math.random() * 20;
                     level.sendParticles(ParticleTypes.CLOUD, player.getX() + r * Math.cos(a) * Math.cos(p),
@@ -388,7 +368,7 @@ public class AbilityActivator {
             case SUPERFORCE -> SuperforceAbility.activateUlt(player, level);
             case GEO -> geoUlt(player, level);
             case CHAOS -> ChaosAbility.activateUlt(player, level);
-            case VOID -> voidUlt(player, level, 30);
+            case VOID -> voidUlt(player, level, 20);
             case LIGHT -> lightUlt(player, level);
             case GRAVITY -> gravityUlt(player, level);
             case ECHO -> echoUlt(player, level);
@@ -467,7 +447,7 @@ public class AbilityActivator {
         Vec3 start = player.getEyePosition();
         Vec3 dir = player.getLookAngle().normalize();
         boolean hit = false;
-        for (LivingEntity entity : getNearbyEnemies(player, 20)) {
+        for (LivingEntity entity : getNearbyEnemies(player, 12)) {
             Vec3 toE = entity.position().subtract(start);
             double dot = toE.dot(dir);
             if (dot > 0 && dot < length) {
@@ -526,7 +506,7 @@ public class AbilityActivator {
     private static void cageNearestEnemy(ServerPlayer player, ServerLevel level) {
         LivingEntity target = null;
         double minD = Double.MAX_VALUE;
-        for (LivingEntity e : getNearbyEnemies(player, 20)) {
+        for (LivingEntity e : getNearbyEnemies(player, 12)) {
             double d = e.distanceTo(player);
             if (d < minD) {
                 minD = d;
@@ -659,7 +639,7 @@ public class AbilityActivator {
 
     // Geo ult: earthquake - throw all in radius, slowness, camera shake via potion
     private static void geoUlt(ServerPlayer player, ServerLevel level) {
-        for (LivingEntity entity : getNearbyEnemies(player, 20)) {
+        for (LivingEntity entity : getNearbyEnemies(player, 12)) {
             // Launch upward
             entity.setDeltaMovement(entity.getDeltaMovement().add(
                     (Math.random() - 0.5) * 0.5, 0.9 + Math.random() * 0.3, (Math.random() - 0.5) * 0.5));
@@ -722,7 +702,7 @@ public class AbilityActivator {
 
     // Light ult: totem of undying for all nearby players + heavy self debuffs
     private static void lightUlt(ServerPlayer player, ServerLevel level) {
-        AABB box = player.getBoundingBox().inflate(20);
+        AABB box = player.getBoundingBox().inflate(12);
         List<Player> nearbyPlayers = player.level().getEntitiesOfClass(Player.class, box, p -> true);
 
         // Give totem effect to all nearby players (simulate with absorption + regen)
@@ -755,7 +735,7 @@ public class AbilityActivator {
         Vec3 center = hit.getType() == HitResult.Type.MISS ? end : Vec3.atCenterOf(hit.getBlockPos());
 
         // Store vortex in level data - simplified: just pull immediately
-        for (LivingEntity entity : getNearbyEnemies(player, 20)) {
+        for (LivingEntity entity : getNearbyEnemies(player, 12)) {
             Vec3 pull = center.subtract(entity.position()).normalize().scale(1.8);
             entity.setDeltaMovement(entity.getDeltaMovement().add(pull.x * 1.5, pull.y * 0.5, pull.z * 1.5));
             entity.hurtMarked = true;
@@ -826,7 +806,7 @@ public class AbilityActivator {
             }
         }
         if (target == null) {
-            for (LivingEntity e : getNearbyEnemies(player, 30)) {
+            for (LivingEntity e : getNearbyEnemies(player, 12)) {
                 double d = e.distanceTo(player);
                 if (d < minD) {
                     minD = d;
@@ -853,7 +833,7 @@ public class AbilityActivator {
 
     // Echo ult: blind all in radius + observer mode for 20s
     private static void echoUlt(ServerPlayer player, ServerLevel level) {
-        for (LivingEntity entity : getNearbyEnemies(player, 30)) {
+        for (LivingEntity entity : getNearbyEnemies(player, 12)) {
             entity.addEffect(fx(MobEffects.BLINDNESS, 100, 0));
             level.sendParticles(ParticleTypes.PORTAL, entity.getX(), entity.getY() + 1, entity.getZ(), 20, 0.5, 1, 0.5,
                     0.1);
@@ -868,6 +848,58 @@ public class AbilityActivator {
     }
 
     // === UTILS ===
+    // Water ability: summon 2-8 random aquatic mobs nearby
+    private static void spawnAquaticMobs(ServerPlayer player, ServerLevel level) {
+        java.util.Random rng = new java.util.Random();
+        int count = 2 + rng.nextInt(7); // 2 to 8
+
+        net.minecraft.world.entity.EntityType<?>[] aquaticTypes = {
+            net.minecraft.world.entity.EntityType.COD,
+            net.minecraft.world.entity.EntityType.SALMON,
+            net.minecraft.world.entity.EntityType.TROPICAL_FISH,
+            net.minecraft.world.entity.EntityType.SQUID,
+            net.minecraft.world.entity.EntityType.GLOW_SQUID,
+            net.minecraft.world.entity.EntityType.TURTLE,
+            net.minecraft.world.entity.EntityType.DOLPHIN,
+        };
+
+        for (int i = 0; i < count; i++) {
+            net.minecraft.world.entity.EntityType<?> type = aquaticTypes[rng.nextInt(aquaticTypes.length)];
+            net.minecraft.world.entity.Entity mob = type.create(level);
+            if (mob == null) continue;
+
+            double angle = (i / (double) count) * Math.PI * 2 + rng.nextDouble();
+            double r = 1.5 + rng.nextDouble() * 2.5;
+            mob.moveTo(
+                player.getX() + r * Math.cos(angle),
+                player.getY() + 0.5,
+                player.getZ() + r * Math.sin(angle),
+                rng.nextFloat() * 360, 0
+            );
+            if (mob instanceof net.minecraft.world.entity.Mob m) {
+                m.setPersistenceRequired();
+                m.finalizeSpawn(level,
+                    level.getCurrentDifficultyAt(mob.blockPosition()),
+                    net.minecraft.world.entity.MobSpawnType.MOB_SUMMONED, null, null);
+            }
+            level.addFreshEntity(mob);
+
+            // Splash particles at spawn
+            level.sendParticles(ParticleTypes.SPLASH,
+                mob.getX(), mob.getY() + 0.5, mob.getZ(),
+                8, 0.3, 0.2, 0.3, 0.1);
+        }
+
+        // Water burst
+        level.sendParticles(ParticleTypes.SPLASH,
+            player.getX(), player.getY() + 1, player.getZ(),
+            40, 3, 1.5, 3, 0.15);
+        level.sendParticles(ParticleTypes.BUBBLE_POP,
+            player.getX(), player.getY() + 1, player.getZ(),
+            20, 2, 1, 2, 0.1);
+        player.sendSystemMessage(msg("Ocean Summon! (" + count + " creatures)", ChatFormatting.AQUA));
+    }
+
     public static List<LivingEntity> getNearbyEnemies(ServerPlayer player, double radius) {
         AABB box = player.getBoundingBox().inflate(radius);
         return player.level().getEntitiesOfClass(LivingEntity.class, box,
@@ -881,7 +913,7 @@ public class AbilityActivator {
 
     // Ice ult: flash-freeze - stops all enemies in radius, encases them in ice
     private static void iceUltFreeze(ServerPlayer player, ServerLevel level) {
-        List<LivingEntity> enemies = getNearbyEnemies(player, 25);
+        List<LivingEntity> enemies = getNearbyEnemies(player, 15);
 
         for (LivingEntity entity : enemies) {
             // 15 seconds of freeze

@@ -147,7 +147,7 @@ public class PlayerPowerData {
             if (fireUltFireballCooldown > 0) {
                 fireUltFireballCooldown--;
             } else {
-                fireUltFireballCooldown = 40; // каждые 0.5 сек
+                fireUltFireballCooldown = 40; //
                 fireUltShouldShoot = true;
             }
         }
