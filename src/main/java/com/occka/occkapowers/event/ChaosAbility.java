@@ -24,7 +24,7 @@ public class ChaosAbility {
                 return new MobEffectInstance(eff, dur, amp, false, false);
         }
 
-        // ===== SHIFT - один из 4 =====
+        //
         public static void activateShift(ServerPlayer player, ServerLevel level) {
                 int roll = RNG.nextInt(4);
                 switch (roll) {
@@ -64,7 +64,7 @@ public class ChaosAbility {
                 }
         }
 
-        // ===== ABILITY - один из 6 =====
+        //
         public static void activateAbility(ServerPlayer player, ServerLevel level) {
                 int roll = RNG.nextInt(6);
                 switch (roll) {
@@ -98,12 +98,12 @@ public class ChaosAbility {
                 }
         }
 
-        // ===== ULT - один из 3 =====
+        //
         public static void activateUlt(ServerPlayer player, ServerLevel level) {
                 int roll = RNG.nextInt(3);
                 switch (roll) {
                         case 0 -> {
-                                // Сила + скорость + слепота 15 сек
+                                //
                                 player.addEffect(fx(MobEffects.DAMAGE_BOOST, 300, 2));
                                 player.addEffect(fx(MobEffects.MOVEMENT_SPEED, 300, 2));
                                 player.addEffect(fx(MobEffects.BLINDNESS, 300, 0));
@@ -117,7 +117,7 @@ public class ChaosAbility {
                                                 .withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD));
                         }
                         case 1 -> {
-                                // 5 клонов + невидимость
+                                //
                                 for (int i = 0; i < 5; i++)
                                         spawnClone(player, level, i);
                                 player.addEffect(fx(MobEffects.INVISIBILITY, 400, 0));
@@ -133,7 +133,7 @@ public class ChaosAbility {
 
         // === HELPERS ===
 
-        // Хорус-телепорт: не попадает в блоки
+        //
         private static void chaosTP(ServerPlayer player, ServerLevel level) {
                 for (int attempt = 0; attempt < 20; attempt++) {
                         double ox = (RNG.nextDouble() - 0.5) * 60; // -30..+30
@@ -141,21 +141,21 @@ public class ChaosAbility {
                         double nx = player.getX() + ox;
                         double nz = player.getZ() + oz;
 
-                        // Ищем безопасную Y
+                        //
                         BlockPos pos = BlockPos.containing(nx, player.getY() + 10, nz);
                         while (pos.getY() > level.getMinBuildHeight() && !level.getBlockState(pos).isAir()) {
                                 pos = pos.below();
                         }
-                        // Проверяем что нога и голова свободны
+                        //
                         if (level.getBlockState(pos).isAir() && level.getBlockState(pos.above()).isAir()
                                         && !level.getBlockState(pos.below()).isAir()) {
-                                // Партиклы на старом месте
+                                //
                                 level.sendParticles(ParticleTypes.PORTAL,
                                                 player.getX(), player.getY() + 1, player.getZ(),
                                                 30, 0.5, 1, 0.5, 0.15);
-                                // Тп
+                                //
                                 player.teleportTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
-                                // Партиклы на новом месте
+                                //
                                 level.sendParticles(ParticleTypes.REVERSE_PORTAL,
                                                 player.getX(), player.getY() + 1, player.getZ(),
                                                 30, 0.5, 1, 0.5, 0.15);
@@ -168,14 +168,14 @@ public class ChaosAbility {
                                 .withStyle(ChatFormatting.GRAY));
         }
 
-        // Взрыв частиц + урон всем вокруг
+        //
         private static void chaosExplosion(ServerPlayer player, ServerLevel level) {
                 var box = player.getBoundingBox().inflate(10);
                 level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, box,
                                 e -> e != player)
                                 .forEach(e -> e.hurt(player.damageSources().explosion(null, null), 12));
 
-                // Красивый взрыв частиц
+                //
                 for (int i = 0; i < 60; i++) {
                         double angle = RNG.nextDouble() * Math.PI * 2;
                         double r = RNG.nextDouble() * 10;
@@ -191,7 +191,7 @@ public class ChaosAbility {
                                 .withStyle(ChatFormatting.RED));
         }
 
-        // Спавн клона (armor stand с именем игрока)
+        //
         private static void spawnClone(ServerPlayer player, ServerLevel level, int index) {
                 double angle = (index / 5.0) * Math.PI * 2;
                 double offsetX = index == 0 ? 0 : 2 * Math.cos(angle);
@@ -205,10 +205,10 @@ public class ChaosAbility {
                 clone.setCustomNameVisible(true);
                 clone.setNoGravity(false);
                 clone.setInvisible(false);
-                // Помечаем как хаос-клон чтобы удалять потом
+                //
                 clone.getPersistentData().putString("occka_chaos_clone",
                                 player.getUUID().toString());
-                // Удалить через 20 секунд
+                //
                 clone.getPersistentData().putInt("occka_clone_lifetime", 400);
 
                 level.addFreshEntity(clone);
@@ -217,9 +217,9 @@ public class ChaosAbility {
                                 15, 0.3, 0.5, 0.3, 0.1);
         }
 
-        // Ульта 3: случайные эффекты рулетка
+        //
         private static void chaosRoulette(ServerPlayer player, ServerLevel level) {
-                // Даёт 5 случайных эффектов: 3 позитивных и 2 негативных вперемешку
+                //
                 net.minecraft.world.effect.MobEffect[] positive = {
                                 MobEffects.REGENERATION, MobEffects.ABSORPTION, MobEffects.DAMAGE_BOOST,
                                 MobEffects.MOVEMENT_SPEED, MobEffects.LUCK, MobEffects.JUMP
@@ -238,7 +238,7 @@ public class ChaosAbility {
                                         300, RNG.nextInt(2)));
                 }
 
-                // Радуга частиц
+                //
                 for (int i = 0; i < 100; i++) {
                         double a = RNG.nextDouble() * Math.PI * 2;
                         double r = RNG.nextDouble() * 5;

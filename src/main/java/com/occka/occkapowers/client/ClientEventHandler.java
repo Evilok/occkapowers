@@ -48,11 +48,12 @@ class ClientTickHandler {
         // Shift ability: send every 20 ticks while held
         if (KeyBindings.KEY_SHIFT_ABILITY.isDown()) {
             shiftHeldTicks++;
-            if (shiftHeldTicks % 20 == 1) { // first tick + every 20 after
+            // Send every 20 ticks (~1/sec) - matches server-side 1s effect duration
+            if (shiftHeldTicks == 1 || shiftHeldTicks % 20 == 0) {
                 NetworkHandler.CHANNEL.sendToServer(new PacketShiftHeld());
             }
         } else {
-            shiftHeldTicks = 0;
+            if (shiftHeldTicks > 0) shiftHeldTicks = 0;
         }
 
         while (KeyBindings.KEY_ABILITY.consumeClick()) {
