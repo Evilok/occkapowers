@@ -193,11 +193,11 @@ public class GeoOrbitHandler {
             level.sendParticles(ParticleTypes.FLAME, pig.getX(), pig.getY() + 0.5, pig.getZ(), 2, 0.02, 0.02, 0.02,
                     0.01);
 
-            // Проверка на взрыв (дистанция 15 блоков)
+            // Проверка на взрыв (дистанция 25 блоков)
             double startX = pig.getPersistentData().getDouble("startX");
             double startY = pig.getPersistentData().getDouble("startY");
             double startZ = pig.getPersistentData().getDouble("startZ");
-            if (pig.position().distanceToSqr(startX, startY, startZ) > 225) { // 15*15
+            if (pig.position().distanceToSqr(startX, startY, startZ) > 625) { // 25*25
                 explodePig(pig, level);
                 iterator.remove();
                 continue;
@@ -225,8 +225,8 @@ public class GeoOrbitHandler {
         level.sendParticles(ParticleTypes.FLASH, pos.x, pos.y, pos.z, 1, 0, 0, 0, 0);
 
         // Урон в радиусе 3 блоков (как ты и просил)
-        float damage = 20.0f; // 10 сердечек
-        double radius = 3.0;
+        float damage = 22.0f; // 10 сердечек
+        double radius = 6.0;
 
         List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, pig.getBoundingBox().inflate(radius));
         String ownerUUIDStr = pig.getPersistentData().getString("owner_uuid");
