@@ -1,0 +1,17 @@
+*
+
+!.gitignore
+
+!src/
+
+!src/**
+
+.gradle/
+build/
+bin/
+
+.idea/
+*.iml
+
+.DS_Store
+Thumbs.db
