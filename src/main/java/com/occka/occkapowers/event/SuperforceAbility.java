@@ -25,7 +25,8 @@ public class SuperforceAbility {
     // ===== PASSIVE: creative-style flight =====
     // Called every tick while player has SUPERFORCE
     public static void applyPassive(ServerPlayer player) {
-        if (player.isCreative() || player.isSpectator()) return;
+        if (player.isCreative() || player.isSpectator())
+            return;
         // Grant creative-style flight
         if (!player.getAbilities().mayfly) {
             player.getAbilities().mayfly = true;
@@ -39,55 +40,75 @@ public class SuperforceAbility {
     }
 
     // ===== ULT TICK: runs every tick for SUPERFORCE players =====
+    // В методе tickUlt замени блок с elytra:
     public static void tickUlt(ServerPlayer player, ServerLevel level) {
         var nbt = player.getPersistentData();
 
-        // Phase 1: elytra flying after launch
         if (nbt.getBoolean("occka_sf_ult_flying")) {
             int ticks = nbt.getInt("occka_sf_ult_ticks");
             nbt.putInt("occka_sf_ult_ticks", ticks + 1);
 
-            // Start elytra on tick 3 (after upward velocity is established)
-            if (ticks == 3 && !player.isFallFlying()) {
-                player.startFallFlying();
+            // Начинаем elytra только когда игрок поднялся достаточно (тик 5+)
+            if (ticks >= 5) {
+                if (!player.isFallFlying()) {
+                    // Принудительно включаем elytra
+                    player.startFallFlying();
+                }
+
+                if (player.isFallFlying()) {
+                    Vec3 look = player.getLookAngle().normalize();
+                    double speed = 1.2; // регулируешь тут
+
+                    player.setDeltaMovement(
+                            look.x * speed,
+                            look.y * speed,
+                            look.z * speed);
+
+                    player.hurtMarked = true;
+                    player.resetFallDistance();
+                    player.fallDistance = 0;
+
+                    if (ticks % 2 == 0) {
+                        level.sendParticles(ParticleTypes.CRIT,
+                                player.getX(), player.getY(), player.getZ(),
+                                3, 0.3, 0.3, 0.3, 0.1);
+                        level.sendParticles(ParticleTypes.CLOUD,
+                                player.getX(), player.getY(), player.getZ(),
+                                2, 0.2, 0.1, 0.2, 0.03);
+                    }
+
+                    // Детект приземления: на земле после 15+ тиков
+                    if (player.onGround() && ticks > 15) {
+                        nbt.putBoolean("occka_sf_ult_flying", false);
+                        player.stopFallFlying();
+                        executeMeteorCrash(player, level);
+                        return;
+                    }
+                } else {
+                    // Если elytra не включилась (нет крыльев) — симулируем полёт вручную
+                    Vec3 look = player.getLookAngle();
+                    player.setDeltaMovement(
+                            look.x * 0.95,
+                            Math.max(look.y * 0.95, -0.1),
+                            look.z * 0.95);
+                    player.hurtMarked = true;
+                    player.resetFallDistance();
+
+                    if (player.onGround() && ticks > 15) {
+                        nbt.putBoolean("occka_sf_ult_flying", false);
+                        executeMeteorCrash(player, level);
+                    }
+                }
             }
 
-            if (player.isFallFlying()) {
-                // Constant forward boost in look direction
-                Vec3 look = player.getLookAngle();
-                Vec3 vel = player.getDeltaMovement();
-                double speed = 0.075;
-                player.setDeltaMovement(
-                    vel.x * 0.82 + look.x * speed,
-                    vel.y * 0.82 + look.y * speed,
-                    vel.z * 0.82 + look.z * speed
-                );
-                player.hurtMarked = true;
-                player.resetFallDistance();
-
-                // Fire trail during flight
-                if (ticks % 2 == 0) {
-                    level.sendParticles(ParticleTypes.CRIT,
-                        player.getX(), player.getY(), player.getZ(),
-                        3, 0.3, 0.3, 0.3, 0.1);
-                    level.sendParticles(ParticleTypes.CLOUD,
-                        player.getX(), player.getY(), player.getZ(),
-                        2, 0.2, 0.1, 0.2, 0.03);
-                }
-
-                // Detect landing: on ground after at least 10 ticks of flight
-                if (player.onGround() && ticks > 10) {
-                    nbt.putBoolean("occka_sf_ult_flying", false);
-                    player.stopFallFlying();
-                    executeMeteorCrash(player, level);
-                }
-            } else if (ticks > 60) {
-                // Timeout - no crash
+            // Таймаут 5 секунд (100 тиков) — принудительный краш
+            if (ticks > 1000) {
                 nbt.putBoolean("occka_sf_ult_flying", false);
+                executeMeteorCrash(player, level);
             }
         }
 
-        // Camera shake ticker
+        // Camera shake тикер (остаётся как был)
         int shakeTicks = nbt.getInt("occka_shake_ticks");
         if (shakeTicks > 0) {
             nbt.putInt("occka_shake_ticks", shakeTicks - 1);
@@ -95,8 +116,7 @@ public class SuperforceAbility {
                 float amt = 12f * (shakeTicks / 10f);
                 player.setYRot(player.getYRot() + (player.getRandom().nextFloat() - 0.5f) * amt);
                 player.setXRot(Math.max(-89, Math.min(89,
-                    player.getXRot() + (player.getRandom().nextFloat() - 0.5f) * amt * 0.4f)));
-                // Force position sync
+                        player.getXRot() + (player.getRandom().nextFloat() - 0.5f) * amt * 0.4f)));
                 player.teleportTo(player.getX(), player.getY(), player.getZ());
             }
         }
@@ -115,7 +135,10 @@ public class SuperforceAbility {
             Vec3 toE = e.position().subtract(eye).normalize();
             double dot = toE.dot(dir);
             double dist = e.distanceTo(player);
-            if (dot > 0.65 && dist < minDist) { minDist = dist; target = e; }
+            if (dot > 0.65 && dist < minDist) {
+                minDist = dist;
+                target = e;
+            }
         }
 
         if (target != null) {
@@ -129,18 +152,21 @@ public class SuperforceAbility {
             for (int i = 0; i < 30; i++) {
                 double a = Math.random() * Math.PI * 2;
                 level.sendParticles(ParticleTypes.CRIT,
-                    target.getX() + Math.cos(a) * 0.4, target.getY() + 1 + Math.random(),
-                    target.getZ() + Math.sin(a) * 0.4, 1, 0, 0, 0, 0.3);
+                        target.getX() + Math.cos(a) * 0.4, target.getY() + 1 + Math.random(),
+                        target.getZ() + Math.sin(a) * 0.4, 1, 0, 0, 0, 0.3);
             }
-            level.sendParticles(ParticleTypes.EXPLOSION, target.getX(), target.getY() + 1, target.getZ(), 3, 0.3, 0.3, 0.3, 0.1);
+            level.sendParticles(ParticleTypes.EXPLOSION, target.getX(), target.getY() + 1, target.getZ(), 3, 0.3, 0.3,
+                    0.3, 0.1);
             // Speed lines
             for (double d = 0.5; d < minDist; d += 0.6) {
                 Vec3 p = eye.add(dir.scale(d));
                 level.sendParticles(ParticleTypes.SWEEP_ATTACK, p.x, p.y, p.z, 1, 0.05, 0.05, 0.05, 0);
             }
-            player.sendSystemMessage(Component.literal("SUPER PUNCH!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+            player.sendSystemMessage(
+                    Component.literal("SUPER PUNCH!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
         } else {
-            level.sendParticles(ParticleTypes.SWEEP_ATTACK, eye.x + dir.x * 3, eye.y + dir.y * 3, eye.z + dir.z * 3, 4, 0.3, 0.3, 0.3, 0.1);
+            level.sendParticles(ParticleTypes.SWEEP_ATTACK, eye.x + dir.x * 3, eye.y + dir.y * 3, eye.z + dir.z * 3, 4,
+                    0.3, 0.3, 0.3, 0.1);
             player.sendSystemMessage(Component.literal("Miss!").withStyle(ChatFormatting.GRAY));
         }
     }
@@ -161,7 +187,7 @@ public class SuperforceAbility {
                 var state = level.getBlockState(bp).isAir() ? level.getBlockState(bp.below()) : level.getBlockState(bp);
                 if (!state.isAir()) {
                     level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state),
-                        x, pos.y + 0.1, z, 2, 0, 0.25, 0, 0.12);
+                            x, pos.y + 0.1, z, 2, 0, 0.25, 0, 0.12);
                 }
             }
         }
@@ -177,14 +203,15 @@ public class SuperforceAbility {
             if (entity instanceof ServerPlayer tp) {
                 tp.addEffect(fx(MobEffects.CONFUSION, 35, 4));
             }
-            level.sendParticles(ParticleTypes.CRIT, entity.getX(), entity.getY() + 1, entity.getZ(), 8, 0.3, 0.3, 0.3, 0.2);
+            level.sendParticles(ParticleTypes.CRIT, entity.getX(), entity.getY() + 1, entity.getZ(), 8, 0.3, 0.3, 0.3,
+                    0.2);
         }
 
         // Shockwave ring
         for (int deg = 0; deg < 360; deg += 8) {
             level.sendParticles(ParticleTypes.EXPLOSION,
-                pos.x + 7 * Math.cos(Math.toRadians(deg)), pos.y + 0.1, pos.z + 7 * Math.sin(Math.toRadians(deg)),
-                1, 0, 0, 0, 0);
+                    pos.x + 7 * Math.cos(Math.toRadians(deg)), pos.y + 0.1, pos.z + 7 * Math.sin(Math.toRadians(deg)),
+                    1, 0, 0, 0, 0);
         }
         level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, pos.x, pos.y, pos.z, 1, 0, 0, 0, 0.02);
         player.sendSystemMessage(Component.literal("GROUND SLAM!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
@@ -206,12 +233,13 @@ public class SuperforceAbility {
         // Launch particles
         for (int i = 0; i < 25; i++) {
             level.sendParticles(ParticleTypes.CLOUD,
-                player.getX() + (Math.random() - 0.5) * 0.8, player.getY(),
-                player.getZ() + (Math.random() - 0.5) * 0.8, 1, 0.2, -0.05, 0.2, 0.04);
+                    player.getX() + (Math.random() - 0.5) * 0.8, player.getY(),
+                    player.getZ() + (Math.random() - 0.5) * 0.8, 1, 0.2, -0.05, 0.2, 0.04);
         }
-        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, player.getX(), player.getY(), player.getZ(), 2, 0, 0, 0, 0.05);
+        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, player.getX(), player.getY(), player.getZ(), 2, 0, 0, 0,
+                0.05);
         player.sendSystemMessage(Component.literal("METEOR DIVE! Look where you want to crash!")
-            .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+                .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
     }
 
     // ===== IMPACT on landing =====
@@ -227,7 +255,7 @@ public class SuperforceAbility {
                 var state = level.getBlockState(bp).isAir() ? level.getBlockState(bp.below()) : level.getBlockState(bp);
                 if (!state.isAir()) {
                     level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state),
-                        x, pos.y + 0.2, z, 2, 0, 0.4, 0, 0.2);
+                            x, pos.y + 0.2, z, 2, 0, 0.4, 0, 0.2);
                 }
                 if (r < 4) {
                     level.sendParticles(ParticleTypes.EXPLOSION, x, pos.y + 0.1, z, 1, 0, 0, 0, 0);
@@ -246,13 +274,14 @@ public class SuperforceAbility {
 
             entity.setDeltaMovement(dir.x * force, 1.5 + (1.0 - dist / 10.0) * 0.6, dir.z * force);
             entity.hurtMarked = true;
-            entity.hurt(player.damageSources().playerAttack(player), (float)(12 * (1 - dist / 10.0)));
+            entity.hurt(player.damageSources().playerAttack(player), (float) (12 * (1 - dist / 10.0)));
 
             if (entity instanceof ServerPlayer tp) {
                 tp.getPersistentData().putInt("occka_shake_ticks", 10);
                 tp.addEffect(fx(MobEffects.CONFUSION, 50, 7));
             }
-            level.sendParticles(ParticleTypes.CRIT, entity.getX(), entity.getY() + 1, entity.getZ(), 12, 0.4, 0.4, 0.4, 0.2);
+            level.sendParticles(ParticleTypes.CRIT, entity.getX(), entity.getY() + 1, entity.getZ(), 12, 0.4, 0.4, 0.4,
+                    0.2);
         }
 
         // Shake own camera
@@ -261,13 +290,14 @@ public class SuperforceAbility {
 
         // Announce to nearby
         for (Player p : level.getEntitiesOfClass(Player.class, player.getBoundingBox().inflate(15), x -> true)) {
-            ((ServerPlayer) p).sendSystemMessage(Component.literal("METEOR CRASH!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+            ((ServerPlayer) p).sendSystemMessage(
+                    Component.literal("METEOR CRASH!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
         }
     }
 
     private static List<LivingEntity> getNearby(ServerPlayer player, double radius) {
         AABB box = player.getBoundingBox().inflate(radius);
         return player.level().getEntitiesOfClass(LivingEntity.class, box,
-            e -> e != player && !(e instanceof Player p && p.isAlliedTo(player)));
+                e -> e != player && !(e instanceof Player p && p.isAlliedTo(player)));
     }
 }
