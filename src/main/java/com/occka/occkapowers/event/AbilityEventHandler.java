@@ -27,8 +27,17 @@ import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 
+import java.util.Random;
+
 @Mod.EventBusSubscriber(modid = OcckaPowers.MOD_ID)
 public class AbilityEventHandler {
+
+    private static final Random RNG = new Random();
+
+    private static final net.minecraft.core.particles.SimpleParticleType[] CHAOS_PARTICLES = {
+            ParticleTypes.WITCH, ParticleTypes.PORTAL,
+            ParticleTypes.FLAME, ParticleTypes.ENCHANT
+    };
 
     private static MobEffectInstance fx(net.minecraft.world.effect.MobEffect eff, int dur, int amp) {
         return new MobEffectInstance(eff, dur, amp, false, false);
@@ -36,15 +45,13 @@ public class AbilityEventHandler {
 
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END)
-            return;
-        if (!(event.player instanceof ServerPlayer player))
-            return;
+        if (event.phase != TickEvent.Phase.END) return;
+        if (!(event.player instanceof ServerPlayer player)) return;
 
         player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
-            boolean wasFireUltActive = data.isFireUltActive();
             data.tick();
 
+<<<<<<< HEAD
             applyConstantPassives(player, data, data.getPowerType());
 
             // Ice snowstorm ticker
@@ -76,6 +83,45 @@ public class AbilityEventHandler {
                         });
             }
             // Echo ult spectator timer
+=======
+            PowerType type = data.getPowerType();
+
+            if (type == PowerType.SUPERFORCE) {
+                SuperforceAbility.applyPassive(player);
+                if (!player.onGround() && !player.isFallFlying()
+                        && !player.isInWater() && !player.isCreative() && !player.isSpectator()) {
+                    player.startFallFlying();
+                }
+                player.resetFallDistance();
+            }
+
+            if (type == PowerType.AIR && player.fallDistance > 1.5f) {
+                player.addEffect(fx(MobEffects.SLOW_FALLING, 40, 0));
+            }
+
+            if (data.isFireUltActive() && data.shouldShootFireball()) {
+                AbilityActivator.fireUltShoot(player, data);
+                data.setShouldShootFireball(false);
+            }
+
+            int tick = player.tickCount;
+            int snowTicks = player.getPersistentData().getInt("occka_ice_snowstorm_ticks");
+            if (snowTicks > 0 && player.level() instanceof ServerLevel snowLevel) {
+                player.getPersistentData().putInt("occka_ice_snowstorm_ticks", snowTicks - 1);
+                if (snowTicks % 4 == 0) {
+                    // Было: 20 вызовов sendParticles + 30% шанс ещё 20 → стало: 2 групповых
+                    snowLevel.sendParticles(ParticleTypes.SNOWFLAKE,
+                            player.getX(), player.getY() + 14, player.getZ(),
+                            20, 20, 2.5, 20, 0.1);
+                    if (RNG.nextFloat() < 0.3f) {
+                        snowLevel.sendParticles(ParticleTypes.ITEM_SNOWBALL,
+                                player.getX(), player.getY() + 10, player.getZ(),
+                                6, 20, 0, 20, 0.05);
+                    }
+                }
+            }
+
+>>>>>>> 0ab8c04 (abilityeventhandler)
             int echoTicks = player.getPersistentData().getInt("occka_echo_ult_ticks");
             if (echoTicks > 0) {
                 player.getPersistentData().putInt("occka_echo_ult_ticks", echoTicks - 1);
@@ -86,15 +132,48 @@ public class AbilityEventHandler {
                 }
             }
 
+<<<<<<< HEAD
             // Superforce crash handled in tickUlt (land detection)
+=======
+            int sfCrashTicks = player.getPersistentData().getInt("occka_sf_crash_ticks");
+            if (sfCrashTicks > 0) {
+                player.getPersistentData().putInt("occka_sf_crash_ticks", sfCrashTicks - 1);
+                if (sfCrashTicks == 1 && player.level() instanceof ServerLevel sfLevel) {
+                    SuperforceAbility.executeMeteorCrash(player, sfLevel);
+                }
+            }
+>>>>>>> 0ab8c04 (abilityeventhandler)
 
-            if (data.isFireUltActive() && data.shouldShootFireball()) {
-                AbilityActivator.fireUltShoot(player, data);
-                data.setShouldShootFireball(false);
+            if (tick % 20 == 0) {
+                player.level().getEntitiesOfClass(
+                        net.minecraft.world.entity.decoration.ArmorStand.class,
+                        player.getBoundingBox().inflate(50),
+                        e -> e.getPersistentData().contains("occka_clone_lifetime")
+                ).forEach(stand -> {
+                    int life = stand.getPersistentData().getInt("occka_clone_lifetime");
+                    if (life <= 0) stand.discard();
+                    else stand.getPersistentData().putInt("occka_clone_lifetime", life - 20);
+                });
             }
 
+<<<<<<< HEAD
             // Sync HUD every 10 ticks (2.5x less packets, still smooth at ~2 updates/sec)
             if (player.tickCount % 10 == 0) {
+=======
+            if (tick % 100 == 0) {
+                applyConstantPassives(player, data, type);
+            }
+
+            if (tick % 40 == 0 && player.level() instanceof ServerLevel level) {
+                applyAuraParticles(player, level, type);
+            }
+
+            if (tick % 200 == 0 && type != PowerType.NONE) {
+                applyNickColor(player, type);
+            }
+
+            if (tick % 4 == 0) {
+>>>>>>> 0ab8c04 (abilityeventhandler)
                 NetworkHandler.CHANNEL.send(
                         PacketDistributor.PLAYER.with(() -> player),
                         new PacketSyncPowerData(data));
@@ -102,17 +181,87 @@ public class AbilityEventHandler {
         });
     }
 
-    @SubscribeEvent
-    public static void onLeftClick(PlayerInteractEvent.LeftClickEmpty event) {
-        System.out.println("LMB CLICK DETECTED");
-        if (!(event.getEntity() instanceof ServerPlayer player))
-            return;
-
-        player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
-            AbilityActivator.fireUltShoot(player, data);
-        });
+    private static void applyConstantPassives(ServerPlayer player, PlayerPowerData data, PowerType type) {
+        switch (type) {
+            case FIRE -> player.addEffect(fx(MobEffects.FIRE_RESISTANCE, 200, 0));
+            case AIR -> {
+                player.addEffect(fx(MobEffects.SLOW_FALLING, 25, 0));
+                AttributeInstance hp = player.getAttribute(Attributes.MAX_HEALTH);
+                if (hp != null && hp.getBaseValue() != 18.0) hp.setBaseValue(18.0);
+            }
+            case SUPERFORCE -> {
+                SuperforceAbility.applyPassive(player);
+                if (!player.onGround() && !player.isFallFlying()
+                        && !player.isInWater() && !player.isCreative()) {
+                    player.startFallFlying();
+                }
+                player.resetFallDistance();
+            }
+            case WATER -> player.addEffect(fx(MobEffects.WATER_BREATHING, 200, 0));
+            case GEO -> {
+                AttributeInstance attr = player.getAttribute(Attributes.MAX_HEALTH);
+                if (attr != null && attr.getBaseValue() < 40.0) attr.setBaseValue(40.0);
+            }
+            case LIGHT -> player.addEffect(fx(MobEffects.LUCK, 200, 4));
+            case VOID -> {
+                AttributeInstance hp = player.getAttribute(Attributes.MAX_HEALTH);
+                if (hp != null && hp.getBaseValue() != 16.0) hp.setBaseValue(16.0);
+            }
+            case ICE -> player.removeAllEffects();
+            default -> {}
+        }
     }
 
+    private static void applyAuraParticles(ServerPlayer player, ServerLevel level, PowerType type) {
+        switch (type) {
+            case FIRE -> level.sendParticles(ParticleTypes.FLAME,
+                    player.getX(), player.getY() + 0.5, player.getZ(), 2, 0.4, 0.4, 0.4, 0.01);
+            case AIR -> level.sendParticles(ParticleTypes.CLOUD,
+                    player.getX(), player.getY() - 0.3, player.getZ(), 2, 0.3, 0.05, 0.3, 0.005);
+            case WATER -> level.sendParticles(ParticleTypes.DRIPPING_WATER,
+                    player.getX(), player.getY() + 2.1, player.getZ(), 3, 0.3, 0.1, 0.3, 0.01);
+            case ICE -> level.sendParticles(ParticleTypes.SNOWFLAKE,
+                    player.getX(), player.getY() + 0.5, player.getZ(), 3, 0.4, 0.4, 0.4, 0.01);
+            case LIGHTNING -> level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                    player.getX(), player.getY() + 1, player.getZ(), 2, 0.3, 0.5, 0.3, 0.1);
+            case LASER -> level.sendParticles(ParticleTypes.CRIT,
+                    player.getX(), player.getY() + 1, player.getZ(), 1, 0.2, 0.3, 0.2, 0.02);
+            case GEO -> level.sendParticles(
+                    new net.minecraft.core.particles.BlockParticleOption(
+                            ParticleTypes.FALLING_DUST,
+                            net.minecraft.world.level.block.Blocks.STONE.defaultBlockState()),
+                    player.getX(), player.getY() + 0.1, player.getZ(), 2, 0.3, 0.1, 0.3, 0.01);
+            case VOID -> level.sendParticles(ParticleTypes.PORTAL,
+                    player.getX(), player.getY() + 1, player.getZ(), 3, 0.3, 0.5, 0.3, 0.02);
+            case LIGHT -> level.sendParticles(ParticleTypes.END_ROD,
+                    player.getX(), player.getY() + 1, player.getZ(), 3, 0.4, 0.4, 0.4, 0.02);
+            case GRAVITY -> level.sendParticles(ParticleTypes.REVERSE_PORTAL,
+                    player.getX(), player.getY() + 1, player.getZ(), 2, 0.3, 0.3, 0.3, 0.01);
+            case ECHO -> level.sendParticles(ParticleTypes.PORTAL,
+                    player.getX(), player.getY() + 1, player.getZ(), 1, 0.2, 0.3, 0.2, 0.01);
+            case CHAOS ->
+                level.sendParticles(CHAOS_PARTICLES[RNG.nextInt(CHAOS_PARTICLES.length)],
+                        player.getX(), player.getY() + 1, player.getZ(), 3, 0.4, 0.4, 0.4, 0.05);
+            case SUPERFORCE -> {
+                level.sendParticles(ParticleTypes.CRIT,
+                        player.getX(), player.getY() + 1, player.getZ(), 2, 0.5, 0.5, 0.5, 0.1);
+                if (player.getAbilities().flying) {
+                    level.sendParticles(ParticleTypes.CLOUD,
+                            player.getX(), player.getY(), player.getZ(), 3, 0.3, 0.1, 0.3, 0.03);
+                }
+            }
+            default -> {}
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLeftClick(PlayerInteractEvent.LeftClickEmpty event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data ->
+                AbilityActivator.fireUltShoot(player, data));
+    }
+
+<<<<<<< HEAD
     private static void applyConstantPassives(ServerPlayer player, PlayerPowerData data, PowerType type) {
         if (!(player.level() instanceof ServerLevel level))
             return;
@@ -233,6 +382,8 @@ public class AbilityEventHandler {
     }
 
     // Color player name via scoreboard team
+=======
+>>>>>>> 0ab8c04 (abilityeventhandler)
     private static void applyNickColor(ServerPlayer player, PowerType type) {
         var scoreboard = player.getServer().getScoreboard();
         String teamName = "occka_" + type.getId();
@@ -244,11 +395,8 @@ public class AbilityEventHandler {
             team.setNameTagVisibility(Team.Visibility.ALWAYS);
         }
 
-        // Move player to the correct team if not already there
-        if (!teamName.equals(scoreboard.getPlayersTeam(player.getScoreboardName()) == null ? ""
-                : scoreboard.getPlayersTeam(player.getScoreboardName()).getName())) {
-            // Remove from old occka team first
-            var currentTeam = scoreboard.getPlayersTeam(player.getScoreboardName());
+        var currentTeam = scoreboard.getPlayersTeam(player.getScoreboardName());
+        if (currentTeam == null || !currentTeam.getName().equals(teamName)) {
             if (currentTeam != null && currentTeam.getName().startsWith("occka_")) {
                 scoreboard.removePlayerFromTeam(player.getScoreboardName(), currentTeam);
             }
@@ -256,12 +404,9 @@ public class AbilityEventHandler {
         }
     }
 
-    // === CRITICAL: persist class across death ===
     @SubscribeEvent
     public static void onPlayerClone(PlayerEvent.Clone event) {
-        // This fires on death/respawn AND dimension travel
-        // Always copy capability from original to new player
-        event.getOriginal().reviveCaps(); // needed to access caps after death
+        event.getOriginal().reviveCaps();
         event.getOriginal().getCapability(ModCapabilities.PLAYER_POWER)
                 .ifPresent(oldData -> event.getEntity().getCapability(ModCapabilities.PLAYER_POWER)
                         .ifPresent(newData -> newData.deserializeNBT(oldData.serializeNBT())));
@@ -275,7 +420,6 @@ public class AbilityEventHandler {
                 NetworkHandler.CHANNEL.send(
                         PacketDistributor.PLAYER.with(() -> player),
                         new PacketSyncPowerData(data));
-                // Re-apply nick color on login
                 if (data.getPowerType() != PowerType.NONE) {
                     applyNickColor(player, data.getPowerType());
                 }
@@ -286,8 +430,10 @@ public class AbilityEventHandler {
     @SubscribeEvent
     public static void onDimensionChange(PlayerEvent.PlayerChangedDimensionEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> NetworkHandler.CHANNEL
-                    .send(PacketDistributor.PLAYER.with(() -> player), new PacketSyncPowerData(data)));
+            player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data ->
+                    NetworkHandler.CHANNEL.send(
+                            PacketDistributor.PLAYER.with(() -> player),
+                            new PacketSyncPowerData(data)));
         }
     }
 }
