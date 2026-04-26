@@ -15,6 +15,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Team;
 import net.minecraftforge.event.TickEvent;
@@ -25,6 +26,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import com.occka.occkapowers.event.GeoOrbitHandler;
+import java.util.List;
 
 @Mod.EventBusSubscriber(modid = OcckaPowers.MOD_ID)
 public class AbilityEventHandler {
@@ -75,6 +77,9 @@ public class AbilityEventHandler {
             // 6. Echo ult тикер
             tickEchoUlt(player);
 
+            // Gravity ult — таймер падения
+            tickGravityUlt(player, level);
+
             // 7. Chaos/Echo клон тикер — только каждые 20 тиков
             PowerType type = data.getPowerType();
             if (player.tickCount % 20 == 0 &&
@@ -82,12 +87,15 @@ public class AbilityEventHandler {
                 tickClones(player, level);
             }
 
-            // 8. Superforce пассивки и ульт-тик
-            if (type == PowerType.SUPERFORCE) {
-                SuperforceAbility.applyPassive(player);
-                SuperforceAbility.tickUlt(player, level);
+            // Пассивный элитра-полёт для FIRE и SUPERFORCE
+            if (type == PowerType.SUPERFORCE || type == PowerType.FIRE) {
+                SuperforceAbility.applyPassive(player); // выдаёт mayfly
+                SuperforceAbility.applyElytraFlight(player, level); // элитра-движение
+                if (type == PowerType.SUPERFORCE) {
+                    SuperforceAbility.tickUlt(player, level); // ульт только у superforce
+                }
             }
-            
+
             // Добавить после блока с SUPERFORCE:
             if (type == PowerType.ADEPT && player.tickCount % 20 == 0) {
                 AdeptAbility.tick(player, level);
@@ -167,6 +175,10 @@ public class AbilityEventHandler {
                     AttributeInstance attr = player.getAttribute(Attributes.MAX_HEALTH);
                     if (attr != null && attr.getBaseValue() != 16.0)
                         attr.setBaseValue(16.0);
+                }
+                case GRAVITY -> {
+                    // Прыжок II уровня (усилитель 1) на 10 секунд
+                    player.addEffect(fx(MobEffects.JUMP, 200, 1));
                 }
                 case ICE -> {
                     // Иммунитет к эффектам: снимаем все негативные
@@ -305,4 +317,39 @@ public class AbilityEventHandler {
                 PacketDistributor.PLAYER.with(() -> player),
                 new PacketSyncPowerData(data)));
     }
+
+    private static void tickGravityUlt(ServerPlayer player, ServerLevel level) {
+    int ticks = player.getPersistentData().getInt("occka_gravity_ult_ticks");
+    if (ticks <= 0) return;
+
+    ticks--;
+    player.getPersistentData().putInt("occka_gravity_ult_ticks", ticks);
+
+    if (ticks == 0) {
+        // Время вышло — резкий минус Y всем в радиусе
+        double radius = player.getPersistentData().getDouble("occka_gravity_ult_radius");
+        AABB box = player.getBoundingBox().inflate(radius);
+        List<net.minecraft.world.entity.LivingEntity> targets =
+                level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                        box, e -> e != player);
+
+        for (net.minecraft.world.entity.LivingEntity entity : targets) {
+            // Убираем левитацию и бьём вниз
+            entity.removeEffect(MobEffects.LEVITATION);
+            entity.setDeltaMovement(
+                    entity.getDeltaMovement().x,
+                    -3.5, // резкое падение
+                    entity.getDeltaMovement().z);
+            entity.hurtMarked = true;
+        }
+
+        // Частицы "гравитация вернулась"
+        level.sendParticles(ParticleTypes.PORTAL,
+                player.getX(), player.getY() + 5, player.getZ(),
+                40, 10, 5, 10, 0.2);
+
+        player.sendSystemMessage(
+                Component.literal("Gravity restored!").withStyle(ChatFormatting.DARK_GRAY));
+    }
+}
 }
