@@ -6,10 +6,11 @@ public class ClientPowerData {
     public static PowerType powerType = PowerType.NONE;
     public static int shiftCd = 0, abilityCd = 0, ultCd = 0;
     public static int shiftMaxCd = 1, abilityMaxCd = 1, ultMaxCd = 1;
-    public static boolean abilityUnlocked = false, ultUnlocked = false, fireUltActive = false;
+    public static boolean abilityUnlocked = false, ultUnlocked = false, fireUltActive = false, laserUltActive = false;
+    public static int laserUltTicks = 0, laserUltMaxTicks = 80;
 
     public static void update(PowerType type, int sc, int ac, int uc, int sm, int am, int um, boolean au, boolean uu,
-            boolean fua) {
+            boolean fua, boolean lua, int lut, int lumt) {
         powerType = type;
         shiftCd = sc;
         abilityCd = ac;
@@ -20,6 +21,9 @@ public class ClientPowerData {
         abilityUnlocked = au;
         ultUnlocked = uu;
         fireUltActive = fua;
+        laserUltActive = lua;
+        laserUltTicks = Math.max(0, lut);
+        laserUltMaxTicks = Math.max(1, lumt);
     }
 
     public static float shiftProgress() {
@@ -44,5 +48,9 @@ public class ClientPowerData {
 
     public static boolean ultReady() {
         return ultCd == 0;
+    }
+
+    public static float laserUltProgress() {
+        return laserUltMaxTicks <= 0 ? 0f : (float) laserUltTicks / laserUltMaxTicks;
     }
 }

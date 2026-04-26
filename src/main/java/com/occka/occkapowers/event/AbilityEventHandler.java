@@ -75,6 +75,11 @@ public class AbilityEventHandler {
             // 6. Echo ult тикер
             tickEchoUlt(player);
 
+            // 6.1 Laser ult channel тикер
+            if (data.getPowerType() == PowerType.LASER && data.isLaserUltActive()) {
+                AbilityActivator.tickLaserUlt(player, data, level);
+            }
+
             // 7. Chaos/Echo клон тикер — только каждые 20 тиков
             PowerType type = data.getPowerType();
             if (player.tickCount % 20 == 0 &&
@@ -88,8 +93,8 @@ public class AbilityEventHandler {
                 SuperforceAbility.tickUlt(player, level);
             }
 
-            // 10. Синхронизация HUD каждые 10 тиков
-            if (player.tickCount % 10 == 0) {
+            // 10. Синхронизация HUD каждые 10 тиков (или каждый тик для laser-ульта)
+            if (player.tickCount % 10 == 0 || data.isLaserUltActive()) {
                 NetworkHandler.CHANNEL.send(
                         PacketDistributor.PLAYER.with(() -> player),
                         new PacketSyncPowerData(data));
