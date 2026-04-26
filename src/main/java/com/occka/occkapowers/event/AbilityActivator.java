@@ -23,6 +23,7 @@ import net.minecraft.world.entity.monster.WitherSkeleton;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.LargeFireball;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
@@ -370,7 +371,7 @@ public class AbilityActivator {
             }
             case ICE -> iceUltFreeze(player, level);
             case LIGHTNING -> lightningStrikeAll(player, level, 40);
-            case LASER -> startLaserUlt(player, level, data);
+            case LASER -> laserUltOverload(player, level);
             case SUPERFORCE -> SuperforceAbility.activateUlt(player, level);
             case GEO -> {
                 // Спавним орбиту и сразу запускаем таймер — кд ставится здесь же
@@ -496,60 +497,39 @@ public class AbilityActivator {
         player.sendSystemMessage(msg("Optic Blast!", ChatFormatting.RED, ChatFormatting.BOLD));
     }
 
-    private static void startLaserUlt(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
-        data.setLaserUltMaxTicks(80); // 4s
-        data.setLaserUltTicks(80);
-        data.setLaserUltActive(true);
-        player.sendSystemMessage(msg("LASER ULT: channeling for 4s!", ChatFormatting.RED, ChatFormatting.BOLD));
-    }
-
-    // Called each server tick while laser ult is active
-    public static void tickLaserUlt(ServerPlayer player, PlayerPowerData data) {
-        if (player.level() instanceof ServerLevel level) {
-            tickLaserUlt(player, data, level);
-        }
-    }
-
-    // Called each server tick while laser ult is active
-    public static void tickLaserUlt(ServerPlayer player, PlayerPowerData data, ServerLevel level) {
-        if (!data.isLaserUltActive())
-            return;
-
-        // Stop movement while channeling
-        player.setDeltaMovement(0, 0, 0);
-        player.hurtMarked = true;
-        player.addEffect(fx(MobEffects.MOVEMENT_SLOWDOWN, 6, 10));
-        player.addEffect(fx(MobEffects.JUMP, 6, 128));
-
+    private static void laserUltOverload(ServerPlayer player, ServerLevel level) {
         Vec3 start = player.getEyePosition();
         Vec3 dir = player.getLookAngle().normalize();
-        double length = 42;
 
-        // Instant mining/cutting along beam path
-        for (double d = 0.4; d <= length; d += 0.4) {
-            Vec3 p = start.add(dir.scale(d));
-            BlockPos pos = BlockPos.containing(p);
-            var state = level.getBlockState(pos);
-            if (!state.isAir() && state.getDestroySpeed(level, pos) >= 0) {
-                level.destroyBlock(pos, true, player);
-            }
+        for (int wave = -3; wave <= 3; wave++) {
+            Vec3 side = new Vec3(-dir.z, 0, dir.x).normalize().scale(wave * 0.75);
+            Vec3 waveStart = start.add(side);
 
-            level.sendParticles(ParticleTypes.FLAME, p.x, p.y, p.z, 2, 0.02, 0.02, 0.02, 0.01);
-            level.sendParticles(ParticleTypes.END_ROD, p.x, p.y, p.z, 1, 0.01, 0.01, 0.01, 0);
-        }
-
-        // Damage entities in beam corridor
-        for (LivingEntity entity : getNearbyEnemies(player, 45)) {
-            Vec3 toE = entity.position().subtract(start);
-            double dot = toE.dot(dir);
-            if (dot > 0 && dot < length) {
-                Vec3 proj = start.add(dir.scale(dot));
-                if (proj.distanceTo(entity.position()) < 1.75) {
-                    entity.hurt(player.damageSources().magic(), 6.5f);
-                    entity.setSecondsOnFire(2);
+            for (double d = 0.5; d <= 36; d += 0.5) {
+                Vec3 p = waveStart.add(dir.scale(d));
+                level.sendParticles(ParticleTypes.FLAME, p.x, p.y, p.z, 2, 0.02, 0.02, 0.02, 0.01);
+                if (d % 3.0 < 0.5) {
+                    level.sendParticles(ParticleTypes.EXPLOSION, p.x, p.y, p.z, 1, 0.2, 0.2, 0.2, 0.01);
                 }
             }
         }
+
+        for (LivingEntity entity : getNearbyEnemies(player, 40)) {
+            Vec3 toE = entity.position().subtract(start);
+            double forward = toE.dot(dir);
+            if (forward > 0 && forward < 36) {
+                Vec3 onLine = start.add(dir.scale(forward));
+                if (onLine.distanceTo(entity.position()) < 5.5) {
+                    entity.hurt(player.damageSources().magic(), 30f);
+                    entity.setDeltaMovement(dir.x * 2.0, 0.6, dir.z * 2.0);
+                    entity.hurtMarked = true;
+                }
+            }
+        }
+
+        level.explode(player, start.x + dir.x * 30, start.y + dir.y * 30, start.z + dir.z * 30, 4.0f,
+                Level.ExplosionInteraction.NONE);
+        player.sendSystemMessage(msg("OPTIC OVERLOAD!", ChatFormatting.RED, ChatFormatting.BOLD));
     }
 
     private static void geoShockwave(ServerPlayer player, ServerLevel level, double radius) {
