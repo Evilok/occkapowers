@@ -159,14 +159,18 @@ public class AbilityActivator {
                         player.getX(), player.getY() + 1, player.getZ(), 5, 0.3, 0.5, 0.3, 0.2);
             }
             case LASER -> {
-                // Glow all nearby enemies while held (1s)
-                getNearbyEnemies(player, 30).forEach(e -> e.addEffect(fx(MobEffects.GLOWING, 25, 0)));
+                // Cyclops-like visor focus: highlights targets and chips them with a thin beam
+                player.addEffect(fx(MobEffects.NIGHT_VISION, 40, 0));
+                player.addEffect(fx(MobEffects.DAMAGE_RESISTANCE, 25, 0));
+                getNearbyEnemies(player, 35).forEach(e -> e.addEffect(fx(MobEffects.GLOWING, 35, 0)));
+                fireLaserBeam(player, level, 22, 6f, 1.35, false);
+
                 // Scanning laser line particles from eyes
                 Vec3 eye = player.getEyePosition();
                 Vec3 look = player.getLookAngle();
-                for (int i = 1; i <= 15; i++) {
+                for (int i = 1; i <= 22; i++) {
                     Vec3 p = eye.add(look.scale(i));
-                    level.sendParticles(ParticleTypes.CRIT, p.x, p.y, p.z, 2, 0.03, 0.03, 0.03, 0.01);
+                    level.sendParticles(ParticleTypes.FLAME, p.x, p.y, p.z, 2, 0.03, 0.03, 0.03, 0.005);
                 }
             }
             case GEO -> {
@@ -297,7 +301,7 @@ public class AbilityActivator {
             case ICE -> cageNearestEnemy(player, level);
             case LIGHTNING -> strikeLightningAtLookBlock(player, level);
             case CHAOS -> ChaosAbility.activateAbility(player, level);
-            case LASER -> fireLaserBeam(player, level, 15);
+            case LASER -> fireLaserBeam(player, level, 28, 22f, 1.9, true);
             case GEO -> geoShockwave(player, level, 10);
             case VOID -> voidBlind(player, level, 10);
             case LIGHT -> {
@@ -366,7 +370,7 @@ public class AbilityActivator {
             }
             case ICE -> iceUltFreeze(player, level);
             case LIGHTNING -> lightningStrikeAll(player, level, 40);
-            case LASER -> tntAirstrike(player, level);
+            case LASER -> startLaserUlt(player, level, data);
             case SUPERFORCE -> SuperforceAbility.activateUlt(player, level);
             case GEO -> {
                 // Спавним орбиту и сразу запускаем таймер — кд ставится здесь же
@@ -451,33 +455,94 @@ public class AbilityActivator {
         player.sendSystemMessage(msg("Lightning Strike!", ChatFormatting.YELLOW));
     }
 
-    // Dense red laser beam 15 blocks, 18 magic damage
-    private static void fireLaserBeam(ServerPlayer player, ServerLevel level, double length) {
+    // Cyclops-like optic beam with configurable damage/radius and optional block melting
+    private static void fireLaserBeam(ServerPlayer player, ServerLevel level, double length, float damage, double hitRadius, boolean meltBlocks) {
         Vec3 start = player.getEyePosition();
         Vec3 dir = player.getLookAngle().normalize();
-        boolean hit = false;
-        for (LivingEntity entity : getNearbyEnemies(player, 12)) {
+        for (LivingEntity entity : getNearbyEnemies(player, 30)) {
             Vec3 toE = entity.position().subtract(start);
             double dot = toE.dot(dir);
             if (dot > 0 && dot < length) {
                 Vec3 proj = start.add(dir.scale(dot));
-                if (proj.distanceTo(entity.position()) < 2.5) {
-                    entity.hurt(player.damageSources().magic(), 18);
+                if (proj.distanceTo(entity.position()) < hitRadius) {
+                    entity.hurt(player.damageSources().magic(), damage);
+                    entity.setDeltaMovement(dir.x * 1.2, 0.3, dir.z * 1.2);
+                    entity.hurtMarked = true;
                     level.sendParticles(ParticleTypes.CRIT, entity.getX(), entity.getY() + 1, entity.getZ(), 25, 0.5,
                             0.5, 0.5, 0.3);
-                    hit = true;
                 }
             }
         }
-        // Dense beam particles - straight red line
+
+        // Beam particles
         for (double d = 0.3; d < length; d += 0.3) {
             Vec3 p = start.add(dir.scale(d));
             level.sendParticles(ParticleTypes.CRIT, p.x, p.y, p.z, 1, 0.02, 0.02, 0.02, 0);
+            level.sendParticles(ParticleTypes.FLAME, p.x, p.y, p.z, 1, 0.01, 0.01, 0.01, 0.005);
             if (d % 1.5 < 0.3)
                 level.sendParticles(ParticleTypes.DAMAGE_INDICATOR, p.x, p.y, p.z, 1, 0.02, 0.02, 0.02, 0);
+
+            if (meltBlocks && d % 1.0 < 0.3) {
+                BlockPos pos = BlockPos.containing(p);
+                var state = level.getBlockState(pos);
+                if (!state.isAir() && (state.is(Blocks.GLASS) || state.is(Blocks.TORCH) || state.is(Blocks.TALL_GRASS)
+                        || state.is(Blocks.GRASS) || state.is(Blocks.SNOW) || state.is(Blocks.ICE))) {
+                    level.destroyBlock(pos, false);
+                    level.sendParticles(ParticleTypes.SMOKE, p.x, p.y, p.z, 4, 0.1, 0.1, 0.1, 0.01);
+                }
+            }
         }
         level.sendParticles(ParticleTypes.FLASH, start.x + dir.x, start.y + dir.y, start.z + dir.z, 1, 0, 0, 0, 0);
-        player.sendSystemMessage(msg("Laser Beam!", ChatFormatting.RED));
+        player.sendSystemMessage(msg("Optic Blast!", ChatFormatting.RED, ChatFormatting.BOLD));
+    }
+
+    private static void startLaserUlt(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
+        data.setLaserUltMaxTicks(80); // 4s
+        data.setLaserUltTicks(80);
+        data.setLaserUltActive(true);
+        player.sendSystemMessage(msg("LASER ULT: channeling for 4s!", ChatFormatting.RED, ChatFormatting.BOLD));
+    }
+
+    // Called each server tick while laser ult is active
+    public static void tickLaserUlt(ServerPlayer player, PlayerPowerData data, ServerLevel level) {
+        if (!data.isLaserUltActive())
+            return;
+
+        // Stop movement while channeling
+        player.setDeltaMovement(0, 0, 0);
+        player.hurtMarked = true;
+        player.addEffect(fx(MobEffects.MOVEMENT_SLOWDOWN, 6, 10));
+        player.addEffect(fx(MobEffects.JUMP, 6, 128));
+
+        Vec3 start = player.getEyePosition();
+        Vec3 dir = player.getLookAngle().normalize();
+        double length = 42;
+
+        // Instant mining/cutting along beam path
+        for (double d = 0.4; d <= length; d += 0.4) {
+            Vec3 p = start.add(dir.scale(d));
+            BlockPos pos = BlockPos.containing(p);
+            var state = level.getBlockState(pos);
+            if (!state.isAir() && state.getDestroySpeed(level, pos) >= 0) {
+                level.destroyBlock(pos, true, player);
+            }
+
+            level.sendParticles(ParticleTypes.FLAME, p.x, p.y, p.z, 2, 0.02, 0.02, 0.02, 0.01);
+            level.sendParticles(ParticleTypes.END_ROD, p.x, p.y, p.z, 1, 0.01, 0.01, 0.01, 0);
+        }
+
+        // Damage entities in beam corridor
+        for (LivingEntity entity : getNearbyEnemies(player, 45)) {
+            Vec3 toE = entity.position().subtract(start);
+            double dot = toE.dot(dir);
+            if (dot > 0 && dot < length) {
+                Vec3 proj = start.add(dir.scale(dot));
+                if (proj.distanceTo(entity.position()) < 1.75) {
+                    entity.hurt(player.damageSources().magic(), 6.5f);
+                    entity.setSecondsOnFire(2);
+                }
+            }
+        }
     }
 
     private static void geoShockwave(ServerPlayer player, ServerLevel level, double radius) {

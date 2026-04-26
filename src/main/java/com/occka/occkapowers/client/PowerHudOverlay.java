@@ -36,9 +36,14 @@ public class PowerHudOverlay {
                 ClientPowerData.abilityReady(), ClientPowerData.abilityCd, ClientPowerData.abilityUnlocked,
                 getSlotColor(1));
 
-        // Ult bar
-        renderBar(graphics, mc, bx + 2 * (barW + gap), by, "ULT", ClientPowerData.ultProgress(),
-                ClientPowerData.ultReady(), ClientPowerData.ultCd, ClientPowerData.ultUnlocked, getSlotColor(2));
+        // Ult bar (for LASER show active channel timer)
+        if (ClientPowerData.powerType == PowerType.LASER && ClientPowerData.laserUltActive) {
+            renderBar(graphics, mc, bx + 2 * (barW + gap), by, "LASER",
+                    ClientPowerData.laserUltProgress(), false, ClientPowerData.laserUltTicks, true, getSlotColor(2));
+        } else {
+            renderBar(graphics, mc, bx + 2 * (barW + gap), by, "ULT", ClientPowerData.ultProgress(),
+                    ClientPowerData.ultReady(), ClientPowerData.ultCd, ClientPowerData.ultUnlocked, getSlotColor(2));
+        }
     }
 
     private void renderBar(GuiGraphics g, Minecraft mc,
