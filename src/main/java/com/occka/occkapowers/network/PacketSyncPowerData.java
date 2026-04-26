@@ -11,7 +11,8 @@ import java.util.function.Supplier;
 public class PacketSyncPowerData {
     private final String powerType;
     private final int shiftCd, abilityCd, ultCd, shiftMaxCd, abilityMaxCd, ultMaxCd;
-    private final boolean abilityUnlocked, ultUnlocked, fireUltActive;
+    private final boolean abilityUnlocked, ultUnlocked, fireUltActive, laserUltActive;
+    private final int laserUltTicks, laserUltMaxTicks;
 
     public PacketSyncPowerData(PlayerPowerData data) {
         this.powerType = data.getPowerType().getId();
@@ -24,10 +25,13 @@ public class PacketSyncPowerData {
         this.abilityUnlocked = data.isAbilityUnlocked();
         this.ultUnlocked = data.isUltUnlocked();
         this.fireUltActive = data.isFireUltActive();
+        this.laserUltActive = data.isLaserUltActive();
+        this.laserUltTicks = data.getLaserUltTicks();
+        this.laserUltMaxTicks = data.getLaserUltMaxTicks();
     }
 
     private PacketSyncPowerData(String pt, int sc, int ac, int uc, int sm, int am, int um, boolean au, boolean uu,
-            boolean fua) {
+            boolean fua, boolean lua, int lut, int lumt) {
         powerType = pt;
         shiftCd = sc;
         abilityCd = ac;
@@ -38,6 +42,9 @@ public class PacketSyncPowerData {
         abilityUnlocked = au;
         ultUnlocked = uu;
         fireUltActive = fua;
+        laserUltActive = lua;
+        laserUltTicks = lut;
+        laserUltMaxTicks = lumt;
     }
 
     public static void encode(PacketSyncPowerData msg, FriendlyByteBuf buf) {
@@ -51,11 +58,15 @@ public class PacketSyncPowerData {
         buf.writeBoolean(msg.abilityUnlocked);
         buf.writeBoolean(msg.ultUnlocked);
         buf.writeBoolean(msg.fireUltActive);
+        buf.writeBoolean(msg.laserUltActive);
+        buf.writeInt(msg.laserUltTicks);
+        buf.writeInt(msg.laserUltMaxTicks);
     }
 
     public static PacketSyncPowerData decode(FriendlyByteBuf buf) {
         return new PacketSyncPowerData(buf.readUtf(), buf.readInt(), buf.readInt(), buf.readInt(),
-                buf.readInt(), buf.readInt(), buf.readInt(), buf.readBoolean(), buf.readBoolean(), buf.readBoolean());
+                buf.readInt(), buf.readInt(), buf.readInt(), buf.readBoolean(), buf.readBoolean(),
+                buf.readBoolean(), buf.readBoolean(), buf.readInt(), buf.readInt());
     }
 
     public static void handle(PacketSyncPowerData msg, Supplier<NetworkEvent.Context> ctx) {
@@ -63,7 +74,8 @@ public class PacketSyncPowerData {
                 PowerType.fromId(msg.powerType),
                 msg.shiftCd, msg.abilityCd, msg.ultCd,
                 msg.shiftMaxCd, msg.abilityMaxCd, msg.ultMaxCd,
-                msg.abilityUnlocked, msg.ultUnlocked, msg.fireUltActive));
+                msg.abilityUnlocked, msg.ultUnlocked, msg.fireUltActive,
+                msg.laserUltActive, msg.laserUltTicks, msg.laserUltMaxTicks));
         ctx.get().setPacketHandled(true);
     }
 }

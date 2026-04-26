@@ -17,12 +17,21 @@ public class PlayerPowerData {
     private boolean fireUltShouldShoot = false;
     // Флаг: нужно вызвать endFireUlt на следующем тике
     private boolean fireUltJustEnded = false;
+    private boolean laserUltActive = false;
+    private int laserUltTicks = 0;
+    private int laserUltMaxTicks = 80; // 4s
 
     public boolean isFireUltJustEnded() { return fireUltJustEnded; }
     public void clearFireUltJustEnded() { fireUltJustEnded = false; }
 
     public boolean shouldShootFireball() { return fireUltShouldShoot; }
     public void setShouldShootFireball(boolean value) { this.fireUltShouldShoot = value; }
+    public boolean isLaserUltActive() { return laserUltActive; }
+    public void setLaserUltActive(boolean value) { this.laserUltActive = value; }
+    public int getLaserUltTicks() { return laserUltTicks; }
+    public void setLaserUltTicks(int value) { this.laserUltTicks = Math.max(0, value); }
+    public int getLaserUltMaxTicks() { return laserUltMaxTicks; }
+    public void setLaserUltMaxTicks(int value) { this.laserUltMaxTicks = Math.max(1, value); }
 
     public PowerType getPowerType() { return powerType; }
 
@@ -37,6 +46,8 @@ public class PlayerPowerData {
         this.fireUltTicks = 0;
         this.fireUltShouldShoot = false;
         this.fireUltJustEnded = false;
+        this.laserUltActive = false;
+        this.laserUltTicks = 0;
     }
 
     public int getShiftCooldown() { return shiftCooldown; }
@@ -94,6 +105,14 @@ public class PlayerPowerData {
                 fireUltJustEnded = true;
             }
         }
+
+        if (laserUltActive) {
+            if (laserUltTicks > 0) {
+                laserUltTicks--;
+            } else {
+                laserUltActive = false;
+            }
+        }
     }
 
     public CompoundTag serializeNBT() {
@@ -104,6 +123,9 @@ public class PlayerPowerData {
         tag.putInt("ultCooldown", ultCooldown);
         tag.putBoolean("abilityUnlocked", abilityUnlocked);
         tag.putBoolean("ultUnlocked", ultUnlocked);
+        tag.putBoolean("laserUltActive", laserUltActive);
+        tag.putInt("laserUltTicks", laserUltTicks);
+        tag.putInt("laserUltMaxTicks", laserUltMaxTicks);
         return tag;
     }
 
@@ -114,5 +136,8 @@ public class PlayerPowerData {
         ultCooldown = tag.getInt("ultCooldown");
         abilityUnlocked = tag.getBoolean("abilityUnlocked");
         ultUnlocked = tag.getBoolean("ultUnlocked");
+        laserUltActive = tag.getBoolean("laserUltActive");
+        laserUltTicks = tag.getInt("laserUltTicks");
+        laserUltMaxTicks = Math.max(1, tag.getInt("laserUltMaxTicks"));
     }
 }
