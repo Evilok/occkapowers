@@ -114,4 +114,5 @@ public enum PowerType {
             default -> "?";
         };
     }
+    
 }

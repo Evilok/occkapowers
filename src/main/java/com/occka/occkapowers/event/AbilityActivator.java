@@ -88,22 +88,37 @@ public class AbilityActivator {
 
         switch (type) {
             case FIRE -> {
-                // Levitation while shift held (level 1 = gentle lift)
-                player.addEffect(fx(MobEffects.LEVITATION, 25, 3));
-                player.resetFallDistance();
-                // Fire particles around player
-                for (int i = 0; i < 10; i++) {
-                    double angle = (i / 10.0) * Math.PI * 2;
-                    double r = 1.2 + Math.random() * 0.8;
-                    level.sendParticles(ParticleTypes.FLAME,
-                            player.getX() + r * Math.cos(angle),
-                            player.getY() + 0.3 + Math.random(),
-                            player.getZ() + r * Math.sin(angle),
-                            1, 0.04, 0.08, 0.04, 0.015);
+                // Огненный лазер 10 блоков, урон огнём
+                Vec3 start = player.getEyePosition();
+                Vec3 dir = player.getLookAngle().normalize();
+                double length = 10.0;
+
+                for (LivingEntity entity : getNearbyEnemies(player, 12)) {
+                    Vec3 toE = entity.position().subtract(start);
+                    double dot = toE.dot(dir);
+                    if (dot > 0 && dot < length) {
+                        Vec3 proj = start.add(dir.scale(dot));
+                        if (proj.distanceTo(entity.position()) < 2.0) {
+                            entity.hurt(player.damageSources().onFire(), 6); // меньше чем лазер (18)
+                            entity.setSecondsOnFire(4);
+                            level.sendParticles(ParticleTypes.FLAME,
+                                    entity.getX(), entity.getY() + 1, entity.getZ(),
+                                    15, 0.3, 0.5, 0.3, 0.08);
+                        }
+                    }
+                }
+                // Визуал луча — огненные частицы по линии
+                for (double d = 0.3; d < length; d += 0.3) {
+                    Vec3 p = start.add(dir.scale(d));
+                    level.sendParticles(ParticleTypes.FLAME, p.x, p.y, p.z,
+                            1, 0.02, 0.02, 0.02, 0.01);
+                    if (d % 1.5 < 0.3)
+                        level.sendParticles(ParticleTypes.LAVA, p.x, p.y, p.z,
+                                1, 0.01, 0.01, 0.01, 0);
                 }
                 level.sendParticles(ParticleTypes.LARGE_SMOKE,
-                        player.getX(), player.getY(), player.getZ(),
-                        2, 0.3, 0.2, 0.3, 0.005);
+                        start.x + dir.x, start.y + dir.y, start.z + dir.z,
+                        1, 0, 0, 0, 0);
             }
             case CHAOS -> ChaosAbility.activateShift(player, level);
             case SUPERFORCE -> SuperforceAbility.activateAbility(player, level); // punch (no cd)
@@ -346,7 +361,7 @@ public class AbilityActivator {
         switch (type) {
             case FIRE -> startFireUlt(player, level, data);
             case AIR -> {
-                levitateEnemies(player, 15, 21, 40);
+                levitateEnemies(player, 15, 21, 20);
                 for (int i = 0; i < 80; i++) {
                     double a = Math.random() * Math.PI * 2, p = (Math.random() - 0.5) * Math.PI, r = Math.random() * 20;
                     level.sendParticles(ParticleTypes.CLOUD, player.getX() + r * Math.cos(a) * Math.cos(p),
@@ -518,6 +533,8 @@ public class AbilityActivator {
     private static void cageNearestEnemy(ServerPlayer player, ServerLevel level) {
         LivingEntity target = null;
         double minD = Double.MAX_VALUE;
+
+        // Поиск ближайшей цели
         for (LivingEntity e : getNearbyEnemies(player, 12)) {
             double d = e.distanceTo(player);
             if (d < minD) {
@@ -525,24 +542,52 @@ public class AbilityActivator {
                 target = e;
             }
         }
+
         if (target == null) {
             player.sendSystemMessage(msg("No targets!", ChatFormatting.RED));
             return;
         }
+
         BlockPos center = target.blockPosition();
-        for (int dx = -1; dx <= 1; dx++)
-            for (int dy = 0; dy <= 2; dy++)
+
+        // 1. Строим ледяной куб (оболочку)
+        // dy от -1 (пол под ногами) до 2 (потолок над головой)
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 2; dy++) {
                 for (int dz = -1; dz <= 1; dz++) {
-                    if (Math.abs(dx) == 1 || dy == 0 || dy == 2 || Math.abs(dz) == 1) {
+                    // Если это граница куба (стены, пол или потолок)
+                    if (Math.abs(dx) == 1 || dy == -1 || dy == 2 || Math.abs(dz) == 1) {
                         BlockPos pos = center.offset(dx, dy, dz);
-                        if (level.getBlockState(pos).isAir())
+                        var state = level.getBlockState(pos);
+
+                        // ПРОВЕРКА: Ставим блок, если там воздух или то, что можно заменить (трава,
+                        // снежок)
+                        if (state.isAir() || state.canBeReplaced()) {
                             level.setBlock(pos, Blocks.BLUE_ICE.defaultBlockState(), 3);
+                        }
                     }
                 }
+            }
+        }
+
+        // 2. Заполняем центр рыхлым снегом (2 блока в высоту)
+        BlockPos snowLow = center; // Уровень ног
+        BlockPos snowHigh = center.above(); // Уровень головы
+
+        // Для снега внутри тоже добавим проверку, чтобы он заменил траву, если она там
+        // была
+        if (level.getBlockState(snowLow).isAir() || level.getBlockState(snowLow).canBeReplaced())
+            level.setBlock(snowLow, Blocks.POWDER_SNOW.defaultBlockState(), 3);
+
+        if (level.getBlockState(snowHigh).isAir() || level.getBlockState(snowHigh).canBeReplaced())
+            level.setBlock(snowHigh, Blocks.POWDER_SNOW.defaultBlockState(), 3);
+
+        // Частицы и звуки
         level.sendParticles(ParticleTypes.SNOWFLAKE, target.getX(), target.getY() + 1, target.getZ(), 60, 1, 1.5, 1,
                 0.15);
         level.sendParticles(ParticleTypes.ITEM_SNOWBALL, target.getX(), target.getY() + 1, target.getZ(), 25, 0.5, 0.5,
                 0.5, 0.2);
+
         player.sendSystemMessage(msg("Ice Cage!", ChatFormatting.AQUA));
     }
 
@@ -578,7 +623,9 @@ public class AbilityActivator {
         LargeFireball fb = new LargeFireball(EntityType.FIREBALL, level);
         fb.setOwner(player);
         fb.setPos(player.getEyePosition());
-        fb.setDeltaMovement(dir.scale(1.5));
+        fb.setDeltaMovement(dir.scale(2.5));
+
+        fb.addTag("ult_fireball_" + player.getUUID().toString());
 
         level.addFreshEntity(fb);
 
@@ -597,10 +644,19 @@ public class AbilityActivator {
         AttributeInstance gravity = player.getAttribute(ForgeMod.ENTITY_GRAVITY.get());
         if (gravity != null) {
             gravity.setBaseValue(data.getFireUltOldGravity());
-
         }
 
         if (player.level() instanceof ServerLevel level) {
+            // --- НОВОЕ: Очистка фаерболов ---
+            String tag = "ult_fireball_" + player.getUUID().toString();
+            // Проходим по всем сущностям и удаляем те, что помечены нашим тегом
+            level.getAllEntities().forEach(entity -> {
+                if (entity.getTags().contains(tag)) {
+                    entity.discard();
+                }
+            });
+            // -------------------------------
+
             level.sendParticles(ParticleTypes.LARGE_SMOKE,
                     player.getX(), player.getY() + 1, player.getZ(),
                     20, 1, 1, 1, 0.05);
@@ -767,17 +823,31 @@ public class AbilityActivator {
     // Gravity ult: reverse gravity for all in radius
     private static void gravityUlt(ServerPlayer player, ServerLevel level) {
         AABB box = player.getBoundingBox().inflate(50);
-        List<LivingEntity> entities = player.level().getEntitiesOfClass(LivingEntity.class, box, e -> e != player);
+        List<LivingEntity> entities = player.level().getEntitiesOfClass(
+                LivingEntity.class, box, e -> e != player);
+
         for (LivingEntity entity : entities) {
-            entity.addEffect(fx(MobEffects.LEVITATION, 300, 0)); // 10s floating
+            // Лёгкая левитация на 3 секунды (60 тиков), уровень 0 = слабый подъём
+            entity.addEffect(fx(MobEffects.LEVITATION, 60, 0));
             entity.setDeltaMovement(entity.getDeltaMovement().add(0, 2.0, 0));
             entity.hurtMarked = true;
         }
+
+        // Через 3 секунды (60 тиков) дать резкий минус Y всем в том же радиусе
+        // Реализуем через NBT-тег на самом игроке как таймер
+        player.getPersistentData().putInt("occka_gravity_ult_ticks", 60);
+        player.getPersistentData().putDouble("occka_gravity_ult_radius", 50.0);
+
+        // Частицы
         for (int i = 0; i < 100; i++) {
-            double a = Math.random() * Math.PI * 2, p = (Math.random() - 0.5) * Math.PI, r = Math.random() * 50;
+            double a = Math.random() * Math.PI * 2,
+                    p = (Math.random() - 0.5) * Math.PI,
+                    r = Math.random() * 50;
             level.sendParticles(ParticleTypes.REVERSE_PORTAL,
-                    player.getX() + r * Math.cos(a) * Math.cos(p), player.getY() + 2 + r * Math.abs(Math.sin(p)),
-                    player.getZ() + r * Math.sin(a) * Math.cos(p), 1, 0, 0, 0, 0.1);
+                    player.getX() + r * Math.cos(a) * Math.cos(p),
+                    player.getY() + 2 + r * Math.abs(Math.sin(p)),
+                    player.getZ() + r * Math.sin(a) * Math.cos(p),
+                    1, 0, 0, 0, 0.1);
         }
         player.sendSystemMessage(msg("GRAVITY INVERSION!", ChatFormatting.DARK_GRAY, ChatFormatting.BOLD));
     }
@@ -843,7 +913,7 @@ public class AbilityActivator {
         player.sendSystemMessage(msg("Position Swap!", ChatFormatting.GREEN));
     }
 
-    // Echo ult: blind all in radius + observer mode for 20s
+    // Echo ult: blind all in radius + observer mode for 8s
     private static void echoUlt(ServerPlayer player, ServerLevel level) {
         for (LivingEntity entity : getNearbyEnemies(player, 12)) {
             entity.addEffect(fx(MobEffects.BLINDNESS, 100, 0));
@@ -852,11 +922,11 @@ public class AbilityActivator {
         }
         // Spectator for 20s - handled via gamemode change temporarily
         player.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
-        // Schedule return to survival after 20s via tag
-        player.getPersistentData().putInt("occka_echo_ult_ticks", 400);
+        // Schedule return to survival after 8s via tag
+        player.getPersistentData().putInt("occka_echo_ult_ticks", 160);
         level.sendParticles(ParticleTypes.FLASH, player.getX(), player.getY() + 1, player.getZ(), 1, 0, 0, 0, 0);
         level.sendParticles(ParticleTypes.PORTAL, player.getX(), player.getY() + 1, player.getZ(), 60, 3, 3, 3, 0.1);
-        player.sendSystemMessage(msg("Echo Phase: Spectator mode for 20s!", ChatFormatting.GREEN, ChatFormatting.BOLD));
+        player.sendSystemMessage(msg("Echo Phase: Spectator mode for 8s!", ChatFormatting.GREEN, ChatFormatting.BOLD));
     }
 
     // === UTILS ===
