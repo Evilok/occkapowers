@@ -31,13 +31,6 @@ import java.util.List;
 @Mod.EventBusSubscriber(modid = OcckaPowers.MOD_ID)
 public class AbilityEventHandler {
 
-    private static final Random RNG = new Random();
-
-    private static final net.minecraft.core.particles.SimpleParticleType[] CHAOS_PARTICLES = {
-            ParticleTypes.WITCH, ParticleTypes.PORTAL,
-            ParticleTypes.FLAME, ParticleTypes.ENCHANT
-    };
-
     private static MobEffectInstance fx(net.minecraft.world.effect.MobEffect eff, int dur, int amp) {
         return new MobEffectInstance(eff, dur, amp, false, false);
     }
@@ -110,24 +103,45 @@ public class AbilityEventHandler {
         });
     }
 
+    /**
+     * Тик для уровня — Geo орбитальные свиньи.
+     * Вызывается раз в тик на серверный уровень.
+     */
     @SubscribeEvent
-    public static void onLeftClick(PlayerInteractEvent.LeftClickEmpty event) {
-        System.out.println("LMB CLICK DETECTED");
-        if (!(event.getEntity() instanceof ServerPlayer player))
-            return;
-
-        player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
-            AbilityActivator.fireUltShoot(player, data);
-        });
+    public static void onLevelTick(TickEvent.LevelTickEvent event) {
+        // Нам нужен только конец тика и только серверная сторона
+        if (event.phase == TickEvent.Phase.END && event.level instanceof ServerLevel level) {
+            GeoOrbitHandler.tick(level);
+        }
     }
 
-    private static void applyConstantPassives(ServerPlayer player, PlayerPowerData data, PowerType type) {
-        if (!(player.level() instanceof ServerLevel level))
+    private static void tickIceSnowstorm(ServerPlayer player, ServerLevel level) {
+        int snowTicks = player.getPersistentData().getInt("occka_ice_snowstorm_ticks");
+        if (snowTicks <= 0)
             return;
 
-        // Every tick: superforce flight passive
-        if (type == PowerType.SUPERFORCE) {
-            SuperforceAbility.applyPassive(player);
+        player.getPersistentData().putInt("occka_ice_snowstorm_ticks", snowTicks - 1);
+        if (snowTicks % 8 == 0) {
+            for (int i = 0; i < 12; i++) {
+                double ox = (Math.random() - 0.5) * 36;
+                double oz = (Math.random() - 0.5) * 36;
+                level.sendParticles(ParticleTypes.SNOWFLAKE,
+                        player.getX() + ox, player.getY() + 12 + Math.random() * 4,
+                        player.getZ() + oz, 1, 0, -0.25, 0, 0.08);
+            }
+        }
+    }
+
+    private static void tickEchoUlt(ServerPlayer player) {
+        int echoTicks = player.getPersistentData().getInt("occka_echo_ult_ticks");
+        if (echoTicks <= 0)
+            return;
+
+        player.getPersistentData().putInt("occka_echo_ult_ticks", echoTicks - 1);
+        if (echoTicks == 1) {
+            player.setGameMode(GameType.SURVIVAL);
+            player.sendSystemMessage(Component.literal("Echo Phase ended.")
+                    .withStyle(ChatFormatting.GREEN));
         }
     }
 
