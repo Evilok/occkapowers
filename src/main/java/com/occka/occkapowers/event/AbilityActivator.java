@@ -913,7 +913,7 @@ public class AbilityActivator {
         player.sendSystemMessage(msg("Position Swap!", ChatFormatting.GREEN));
     }
 
-    // Echo ult: blind all in radius + observer mode for 20s
+    // Echo ult: blind all in radius + observer mode for 8s
     private static void echoUlt(ServerPlayer player, ServerLevel level) {
         for (LivingEntity entity : getNearbyEnemies(player, 12)) {
             entity.addEffect(fx(MobEffects.BLINDNESS, 100, 0));
@@ -922,11 +922,11 @@ public class AbilityActivator {
         }
         // Spectator for 20s - handled via gamemode change temporarily
         player.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
-        // Schedule return to survival after 20s via tag
-        player.getPersistentData().putInt("occka_echo_ult_ticks", 400);
+        // Schedule return to survival after 8s via tag
+        player.getPersistentData().putInt("occka_echo_ult_ticks", 160);
         level.sendParticles(ParticleTypes.FLASH, player.getX(), player.getY() + 1, player.getZ(), 1, 0, 0, 0, 0);
         level.sendParticles(ParticleTypes.PORTAL, player.getX(), player.getY() + 1, player.getZ(), 60, 3, 3, 3, 0.1);
-        player.sendSystemMessage(msg("Echo Phase: Spectator mode for 20s!", ChatFormatting.GREEN, ChatFormatting.BOLD));
+        player.sendSystemMessage(msg("Echo Phase: Spectator mode for 8s!", ChatFormatting.GREEN, ChatFormatting.BOLD));
     }
 
     // === UTILS ===
