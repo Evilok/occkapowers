@@ -333,37 +333,38 @@ public class AbilityEventHandler {
     }
 
     private static void tickGravityUlt(ServerPlayer player, ServerLevel level) {
-    int ticks = player.getPersistentData().getInt("occka_gravity_ult_ticks");
-    if (ticks <= 0) return;
+        int ticks = player.getPersistentData().getInt("occka_gravity_ult_ticks");
+        if (ticks <= 0)
+            return;
 
-    ticks--;
-    player.getPersistentData().putInt("occka_gravity_ult_ticks", ticks);
+        ticks--;
+        player.getPersistentData().putInt("occka_gravity_ult_ticks", ticks);
 
-    if (ticks == 0) {
-        // Время вышло — резкий минус Y всем в радиусе
-        double radius = player.getPersistentData().getDouble("occka_gravity_ult_radius");
-        AABB box = player.getBoundingBox().inflate(radius);
-        List<net.minecraft.world.entity.LivingEntity> targets =
-                level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
-                        box, e -> e != player);
+        if (ticks == 0) {
+            // Время вышло — резкий минус Y всем в радиусе
+            double radius = player.getPersistentData().getDouble("occka_gravity_ult_radius");
+            AABB box = player.getBoundingBox().inflate(radius);
+            List<net.minecraft.world.entity.LivingEntity> targets = level.getEntitiesOfClass(
+                    net.minecraft.world.entity.LivingEntity.class,
+                    box, e -> e != player);
 
-        for (net.minecraft.world.entity.LivingEntity entity : targets) {
-            // Убираем левитацию и бьём вниз
-            entity.removeEffect(MobEffects.LEVITATION);
-            entity.setDeltaMovement(
-                    entity.getDeltaMovement().x,
-                    -3.5, // резкое падение
-                    entity.getDeltaMovement().z);
-            entity.hurtMarked = true;
+            for (net.minecraft.world.entity.LivingEntity entity : targets) {
+                // Убираем левитацию и бьём вниз
+                entity.removeEffect(MobEffects.LEVITATION);
+                entity.setDeltaMovement(
+                        entity.getDeltaMovement().x,
+                        -3.5, // резкое падение
+                        entity.getDeltaMovement().z);
+                entity.hurtMarked = true;
+            }
+
+            // Частицы "гравитация вернулась"
+            level.sendParticles(ParticleTypes.PORTAL,
+                    player.getX(), player.getY() + 5, player.getZ(),
+                    40, 10, 5, 10, 0.2);
+
+            player.sendSystemMessage(
+                    Component.literal("Gravity restored!").withStyle(ChatFormatting.DARK_GRAY));
         }
-
-        // Частицы "гравитация вернулась"
-        level.sendParticles(ParticleTypes.PORTAL,
-                player.getX(), player.getY() + 5, player.getZ(),
-                40, 10, 5, 10, 0.2);
-
-        player.sendSystemMessage(
-                Component.literal("Gravity restored!").withStyle(ChatFormatting.DARK_GRAY));
     }
-}
 }

@@ -15,7 +15,41 @@ import net.minecraftforge.common.ForgeMod;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 
 public final class FireAbility {
+    
     private FireAbility() {}
+
+    public static void activateShift(ServerPlayer player, ServerLevel level) {
+        Vec3 start = player.getEyePosition();
+                Vec3 dir = player.getLookAngle().normalize();
+                double length = 10.0;
+
+                for (LivingEntity entity : getNearbyEnemies(player, 12)) {
+                    Vec3 toE = entity.position().subtract(start);
+                    double dot = toE.dot(dir);
+                    if (dot > 0 && dot < length) {
+                        Vec3 proj = start.add(dir.scale(dot));
+                        if (proj.distanceTo(entity.position()) < 2.0) {
+                            entity.hurt(player.damageSources().onFire(), 6); // меньше чем лазер (18)
+                            entity.setSecondsOnFire(4);
+                            level.sendParticles(ParticleTypes.FLAME,
+                                    entity.getX(), entity.getY() + 1, entity.getZ(),
+                                    15, 0.3, 0.5, 0.3, 0.08);
+                        }
+                    }
+                }
+                // Визуал луча — огненные частицы по линии
+                for (double d = 0.3; d < length; d += 0.3) {
+                    Vec3 p = start.add(dir.scale(d));
+                    level.sendParticles(ParticleTypes.FLAME, p.x, p.y, p.z,
+                            1, 0.02, 0.02, 0.02, 0.01);
+                    if (d % 1.5 < 0.3)
+                        level.sendParticles(ParticleTypes.LAVA, p.x, p.y, p.z,
+                                1, 0.01, 0.01, 0.01, 0);
+                }
+                level.sendParticles(ParticleTypes.LARGE_SMOKE,
+                        start.x + dir.x, start.y + dir.y, start.z + dir.z,
+                        1, 0, 0, 0, 0);
+    }
 
     public static void activateAbility(ServerPlayer player, ServerLevel level) {
         Vec3 playerPos = player.position();

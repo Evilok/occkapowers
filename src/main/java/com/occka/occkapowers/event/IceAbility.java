@@ -17,7 +17,26 @@ import net.minecraft.world.phys.Vec3;
 import java.util.List;
 
 public final class IceAbility {
-    private IceAbility() {}
+    private IceAbility() {
+    }
+
+    public static void activateShift(ServerPlayer player, PlayerPowerData data, PowerType type) {
+        if (!(player.level() instanceof ServerLevel level))
+            return;
+        // Blizzard aura
+                getNearbyEnemies(player, 5).forEach(e -> {
+                    e.hurt(player.damageSources().playerAttack(player), 0.5f);
+                    e.addEffect(fx(MobEffects.MOVEMENT_SLOWDOWN, 50, 1));
+                });
+                for (int i = 0; i < 25; i++) {
+                    double angle = Math.random() * Math.PI * 2;
+                    double r = Math.random() * 5;
+                    level.sendParticles(ParticleTypes.SNOWFLAKE,
+                            player.getX() + r * Math.cos(angle), player.getY() + Math.random() * 3,
+                            player.getZ() + r * Math.sin(angle), 1, (Math.random() - 0.5) * 0.2, 0.03,
+                            (Math.random() - 0.5) * 0.2, 0);
+                }
+    }
 
     public static void activateAbility(ServerPlayer player, ServerLevel level) {
         cageNearestEnemy(player, level);
@@ -28,7 +47,10 @@ public final class IceAbility {
         double minD = Double.MAX_VALUE;
         for (LivingEntity e : AbilityCommon.getNearbyEnemies(player, 12)) {
             double d = e.distanceTo(player);
-            if (d < minD) { minD = d; target = e; }
+            if (d < minD) {
+                minD = d;
+                target = e;
+            }
         }
         if (target == null) {
             player.sendSystemMessage(AbilityCommon.msg("No targets!", ChatFormatting.RED));
@@ -56,8 +78,10 @@ public final class IceAbility {
         if (level.getBlockState(snowHigh).isAir() || level.getBlockState(snowHigh).canBeReplaced())
             level.setBlock(snowHigh, Blocks.POWDER_SNOW.defaultBlockState(), 3);
 
-        level.sendParticles(ParticleTypes.SNOWFLAKE, target.getX(), target.getY() + 1, target.getZ(), 60, 1, 1.5, 1, 0.15);
-        level.sendParticles(ParticleTypes.ITEM_SNOWBALL, target.getX(), target.getY() + 1, target.getZ(), 25, 0.5, 0.5, 0.5, 0.2);
+        level.sendParticles(ParticleTypes.SNOWFLAKE, target.getX(), target.getY() + 1, target.getZ(), 60, 1, 1.5, 1,
+                0.15);
+        level.sendParticles(ParticleTypes.ITEM_SNOWBALL, target.getX(), target.getY() + 1, target.getZ(), 25, 0.5, 0.5,
+                0.5, 0.2);
         player.sendSystemMessage(AbilityCommon.msg("Ice Cage!", ChatFormatting.AQUA));
     }
 
@@ -73,7 +97,8 @@ public final class IceAbility {
             minion.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SPEED, Integer.MAX_VALUE, 0));
             minion.getPersistentData().putString("occka_owner", player.getUUID().toString());
             level.addFreshEntity(minion);
-            level.sendParticles(ParticleTypes.SNOWFLAKE, minion.getX(), minion.getY() + 1, minion.getZ(), 50, 0.5, 1, 0.5, 0.15);
+            level.sendParticles(ParticleTypes.SNOWFLAKE, minion.getX(), minion.getY() + 1, minion.getZ(), 50, 0.5, 1,
+                    0.5, 0.15);
         }
         player.sendSystemMessage(AbilityCommon.msg("Ice Guardians summoned!", ChatFormatting.AQUA));
     }
@@ -87,10 +112,12 @@ public final class IceAbility {
             entity.setDeltaMovement(0, entity.getDeltaMovement().y, 0);
             entity.hurtMarked = true;
 
-            level.sendParticles(ParticleTypes.SNOWFLAKE, entity.getX(), entity.getY() + 1, entity.getZ(), 80, 0.8, 1.5, 0.8, 0.25);
+            level.sendParticles(ParticleTypes.SNOWFLAKE, entity.getX(), entity.getY() + 1, entity.getZ(), 80, 0.8, 1.5,
+                    0.8, 0.25);
             level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.PACKED_ICE.defaultBlockState()),
                     entity.getX(), entity.getY() + 1, entity.getZ(), 50, 0.8, 0.8, 0.8, 0.35);
-            level.sendParticles(ParticleTypes.ITEM_SNOWBALL, entity.getX(), entity.getY() + 1, entity.getZ(), 20, 0.4, 0.4, 0.4, 0.2);
+            level.sendParticles(ParticleTypes.ITEM_SNOWBALL, entity.getX(), entity.getY() + 1, entity.getZ(), 20, 0.4,
+                    0.4, 0.4, 0.2);
         }
 
         player.addEffect(AbilityCommon.fx(MobEffects.DAMAGE_RESISTANCE, 300, 4));

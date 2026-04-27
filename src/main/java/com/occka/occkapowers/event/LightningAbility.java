@@ -11,15 +11,34 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 public final class LightningAbility {
-    private LightningAbility() {}
+    private LightningAbility() {
+    }
+
+    public static void activateShift(ServerPlayer player, PlayerPowerData data, PowerType type) {
+
+        if (!(player.level() instanceof ServerLevel level))
+            return;
+
+        // Speed burst + sparks
+        player.addEffect(fx(MobEffects.MOVEMENT_SPEED, 250, 6));
+        for (int i = 0; i < 20; i++) {
+            level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                    player.getX() + (Math.random() - 0.5) * 1.5, player.getY() + Math.random() * 2,
+                    player.getZ() + (Math.random() - 0.5) * 1.5, 1, 0, 0, 0, 0.3);
+        }
+        level.sendParticles(ParticleTypes.CRIT,
+                player.getX(), player.getY() + 1, player.getZ(), 5, 0.3, 0.5, 0.3, 0.2);
+    }
 
     public static void activateAbility(ServerPlayer player, ServerLevel level) {
         Vec3 eye = player.getEyePosition();
         Vec3 end = eye.add(player.getLookAngle().scale(50));
-        BlockHitResult hit = level.clip(new ClipContext(eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
+        BlockHitResult hit = level
+                .clip(new ClipContext(eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
         Vec3 strikePos = hit.getType() == HitResult.Type.MISS ? end : Vec3.atCenterOf(hit.getBlockPos());
 
-        net.minecraft.world.entity.LightningBolt bolt = new net.minecraft.world.entity.LightningBolt(EntityType.LIGHTNING_BOLT, level);
+        net.minecraft.world.entity.LightningBolt bolt = new net.minecraft.world.entity.LightningBolt(
+                EntityType.LIGHTNING_BOLT, level);
         bolt.moveTo(strikePos);
         bolt.setVisualOnly(false);
         level.addFreshEntity(bolt);
@@ -34,7 +53,8 @@ public final class LightningAbility {
 
     public static void activateUlt(ServerPlayer player, ServerLevel level, double radius) {
         for (var entity : AbilityCommon.getNearbyEnemies(player, radius)) {
-            net.minecraft.world.entity.LightningBolt bolt = new net.minecraft.world.entity.LightningBolt(EntityType.LIGHTNING_BOLT, level);
+            net.minecraft.world.entity.LightningBolt bolt = new net.minecraft.world.entity.LightningBolt(
+                    EntityType.LIGHTNING_BOLT, level);
             bolt.moveTo(entity.position());
             bolt.setVisualOnly(false);
             level.addFreshEntity(bolt);

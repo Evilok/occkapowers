@@ -9,7 +9,22 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
 
 public final class WaterAbility {
+
     private WaterAbility() {}
+
+    public static void activateShift(ServerPlayer player, ServerLevel level) {
+        // Healing aura
+                AABB box = player.getBoundingBox().inflate(3);
+                player.level().getEntitiesOfClass(LivingEntity.class, box, e -> true)
+                        .forEach(e -> e.addEffect(fx(MobEffects.REGENERATION, 25, 2)));
+                for (int i = 0; i < 12; i++) {
+                    level.sendParticles(ParticleTypes.BUBBLE_POP,
+                            player.getX() + (Math.random() - 0.5) * 6,
+                            player.getY() + Math.random() * 3,
+                            player.getZ() + (Math.random() - 0.5) * 6,
+                            2, 0, 0.05, 0, 0.02);
+                }
+    }
 
     public static void activateAbility(ServerPlayer player, ServerLevel level) {
         spawnAquaticMobs(player, level);

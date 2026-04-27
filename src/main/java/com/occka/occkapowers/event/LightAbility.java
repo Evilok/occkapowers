@@ -17,7 +17,8 @@ import net.minecraft.world.phys.AABB;
 import java.util.List;
 
 public final class LightAbility {
-    private LightAbility() {}
+    private LightAbility() {
+    }
 
     // SHIFT (held): удобрение урожая + насыщение игроков рядом
     public static void activateShift(ServerPlayer player, ServerLevel level) {
