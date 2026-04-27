@@ -39,6 +39,31 @@ public class SuperforceAbility {
         }
     }
 
+    public static void applyElytraFlight(ServerPlayer player, ServerLevel level) {
+
+        // Не включаем принудительно — только если игрок УЖЕ летит на элитре
+        if (!player.isFallFlying())
+            return;
+
+        Vec3 look = player.getLookAngle().normalize();
+        double speed = 1.15;
+
+        player.setDeltaMovement(
+                look.x * speed,
+                look.y * speed,
+                look.z * speed);
+
+        player.hurtMarked = true;
+        player.resetFallDistance();
+        player.fallDistance = 0;
+
+        if (player.tickCount % 3 == 0) {
+            level.sendParticles(ParticleTypes.CLOUD,
+                    player.getX(), player.getY(), player.getZ(),
+                    2, 0.2, 0.1, 0.2, 0.03);
+        }
+    }
+
     // ===== ULT TICK: runs every tick for SUPERFORCE players =====
     // В методе tickUlt замени блок с elytra:
     public static void tickUlt(ServerPlayer player, ServerLevel level) {
@@ -57,7 +82,7 @@ public class SuperforceAbility {
 
                 if (player.isFallFlying()) {
                     Vec3 look = player.getLookAngle().normalize();
-                    double speed = 1.2; // регулируешь тут
+                    double speed = 1.22; // регулируешь тут
 
                     player.setDeltaMovement(
                             look.x * speed,
@@ -300,4 +325,5 @@ public class SuperforceAbility {
         return player.level().getEntitiesOfClass(LivingEntity.class, box,
                 e -> e != player && !(e instanceof Player p && p.isAlliedTo(player)));
     }
+                
 }

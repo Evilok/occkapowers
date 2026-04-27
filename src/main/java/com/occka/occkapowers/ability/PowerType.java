@@ -16,7 +16,8 @@ public enum PowerType {
     GRAVITY("gravity", ChatFormatting.DARK_GRAY),
     CHAOS("chaos", ChatFormatting.DARK_RED),
     ECHO("echo", ChatFormatting.GREEN),
-    SUPERFORCE("superforce", ChatFormatting.GOLD);
+    SUPERFORCE("superforce", ChatFormatting.GOLD),
+    ADEPT("adept", ChatFormatting.DARK_GREEN);
 
     private final String id;
     private final ChatFormatting color;
@@ -60,6 +61,7 @@ public enum PowerType {
             case GEO -> 240;
             case VOID -> 300;
             case LIGHT -> 200;
+            case ADEPT -> 500;
             case GRAVITY -> 340;
             case ECHO -> 200;
             case SUPERFORCE -> 200; // 10s
@@ -82,6 +84,7 @@ public enum PowerType {
             case LIGHTNING -> "1x Iron Boots";
             case LASER -> "1x Bow";
             case GEO -> "64x Dirt";
+            case ADEPT -> "8x Sugar";
             case VOID -> "12x String";
             case LIGHT -> "16x Torch";
             case GRAVITY -> "12x Gravel";
@@ -97,10 +100,11 @@ public enum PowerType {
             case FIRE -> "15x Blaze Rod";
             case AIR -> "10x Diamond";
             case WATER -> "30x Cooked Salmon";
+            case ADEPT -> "16x Bamboo";
             case ICE -> "1x Iron Block";
             case LIGHTNING -> "1x Lightning Rod";
             case LASER -> "16x TNT Block";
-            case GEO -> "1x Iron Pickaxe";
+            case GEO -> "2x Gold Block";
             case VOID -> "1x Ghast Tear";
             case LIGHT -> "32x Glowstone";
             case GRAVITY -> "1x Anvil";
@@ -110,4 +114,5 @@ public enum PowerType {
             default -> "?";
         };
     }
+    
 }

@@ -20,17 +20,20 @@ public class ClientEventHandler {
     private static final PowerHudOverlay hudOverlay = new PowerHudOverlay();
     public static final IGuiOverlay POWER_HUD = (gui, graphics, partialTick, w, h) -> hudOverlay.renderHud(graphics);
 
+    private static long lastJumpTime = 0;
+
     @SubscribeEvent
     public static void registerKeys(RegisterKeyMappingsEvent event) {
         event.register(KeyBindings.KEY_SHIFT_ABILITY);
         event.register(KeyBindings.KEY_ABILITY);
-        event.register(KeyBindings.KEY_ULT);
+        event.register(KeyBindings.KEY_ULT);   
     }
 
     @SubscribeEvent
     public static void registerOverlays(RegisterGuiOverlaysEvent event) {
         event.registerAbove(VanillaGuiOverlay.HOTBAR.id(), "power_hud", POWER_HUD);
     }
+
 }
 
 @Mod.EventBusSubscriber(modid = OcckaPowers.MOD_ID, value = Dist.CLIENT)
@@ -53,7 +56,8 @@ class ClientTickHandler {
                 NetworkHandler.CHANNEL.sendToServer(new PacketShiftHeld());
             }
         } else {
-            if (shiftHeldTicks > 0) shiftHeldTicks = 0;
+            if (shiftHeldTicks > 0)
+                shiftHeldTicks = 0;
         }
 
         while (KeyBindings.KEY_ABILITY.consumeClick()) {

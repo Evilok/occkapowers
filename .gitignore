@@ -1,17 +1,14 @@
-*
-
-!.gitignore
-
-!src/
-
-!src/**
-
+# Gradle
 .gradle/
 build/
-bin/
 
+# IntelliJ
 .idea/
 *.iml
 
+# Logs
+*.log
+
+# OS
 .DS_Store
 Thumbs.db

@@ -15,6 +15,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Team;
 import net.minecraftforge.event.TickEvent;
@@ -25,16 +26,10 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import com.occka.occkapowers.event.GeoOrbitHandler;
+import java.util.List;
 
 @Mod.EventBusSubscriber(modid = OcckaPowers.MOD_ID)
 public class AbilityEventHandler {
-
-    private static final Random RNG = new Random();
-
-    private static final net.minecraft.core.particles.SimpleParticleType[] CHAOS_PARTICLES = {
-            ParticleTypes.WITCH, ParticleTypes.PORTAL,
-            ParticleTypes.FLAME, ParticleTypes.ENCHANT
-    };
 
     private static MobEffectInstance fx(net.minecraft.world.effect.MobEffect eff, int dur, int amp) {
         return new MobEffectInstance(eff, dur, amp, false, false);
@@ -75,10 +70,8 @@ public class AbilityEventHandler {
             // 6. Echo ult тикер
             tickEchoUlt(player);
 
-            // 6.1 Laser ult channel тикер
-            if (data.getPowerType() == PowerType.LASER && data.isLaserUltActive()) {
-                AbilityActivator.tickLaserUlt(player, data, level);
-            }
+            // Gravity ult — таймер падения
+            tickGravityUlt(player, level);
 
             // 7. Chaos/Echo клон тикер — только каждые 20 тиков
             PowerType type = data.getPowerType();
@@ -87,10 +80,18 @@ public class AbilityEventHandler {
                 tickClones(player, level);
             }
 
-            // 8. Superforce пассивки и ульт-тик
-            if (type == PowerType.SUPERFORCE) {
-                SuperforceAbility.applyPassive(player);
-                SuperforceAbility.tickUlt(player, level);
+            // Пассивный элитра-полёт для FIRE и SUPERFORCE
+            if (type == PowerType.SUPERFORCE || type == PowerType.FIRE) {
+                SuperforceAbility.applyPassive(player); // выдаёт mayfly
+                SuperforceAbility.applyElytraFlight(player, level); // элитра-движение
+                if (type == PowerType.SUPERFORCE) {
+                    SuperforceAbility.tickUlt(player, level); // ульт только у superforce
+                }
+            }
+
+            // Добавить после блока с SUPERFORCE:
+            if (type == PowerType.ADEPT && player.tickCount % 20 == 0) {
+                AdeptAbility.tick(player, level);
             }
 
             // 10. Синхронизация HUD каждые 10 тиков (или каждый тик для laser-ульта)
@@ -102,24 +103,45 @@ public class AbilityEventHandler {
         });
     }
 
+    /**
+     * Тик для уровня — Geo орбитальные свиньи.
+     * Вызывается раз в тик на серверный уровень.
+     */
     @SubscribeEvent
-    public static void onLeftClick(PlayerInteractEvent.LeftClickEmpty event) {
-        System.out.println("LMB CLICK DETECTED");
-        if (!(event.getEntity() instanceof ServerPlayer player))
-            return;
-
-        player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
-            AbilityActivator.fireUltShoot(player, data);
-        });
+    public static void onLevelTick(TickEvent.LevelTickEvent event) {
+        // Нам нужен только конец тика и только серверная сторона
+        if (event.phase == TickEvent.Phase.END && event.level instanceof ServerLevel level) {
+            GeoOrbitHandler.tick(level);
+        }
     }
 
-    private static void applyConstantPassives(ServerPlayer player, PlayerPowerData data, PowerType type) {
-        if (!(player.level() instanceof ServerLevel level))
+    private static void tickIceSnowstorm(ServerPlayer player, ServerLevel level) {
+        int snowTicks = player.getPersistentData().getInt("occka_ice_snowstorm_ticks");
+        if (snowTicks <= 0)
             return;
 
-        // Every tick: superforce flight passive
-        if (type == PowerType.SUPERFORCE) {
-            SuperforceAbility.applyPassive(player);
+        player.getPersistentData().putInt("occka_ice_snowstorm_ticks", snowTicks - 1);
+        if (snowTicks % 8 == 0) {
+            for (int i = 0; i < 12; i++) {
+                double ox = (Math.random() - 0.5) * 36;
+                double oz = (Math.random() - 0.5) * 36;
+                level.sendParticles(ParticleTypes.SNOWFLAKE,
+                        player.getX() + ox, player.getY() + 12 + Math.random() * 4,
+                        player.getZ() + oz, 1, 0, -0.25, 0, 0.08);
+            }
+        }
+    }
+
+    private static void tickEchoUlt(ServerPlayer player) {
+        int echoTicks = player.getPersistentData().getInt("occka_echo_ult_ticks");
+        if (echoTicks <= 0)
+            return;
+
+        player.getPersistentData().putInt("occka_echo_ult_ticks", echoTicks - 1);
+        if (echoTicks == 1) {
+            player.setGameMode(GameType.SURVIVAL);
+            player.sendSystemMessage(Component.literal("Echo Phase ended.")
+                    .withStyle(ChatFormatting.GREEN));
         }
     }
 
@@ -167,6 +189,10 @@ public class AbilityEventHandler {
                     AttributeInstance attr = player.getAttribute(Attributes.MAX_HEALTH);
                     if (attr != null && attr.getBaseValue() != 16.0)
                         attr.setBaseValue(16.0);
+                }
+                case GRAVITY -> {
+                    // Прыжок II уровня (усилитель 1) на 10 секунд
+                    player.addEffect(fx(MobEffects.JUMP, 200, 1));
                 }
                 case ICE -> {
                     // Иммунитет к эффектам: снимаем все негативные
@@ -305,4 +331,39 @@ public class AbilityEventHandler {
                 PacketDistributor.PLAYER.with(() -> player),
                 new PacketSyncPowerData(data)));
     }
+
+    private static void tickGravityUlt(ServerPlayer player, ServerLevel level) {
+    int ticks = player.getPersistentData().getInt("occka_gravity_ult_ticks");
+    if (ticks <= 0) return;
+
+    ticks--;
+    player.getPersistentData().putInt("occka_gravity_ult_ticks", ticks);
+
+    if (ticks == 0) {
+        // Время вышло — резкий минус Y всем в радиусе
+        double radius = player.getPersistentData().getDouble("occka_gravity_ult_radius");
+        AABB box = player.getBoundingBox().inflate(radius);
+        List<net.minecraft.world.entity.LivingEntity> targets =
+                level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                        box, e -> e != player);
+
+        for (net.minecraft.world.entity.LivingEntity entity : targets) {
+            // Убираем левитацию и бьём вниз
+            entity.removeEffect(MobEffects.LEVITATION);
+            entity.setDeltaMovement(
+                    entity.getDeltaMovement().x,
+                    -3.5, // резкое падение
+                    entity.getDeltaMovement().z);
+            entity.hurtMarked = true;
+        }
+
+        // Частицы "гравитация вернулась"
+        level.sendParticles(ParticleTypes.PORTAL,
+                player.getX(), player.getY() + 5, player.getZ(),
+                40, 10, 5, 10, 0.2);
+
+        player.sendSystemMessage(
+                Component.literal("Gravity restored!").withStyle(ChatFormatting.DARK_GRAY));
+    }
+}
 }
