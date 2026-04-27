@@ -11,7 +11,10 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.WitherSkeleton;
 import net.minecraft.world.entity.player.Player;
+import com.occka.occkapowers.ability.PlayerPowerData;
+import com.occka.occkapowers.ability.PowerType;
 import net.minecraft.world.level.block.Blocks;
+import com.occka.occkapowers.event.AbilityCommon;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
@@ -20,13 +23,12 @@ public final class IceAbility {
     private IceAbility() {
     }
 
-    public static void activateShift(ServerPlayer player, PlayerPowerData data, PowerType type) {
-        if (!(player.level() instanceof ServerLevel level))
-            return;
+    public static void activateShift(ServerPlayer player, ServerLevel level) {
+
         // Blizzard aura
-                getNearbyEnemies(player, 5).forEach(e -> {
+                AbilityCommon.getNearbyEnemies(player, 5).forEach(e -> {
                     e.hurt(player.damageSources().playerAttack(player), 0.5f);
-                    e.addEffect(fx(MobEffects.MOVEMENT_SLOWDOWN, 50, 1));
+                    e.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SLOWDOWN, 50, 1));
                 });
                 for (int i = 0; i < 25; i++) {
                     double angle = Math.random() * Math.PI * 2;

@@ -6,21 +6,22 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import com.occka.occkapowers.ability.PlayerPowerData;
+import com.occka.occkapowers.ability.PowerType;
+import com.occka.occkapowers.event.AbilityCommon;
 
 public final class LightningAbility {
     private LightningAbility() {
     }
 
-    public static void activateShift(ServerPlayer player, PlayerPowerData data, PowerType type) {
-
-        if (!(player.level() instanceof ServerLevel level))
-            return;
+    public static void activateShift(ServerPlayer player, ServerLevel level) {
 
         // Speed burst + sparks
-        player.addEffect(fx(MobEffects.MOVEMENT_SPEED, 250, 6));
+        player.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SPEED, 250, 6));
         for (int i = 0; i < 20; i++) {
             level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
                     player.getX() + (Math.random() - 0.5) * 1.5, player.getY() + Math.random() * 2,

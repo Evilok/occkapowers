@@ -13,6 +13,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.phys.AABB;
+import com.occka.occkapowers.ability.PlayerPowerData;
+import com.occka.occkapowers.ability.PowerType;
 
 import java.util.List;
 

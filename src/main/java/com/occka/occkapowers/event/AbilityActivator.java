@@ -32,9 +32,7 @@ public class AbilityActivator {
     /** Called every 20 ticks (1s) while shift key held */
     public static void activateShiftHeld(ServerPlayer player) {
         player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
-            PowerType type = data.getPowerType();
-            if (type == PowerType.NONE) return;
-            activateShift(player, data, type);
+            activateShift(player, data, data.getPowerType());
         });
     }
 

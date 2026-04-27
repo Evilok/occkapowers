@@ -13,17 +13,20 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.ForgeMod;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import com.occka.occkapowers.ability.PlayerPowerData;
+import com.occka.occkapowers.ability.PowerType;
 
 public final class FireAbility {
     
     private FireAbility() {}
 
     public static void activateShift(ServerPlayer player, ServerLevel level) {
+
         Vec3 start = player.getEyePosition();
                 Vec3 dir = player.getLookAngle().normalize();
                 double length = 10.0;
 
-                for (LivingEntity entity : getNearbyEnemies(player, 12)) {
+                for (LivingEntity entity : AbilityCommon.getNearbyEnemies(player, 12)) {
                     Vec3 toE = entity.position().subtract(start);
                     double dot = toE.dot(dir);
                     if (dot > 0 && dot < length) {

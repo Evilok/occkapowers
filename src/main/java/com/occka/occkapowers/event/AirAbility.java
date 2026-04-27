@@ -1,18 +1,38 @@
 package com.occka.occkapowers.event;
 
+import com.occka.occkapowers.ability.PowerType;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.phys.Vec3;
+import com.occka.occkapowers.event.AbilityCommon;
 
 public final class AirAbility {
-    private AirAbility() {}
+
+    private AirAbility() {
+    }
+
+
+    public static void activateShift(ServerPlayer player, ServerLevel level) {
+
+        // Levitate + cloud particles under feet
+        player.addEffect(AbilityCommon.fx(MobEffects.LEVITATION, 25, 3));
+        player.addEffect(AbilityCommon.fx(MobEffects.SLOW_FALLING, 25, 0));
+        for (int i = 0; i < 12; i++) {
+            level.sendParticles(ParticleTypes.CLOUD,
+                    player.getX() + (Math.random() - 0.5) * 0.5,
+                    player.getY() - 0.5,
+                    player.getZ() + (Math.random() - 0.5) * 0.5,
+                    5, 0.5, 0.1, 0.5, 0.01);
+        }
+    }
 
     public static void activateAbility(ServerPlayer player, ServerLevel level) {
         dashForward(player, level);
     }
+
 
     private static void dashForward(ServerPlayer player, ServerLevel level) {
         Vec3 look = player.getLookAngle();

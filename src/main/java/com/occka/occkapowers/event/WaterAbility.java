@@ -7,23 +7,29 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.entity.LivingEntity;
+import com.occka.occkapowers.event.AbilityCommon;
 
 public final class WaterAbility {
 
-    private WaterAbility() {}
+    private WaterAbility() {
+    }
 
     public static void activateShift(ServerPlayer player, ServerLevel level) {
+
         // Healing aura
-                AABB box = player.getBoundingBox().inflate(3);
-                player.level().getEntitiesOfClass(LivingEntity.class, box, e -> true)
-                        .forEach(e -> e.addEffect(fx(MobEffects.REGENERATION, 25, 2)));
-                for (int i = 0; i < 12; i++) {
-                    level.sendParticles(ParticleTypes.BUBBLE_POP,
-                            player.getX() + (Math.random() - 0.5) * 6,
-                            player.getY() + Math.random() * 3,
-                            player.getZ() + (Math.random() - 0.5) * 6,
-                            2, 0, 0.05, 0, 0.02);
-                }
+        AABB box = player.getBoundingBox().inflate(3);
+        player.level().getEntitiesOfClass(LivingEntity.class, box, e -> true)
+                .forEach(e -> e.addEffect(AbilityCommon.fx(MobEffects.REGENERATION, 25, 2)));
+        for (int i = 0; i < 12; i++) {
+            level.sendParticles(ParticleTypes.BUBBLE_POP,
+                    player.getX() + (Math.random() - 0.5) * 6,
+                    player.getY() + Math.random() * 3,
+                    player.getZ() + (Math.random() - 0.5) * 6,
+                    2, 0, 0.05, 0, 0.02);
+
+        }
     }
 
     public static void activateAbility(ServerPlayer player, ServerLevel level) {
@@ -47,7 +53,8 @@ public final class WaterAbility {
         for (int i = 0; i < count; i++) {
             net.minecraft.world.entity.EntityType<?> type = aquaticTypes[rng.nextInt(aquaticTypes.length)];
             net.minecraft.world.entity.Entity mob = type.create(level);
-            if (mob == null) continue;
+            if (mob == null)
+                continue;
 
             double angle = (i / (double) count) * Math.PI * 2 + rng.nextDouble();
             double r = 1.5 + rng.nextDouble() * 2.5;
@@ -55,14 +62,16 @@ public final class WaterAbility {
                     rng.nextFloat() * 360, 0);
             if (mob instanceof Mob m) {
                 m.setPersistenceRequired();
-                m.finalizeSpawn(level, level.getCurrentDifficultyAt(mob.blockPosition()), MobSpawnType.MOB_SUMMONED, null, null);
+                m.finalizeSpawn(level, level.getCurrentDifficultyAt(mob.blockPosition()), MobSpawnType.MOB_SUMMONED,
+                        null, null);
             }
             level.addFreshEntity(mob);
             level.sendParticles(ParticleTypes.SPLASH, mob.getX(), mob.getY() + 0.5, mob.getZ(), 8, 0.3, 0.2, 0.3, 0.1);
         }
 
         level.sendParticles(ParticleTypes.SPLASH, player.getX(), player.getY() + 1, player.getZ(), 40, 3, 1.5, 3, 0.15);
-        level.sendParticles(ParticleTypes.BUBBLE_POP, player.getX(), player.getY() + 1, player.getZ(), 20, 2, 1, 2, 0.1);
+        level.sendParticles(ParticleTypes.BUBBLE_POP, player.getX(), player.getY() + 1, player.getZ(), 20, 2, 1, 2,
+                0.1);
         player.sendSystemMessage(AbilityCommon.msg("Ocean Summon! (" + count + " creatures)", ChatFormatting.AQUA));
     }
 
