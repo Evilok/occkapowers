@@ -1,0 +1,822 @@
+package com.occka.occkapowers.event;
+
+import com.occka.occkapowers.ability.PlayerPowerData;
+import com.occka.occkapowers.registry.ModCapabilities;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.WitherSkeleton;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.LargeFireball;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.ForgeMod;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+
+import java.util.List;
+
+public final class AbilityActions {
+    private AbilityActions() {
+    }
+
+    private static MobEffectInstance fx(net.minecraft.world.effect.MobEffect eff, int dur, int amp) {
+        return new MobEffectInstance(eff, dur, amp, false, false);
+    }
+
+    private static Component msg(String text, ChatFormatting... fmt) {
+        var style = net.minecraft.network.chat.Style.EMPTY;
+        for (ChatFormatting f : fmt) style = style.applyFormat(f);
+        return Component.literal(text).withStyle(style);
+    }
+
+    public static List<LivingEntity> getNearbyEnemies(ServerPlayer player, double radius) {
+        AABB box = player.getBoundingBox().inflate(radius);
+        return player.level().getEntitiesOfClass(LivingEntity.class, box, e -> e != player);
+    }
+
+    public static void activateFireAbility(ServerPlayer player, ServerLevel level) {
+        Vec3 playerPos = player.position();
+        for (LivingEntity entity : getNearbyEnemies(player, 10)) {
+            Vec3 dir = entity.position().subtract(playerPos).normalize();
+            double dist = entity.distanceTo(player);
+            double force = 1.8 * (1.0 - dist / 10.0) + 0.4;
+            entity.setDeltaMovement(dir.x * force, 0.45 + (force * 0.3), dir.z * force);
+            entity.hurtMarked = true;
+            entity.setSecondsOnFire(8);
+            entity.hurt(player.damageSources().onFire(), 4);
+            level.sendParticles(ParticleTypes.FLAME, entity.getX(), entity.getY() + 1, entity.getZ(), 12, 0.3, 0.5,
+                    0.3, 0.08);
+        }
+
+        for (int deg = 0; deg < 360; deg += 6) {
+            for (double r = 0.5; r <= 10; r += 1.5) {
+                double x = player.getX() + r * Math.cos(Math.toRadians(deg));
+                double z = player.getZ() + r * Math.sin(Math.toRadians(deg));
+                level.sendParticles(ParticleTypes.FLAME, x, player.getY() + 0.3, z, 1, 0, 0.1, 0, 0.04);
+            }
+        }
+        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, player.getX(), player.getY(), player.getZ(), 2, 0.5, 0,
+                0.5, 0.05);
+        level.sendParticles(ParticleTypes.LAVA, player.getX(), player.getY() + 0.5, player.getZ(), 20, 1.5, 0.5, 1.5,
+                0.2);
+        player.sendSystemMessage(msg("Firestorm!", ChatFormatting.RED));
+    }
+
+    public static void activateLightAbility(ServerPlayer player, ServerLevel level) {
+        AABB box = player.getBoundingBox().inflate(15);
+        player.level().getEntitiesOfClass(LivingEntity.class, box, e -> true).forEach(e -> {
+            e.addEffect(fx(MobEffects.GLOWING, 200, 0));
+            if (e instanceof Player) {
+                e.addEffect(fx(MobEffects.DIG_SPEED, 200, 2));
+            }
+        });
+        level.sendParticles(ParticleTypes.END_ROD, player.getX(), player.getY() + 1, player.getZ(), 60, 7, 3, 7, 0.15);
+        level.sendParticles(ParticleTypes.FLASH, player.getX(), player.getY() + 1, player.getZ(), 1, 0, 0, 0, 0);
+    }
+
+    public static void activateAirUlt(ServerPlayer player, ServerLevel level) {
+        levitateEnemies(player, 15, 21, 20);
+        for (int i = 0; i < 80; i++) {
+            double a = Math.random() * Math.PI * 2;
+            double p = (Math.random() - 0.5) * Math.PI;
+            double r = Math.random() * 20;
+            level.sendParticles(ParticleTypes.CLOUD, player.getX() + r * Math.cos(a) * Math.cos(p),
+                    player.getY() + 2 + r * Math.sin(p), player.getZ() + r * Math.sin(a) * Math.cos(p), 1, 0, 0, 0,
+                    0.05);
+        }
+        player.addEffect(fx(MobEffects.SLOW_FALLING, 100, 0));
+        player.sendSystemMessage(msg("AIR BLAST!", ChatFormatting.AQUA, ChatFormatting.BOLD));
+    }
+
+    public static void activateWaterUlt(ServerPlayer player, ServerLevel level) {
+        player.addEffect(fx(MobEffects.ABSORPTION, 1200, 17));
+        level.setWeatherParameters(0, 6000, true, false);
+        for (int i = 0; i < 60; i++) {
+            level.sendParticles(ParticleTypes.DRIPPING_WATER, player.getX() + (Math.random() - 0.5) * 20,
+                    player.getY() + 10 + Math.random() * 5, player.getZ() + (Math.random() - 0.5) * 20, 1, 0, -0.3, 0,
+                    0.5);
+        }
+        player.sendSystemMessage(msg("Tide of Power!", ChatFormatting.AQUA));
+    }
+
+    // ===== IMPLEMENTATIONS =====
+
+    public static void createFireRing(ServerPlayer player, ServerLevel level, int radius) {
+        double cx = player.getX(), cy = player.getY(), cz = player.getZ();
+        for (int deg = 0; deg < 360; deg += 8) {
+            double rad = Math.toRadians(deg);
+            double x = cx + radius * Math.cos(rad), z = cz + radius * Math.sin(rad);
+            BlockPos pos = new BlockPos((int) x, (int) cy, (int) z);
+            while (pos.getY() > level.getMinBuildHeight() && level.getBlockState(pos).isAir())
+                pos = pos.below();
+            pos = pos.above();
+            if (level.getBlockState(pos).isAir())
+                level.setBlock(pos, Blocks.FIRE.defaultBlockState(), 3);
+            level.sendParticles(ParticleTypes.FLAME, x, cy + 0.5, z, 4, 0.1, 0.3, 0.1, 0.03);
+            level.sendParticles(ParticleTypes.LAVA, x, cy + 0.2, z, 1, 0, 0, 0, 0);
+            level.sendParticles(ParticleTypes.LARGE_SMOKE, x, cy + 1, z, 2, 0.1, 0.3, 0.1, 0.01);
+        }
+        player.sendSystemMessage(msg("Fire Ring!", ChatFormatting.RED));
+    }
+
+    // Physics dash - velocity based, not teleport
+    public static void dashForward(ServerPlayer player, ServerLevel level, double distance) {
+        Vec3 look = player.getLookAngle();
+        Vec3 vel = new Vec3(look.x * 2.8, 0.35, look.z * 2.8);
+        player.setDeltaMovement(vel);
+        player.hurtMarked = true;
+        // Slow falling after dash (air passive)
+        player.addEffect(fx(MobEffects.SLOW_FALLING, 100, 0));
+
+        Vec3 start = player.position();
+        for (int i = 0; i < 25; i++) {
+            Vec3 behind = start.subtract(look.scale(i * 0.35));
+            level.sendParticles(ParticleTypes.CLOUD, behind.x + (Math.random() - 0.5) * 0.6,
+                    behind.y + 0.5 + Math.random() * 1.5, behind.z + (Math.random() - 0.5) * 0.6, 2, 0.1, 0.1, 0.1,
+                    0.03);
+        }
+        level.sendParticles(ParticleTypes.POOF, start.x, start.y + 1, start.z, 30, 0.6, 0.6, 0.6, 0.15);
+        level.sendParticles(ParticleTypes.CLOUD, start.x, start.y + 1, start.z, 20, 0.5, 0.5, 0.5, 0.08);
+        player.sendSystemMessage(msg("Dash!", ChatFormatting.AQUA));
+    }
+
+    // Lightning strikes exactly the targeted block via raycast
+    public static void strikeLightningAtLookBlock(ServerPlayer player, ServerLevel level) {
+        Vec3 eye = player.getEyePosition();
+        Vec3 end = eye.add(player.getLookAngle().scale(50));
+        BlockHitResult hit = level
+                .clip(new ClipContext(eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
+
+        Vec3 strikePos = hit.getType() == HitResult.Type.MISS ? end : Vec3.atCenterOf(hit.getBlockPos());
+
+        net.minecraft.world.entity.LightningBolt bolt = new net.minecraft.world.entity.LightningBolt(
+                EntityType.LIGHTNING_BOLT, level);
+        bolt.moveTo(strikePos);
+        bolt.setVisualOnly(false);
+        level.addFreshEntity(bolt);
+
+        // Pre-strike tracer
+        for (int i = 0; i < 12; i++) {
+            Vec3 p = eye.lerp(strikePos, (double) i / 11);
+            level.sendParticles(ParticleTypes.ELECTRIC_SPARK, p.x, p.y, p.z, 3, 0.1, 0.1, 0.1, 0.2);
+        }
+        level.sendParticles(ParticleTypes.FLASH, strikePos.x, strikePos.y, strikePos.z, 1, 0, 0, 0, 0);
+        player.sendSystemMessage(msg("Lightning Strike!", ChatFormatting.YELLOW));
+    }
+
+    // Cyclops-like optic beam with red particles
+    public static void fireLaserBeam(ServerPlayer player, ServerLevel level, double length, float damage, double hitRadius) {
+        Vec3 start = player.getEyePosition();
+        Vec3 dir = player.getLookAngle().normalize();
+
+        for (LivingEntity entity : getNearbyEnemies(player, 30)) {
+            Vec3 toE = entity.position().subtract(start);
+            double dot = toE.dot(dir);
+            if (dot > 0 && dot < length) {
+                Vec3 proj = start.add(dir.scale(dot));
+                if (proj.distanceTo(entity.position()) < hitRadius) {
+                    entity.hurt(player.damageSources().magic(), damage);
+                    entity.setDeltaMovement(dir.x * 1.0, 0.25, dir.z * 1.0);
+                    entity.hurtMarked = true;
+                    level.sendParticles(ParticleTypes.DAMAGE_INDICATOR, entity.getX(), entity.getY() + 1, entity.getZ(), 10,
+                            0.25, 0.25, 0.25, 0.05);
+                }
+            }
+        }
+
+        for (double d = 0.25; d < length; d += 0.25) {
+            Vec3 p = start.add(dir.scale(d));
+            level.sendParticles(ParticleTypes.DAMAGE_INDICATOR, p.x, p.y, p.z, 1, 0.01, 0.01, 0.01, 0.0);
+            level.sendParticles(ParticleTypes.CRIT, p.x, p.y, p.z, 1, 0.01, 0.01, 0.01, 0.0);
+        }
+    }
+
+    public static void fireLaserAbility(ServerPlayer player, ServerLevel level) {
+        fireLaserBeam(player, level, 30, 16f, 1.25);
+
+        Vec3 eye = player.getEyePosition();
+        Vec3 end = eye.add(player.getLookAngle().scale(30));
+        BlockHitResult hit = level.clip(new ClipContext(eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
+
+        if (hit.getType() == HitResult.Type.BLOCK) {
+            BlockPos pos = hit.getBlockPos();
+            var state = level.getBlockState(pos);
+            if (!state.isAir() && state.getDestroySpeed(level, pos) >= 0) {
+                level.destroyBlock(pos, true, player);
+                Vec3 center = Vec3.atCenterOf(pos);
+                level.sendParticles(ParticleTypes.EXPLOSION, center.x, center.y, center.z, 1, 0.1, 0.1, 0.1, 0.0);
+            }
+        }
+
+        player.sendSystemMessage(msg("Optic Blast!", ChatFormatting.RED, ChatFormatting.BOLD));
+    }
+
+    public static void startLaserUlt(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
+        data.setLaserUltActive(true);
+        data.setLaserUltMaxTicks(100);
+        data.setLaserUltTicks(100);
+        player.sendSystemMessage(msg("OPTIC CHANNEL! Aim to drill a laser line.", ChatFormatting.RED, ChatFormatting.BOLD));
+
+        level.sendParticles(ParticleTypes.FLASH, player.getX(), player.getEyeY(), player.getZ(), 1, 0, 0, 0, 0);
+    }
+
+    public static void tickLaserUlt(ServerPlayer player, PlayerPowerData data, ServerLevel level) {
+        if (!data.isLaserUltActive()) {
+            return;
+        }
+
+        // Freeze owner while channeling
+        player.setDeltaMovement(Vec3.ZERO);
+        player.hurtMarked = true;
+
+        Vec3 eye = player.getEyePosition();
+        Vec3 end = eye.add(player.getLookAngle().scale(40));
+        BlockHitResult hit = level.clip(new ClipContext(eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
+        Vec3 target = hit.getType() == HitResult.Type.BLOCK ? Vec3.atCenterOf(hit.getBlockPos()) : end;
+
+        Vec3 dir = target.subtract(eye).normalize();
+        double len = eye.distanceTo(target);
+
+        for (double d = 0.2; d <= len; d += 0.2) {
+            Vec3 p = eye.add(dir.scale(d));
+            level.sendParticles(ParticleTypes.DAMAGE_INDICATOR, p.x, p.y, p.z, 1, 0, 0, 0, 0);
+        }
+
+        for (LivingEntity entity : getNearbyEnemies(player, 35)) {
+            Vec3 toE = entity.position().subtract(eye);
+            double forward = toE.dot(dir);
+            if (forward > 0 && forward < len) {
+                Vec3 onLine = eye.add(dir.scale(forward));
+                if (onLine.distanceTo(entity.position()) <= 1.35) {
+                    entity.hurt(player.damageSources().magic(), 4.0f);
+                    entity.setDeltaMovement(dir.x * 0.4, 0.1, dir.z * 0.4);
+                    entity.hurtMarked = true;
+                }
+            }
+        }
+
+        if (hit.getType() == HitResult.Type.BLOCK) {
+            BlockPos pos = hit.getBlockPos();
+            var state = level.getBlockState(pos);
+            if (!state.isAir() && state.getDestroySpeed(level, pos) >= 0) {
+                // Dig while channeling (every 4 ticks to avoid instant tunnel spam)
+                if (player.tickCount % 4 == 0) {
+                    level.destroyBlock(pos, true, player);
+                }
+            }
+        }
+    }
+
+    public static void geoShockwave(ServerPlayer player, ServerLevel level, double radius) {
+        for (LivingEntity entity : getNearbyEnemies(player, radius)) {
+            entity.hurt(player.damageSources().playerAttack(player), 12);
+            entity.addEffect(fx(MobEffects.MOVEMENT_SLOWDOWN, 200, 1));
+        }
+        for (int deg = 0; deg < 360; deg += 5) {
+            for (double r = 0.5; r <= radius; r += 1.2) {
+                double x = player.getX() + r * Math.cos(Math.toRadians(deg)),
+                        z = player.getZ() + r * Math.sin(Math.toRadians(deg));
+                level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.STONE.defaultBlockState()),
+                        x, player.getY() + 0.1, z, 2, 0, 0.2, 0, 0.1);
+            }
+        }
+        level.sendParticles(ParticleTypes.EXPLOSION, player.getX(), player.getY(), player.getZ(), 4, 1, 0.5, 1, 0.1);
+        player.sendSystemMessage(msg("Shockwave!", ChatFormatting.GOLD));
+    }
+
+    public static void voidBlind(ServerPlayer player, ServerLevel level, double radius) {
+        for (LivingEntity entity : getNearbyEnemies(player, radius)) {
+            entity.addEffect(fx(MobEffects.BLINDNESS, 200, 0));
+            entity.addEffect(fx(MobEffects.POISON, 100, 0));
+            level.sendParticles(ParticleTypes.PORTAL, entity.getX(), entity.getY() + 1, entity.getZ(), 25, 0.5, 1, 0.5,
+                    0.1);
+        }
+        for (int i = 0; i < 70; i++) {
+            double a = Math.random() * Math.PI * 2, r = Math.random() * radius;
+            level.sendParticles(ParticleTypes.PORTAL, player.getX() + r * Math.cos(a),
+                    player.getY() + 1 + Math.random() * 3, player.getZ() + r * Math.sin(a), 1, 0, 0, 0, 0.05);
+        }
+        player.sendSystemMessage(msg("Darkness!", ChatFormatting.DARK_PURPLE));
+    }
+
+    public static void cageNearestEnemy(ServerPlayer player, ServerLevel level) {
+        LivingEntity target = null;
+        double minD = Double.MAX_VALUE;
+
+        // Поиск ближайшей цели
+        for (LivingEntity e : getNearbyEnemies(player, 12)) {
+            double d = e.distanceTo(player);
+            if (d < minD) {
+                minD = d;
+                target = e;
+            }
+        }
+
+        if (target == null) {
+            player.sendSystemMessage(msg("No targets!", ChatFormatting.RED));
+            return;
+        }
+
+        BlockPos center = target.blockPosition();
+
+        // 1. Строим ледяной куб (оболочку)
+        // dy от -1 (пол под ногами) до 2 (потолок над головой)
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 2; dy++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    // Если это граница куба (стены, пол или потолок)
+                    if (Math.abs(dx) == 1 || dy == -1 || dy == 2 || Math.abs(dz) == 1) {
+                        BlockPos pos = center.offset(dx, dy, dz);
+                        var state = level.getBlockState(pos);
+
+                        // ПРОВЕРКА: Ставим блок, если там воздух или то, что можно заменить (трава,
+                        // снежок)
+                        if (state.isAir() || state.canBeReplaced()) {
+                            level.setBlock(pos, Blocks.BLUE_ICE.defaultBlockState(), 3);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Заполняем центр рыхлым снегом (2 блока в высоту)
+        BlockPos snowLow = center; // Уровень ног
+        BlockPos snowHigh = center.above(); // Уровень головы
+
+        // Для снега внутри тоже добавим проверку, чтобы он заменил траву, если она там
+        // была
+        if (level.getBlockState(snowLow).isAir() || level.getBlockState(snowLow).canBeReplaced())
+            level.setBlock(snowLow, Blocks.POWDER_SNOW.defaultBlockState(), 3);
+
+        if (level.getBlockState(snowHigh).isAir() || level.getBlockState(snowHigh).canBeReplaced())
+            level.setBlock(snowHigh, Blocks.POWDER_SNOW.defaultBlockState(), 3);
+
+        // Частицы и звуки
+        level.sendParticles(ParticleTypes.SNOWFLAKE, target.getX(), target.getY() + 1, target.getZ(), 60, 1, 1.5, 1,
+                0.15);
+        level.sendParticles(ParticleTypes.ITEM_SNOWBALL, target.getX(), target.getY() + 1, target.getZ(), 25, 0.5, 0.5,
+                0.5, 0.2);
+
+        player.sendSystemMessage(msg("Ice Cage!", ChatFormatting.AQUA));
+    }
+
+    // Fire ult: rise 20 blocks, shoot fireballs on LMB for 15s, return to origin
+    public static void startFireUlt(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
+        data.setFireUltOrigin(player.getX(), player.getY(), player.getZ());
+        player.teleportTo(player.getX(), player.getY() + 14, player.getZ());
+        AttributeInstance gravity = player.getAttribute(ForgeMod.ENTITY_GRAVITY.get());
+        if (gravity != null) {
+            data.setFireUltOldGravity(gravity.getBaseValue());
+            gravity.setBaseValue(0.0);
+        }
+        data.setFireUltActive(true);
+        data.setFireUltTicks(300); // 15s
+        data.setFireUltFireballCooldown(0);
+        // Rise particles
+        for (int i = 0; i < 30; i++)
+            level.sendParticles(ParticleTypes.FLAME, player.getX(), player.getY() - i * 0.5, player.getZ(), 5, 1, 0.2,
+                    1, 0.05);
+        player.sendSystemMessage(
+                msg("FIRE ULT! Shoot fireballs with LMB for 15s!", ChatFormatting.RED, ChatFormatting.BOLD));
+    }
+
+    // Called from event handler when fire ult active + LMB click
+    public static void fireUltShoot(ServerPlayer player, PlayerPowerData data) {
+        if (!data.isFireUltActive())
+            return;
+
+        ServerLevel level = (ServerLevel) player.level();
+
+        Vec3 dir = player.getLookAngle().normalize();
+
+        LargeFireball fb = new LargeFireball(EntityType.FIREBALL, level);
+        fb.setOwner(player);
+        fb.setPos(player.getEyePosition());
+        fb.setDeltaMovement(dir.scale(2.5));
+
+        fb.addTag("ult_fireball_" + player.getUUID().toString());
+
+        level.addFreshEntity(fb);
+
+        level.sendParticles(ParticleTypes.LAVA,
+                player.getX(), player.getY(), player.getZ(),
+                8, 0.3, 0.3, 0.3, 0.1);
+    }
+
+    // Called when fire ult expires
+    public static void endFireUlt(ServerPlayer player, PlayerPowerData data) {
+        player.teleportTo(
+                data.getFireUltOriginX(),
+                data.getFireUltOriginY(),
+                data.getFireUltOriginZ());
+
+        AttributeInstance gravity = player.getAttribute(ForgeMod.ENTITY_GRAVITY.get());
+        if (gravity != null) {
+            gravity.setBaseValue(data.getFireUltOldGravity());
+        }
+
+        if (player.level() instanceof ServerLevel level) {
+            // --- НОВОЕ: Очистка фаерболов ---
+            String tag = "ult_fireball_" + player.getUUID().toString();
+            // Проходим по всем сущностям и удаляем те, что помечены нашим тегом
+            level.getAllEntities().forEach(entity -> {
+                if (entity.getTags().contains(tag)) {
+                    entity.discard();
+                }
+            });
+            // -------------------------------
+
+            level.sendParticles(ParticleTypes.LARGE_SMOKE,
+                    player.getX(), player.getY() + 1, player.getZ(),
+                    20, 1, 1, 1, 0.05);
+        }
+    }
+
+    public static void lightningStrikeAll(ServerPlayer player, ServerLevel level, double radius) {
+        for (LivingEntity entity : getNearbyEnemies(player, radius)) {
+            net.minecraft.world.entity.LightningBolt bolt = new net.minecraft.world.entity.LightningBolt(
+                    EntityType.LIGHTNING_BOLT, level);
+            bolt.moveTo(entity.position());
+            bolt.setVisualOnly(false);
+            level.addFreshEntity(bolt);
+        }
+        for (int i = 0; i < 60; i++) {
+            double a = Math.random() * Math.PI * 2, r = Math.random() * radius;
+            level.sendParticles(ParticleTypes.ELECTRIC_SPARK, player.getX() + r * Math.cos(a),
+                    player.getY() + 20 + Math.random() * 5, player.getZ() + r * Math.sin(a), 1, 0, 0, 0, 0.5);
+        }
+        player.sendSystemMessage(msg("LIGHTNING STORM!", ChatFormatting.YELLOW, ChatFormatting.BOLD));
+    }
+
+    // Laser ult: mark target with red smoke, after 2s drop 4-6 TNT in diamond
+    // pattern
+    public static void tntAirstrike(ServerPlayer player, ServerLevel level) {
+        Vec3 eye = player.getEyePosition();
+        Vec3 end = eye.add(player.getLookAngle().scale(60));
+        BlockHitResult hit = level
+                .clip(new ClipContext(eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
+        Vec3 target = hit.getType() == HitResult.Type.MISS ? end : Vec3.atCenterOf(hit.getBlockPos());
+
+        // Signal smoke at target
+        for (int i = 0; i < 20; i++)
+            level.sendParticles(ParticleTypes.CRIT, target.x + (Math.random() - 0.5) * 2, target.y + i * 0.3,
+                    target.z + (Math.random() - 0.5) * 2, 2, 0.2, 0.1, 0.2, 0.05);
+        level.sendParticles(ParticleTypes.FLAME, target.x, target.y + 1, target.z, 20, 1, 2, 1, 0.1);
+
+        // Spawn TNT with varied fuses in diamond pattern
+        int[][] pattern = { { 0, 0 }, { 2, 0 }, { -2, 0 }, { 0, 2 }, { 0, -2 } };
+        for (int[] offset : pattern) {
+            net.minecraft.world.entity.item.PrimedTnt tnt = new net.minecraft.world.entity.item.PrimedTnt(
+                    level, target.x + offset[0], target.y + 25, target.z + offset[1], player);
+            tnt.setFuse(60 + level.random.nextInt(20)); // varied delay
+            level.addFreshEntity(tnt);
+        }
+        player.sendSystemMessage(msg("AIRSTRIKE!", ChatFormatting.RED, ChatFormatting.BOLD));
+    }
+
+    // Geo ult: earthquake - throw all in radius, slowness, camera shake via potion
+    public static void geoUlt(ServerPlayer player, ServerLevel level) {
+        for (LivingEntity entity : getNearbyEnemies(player, 12)) {
+            // Launch upward
+            entity.setDeltaMovement(entity.getDeltaMovement().add(
+                    (Math.random() - 0.5) * 0.5, 0.9 + Math.random() * 0.3, (Math.random() - 0.5) * 0.5));
+            entity.hurtMarked = true;
+            entity.addEffect(fx(MobEffects.MOVEMENT_SLOWDOWN, 200, 3));
+            // Simulate camera shake via nausea effect
+            entity.addEffect(fx(MobEffects.CONFUSION, 40, 10));
+        }
+        // Massive ground crack particles
+        for (int deg = 0; deg < 360; deg += 3) {
+            for (double r = 0.5; r <= 20; r += 2) {
+                double x = player.getX() + r * Math.cos(Math.toRadians(deg)),
+                        z = player.getZ() + r * Math.sin(Math.toRadians(deg));
+                level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.STONE.defaultBlockState()),
+                        x, player.getY() + 0.1, z, 1, 0, 0.3, 0, 0.15);
+            }
+        }
+        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, player.getX(), player.getY(), player.getZ(), 3, 2, 0, 2,
+                0.1);
+        player.sendSystemMessage(msg("EARTHQUAKE!", ChatFormatting.GOLD, ChatFormatting.BOLD));
+    }
+
+    public static void spawnIceMinions(ServerPlayer player, ServerLevel level) {
+        for (int i = 0; i < 2; i++) {
+            WitherSkeleton minion = new WitherSkeleton(EntityType.WITHER_SKELETON, level);
+            minion.moveTo(player.getX() + (i == 0 ? 3 : -3), player.getY(), player.getZ());
+            minion.setCustomName(Component.literal("Ice Guardian").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
+            minion.setCustomNameVisible(true);
+            minion.setPersistenceRequired();
+            minion.addEffect(fx(MobEffects.DAMAGE_BOOST, Integer.MAX_VALUE, 1));
+            minion.addEffect(fx(MobEffects.ABSORPTION, Integer.MAX_VALUE, 4));
+            minion.addEffect(fx(MobEffects.MOVEMENT_SPEED, Integer.MAX_VALUE, 0));
+            minion.getPersistentData().putString("occka_owner", player.getUUID().toString());
+            level.addFreshEntity(minion);
+            level.sendParticles(ParticleTypes.SNOWFLAKE, minion.getX(), minion.getY() + 1, minion.getZ(), 50, 0.5, 1,
+                    0.5, 0.15);
+        }
+        player.sendSystemMessage(msg("Ice Guardians summoned!", ChatFormatting.AQUA));
+    }
+
+    public static void voidUlt(ServerPlayer player, ServerLevel level, double radius) {
+        player.addEffect(fx(MobEffects.DAMAGE_BOOST, 600, 2));
+        player.addEffect(fx(MobEffects.MOVEMENT_SPEED, 600, 3));
+        for (LivingEntity entity : getNearbyEnemies(player, radius)) {
+            entity.addEffect(fx(MobEffects.WITHER, 200, 0));
+            entity.addEffect(fx(MobEffects.WEAKNESS, 200, 1));
+            level.sendParticles(ParticleTypes.PORTAL, entity.getX(), entity.getY() + 1, entity.getZ(), 25, 0.5, 1, 0.5,
+                    0.1);
+        }
+        for (int i = 0; i < 120; i++) {
+            double a = Math.random() * Math.PI * 2, p = (Math.random() - 0.5) * Math.PI, r = Math.random() * radius;
+            level.sendParticles(ParticleTypes.PORTAL, player.getX() + r * Math.cos(a) * Math.cos(p),
+                    player.getY() + 2 + r * Math.sin(p), player.getZ() + r * Math.sin(a) * Math.cos(p), 1, 0, 0, 0,
+                    0.03);
+        }
+        level.sendParticles(ParticleTypes.REVERSE_PORTAL, player.getX(), player.getY() + 1, player.getZ(), 40, 2, 2, 2,
+                0.1);
+        player.sendSystemMessage(msg("VOID ULT!", ChatFormatting.DARK_PURPLE, ChatFormatting.BOLD));
+    }
+
+    // Light ult: totem of undying for all nearby players + heavy self debuffs
+    public static void lightUlt(ServerPlayer player, ServerLevel level) {
+        AABB box = player.getBoundingBox().inflate(12);
+        List<Player> nearbyPlayers = player.level().getEntitiesOfClass(Player.class, box, p -> true);
+
+        // Give totem effect to all nearby players (simulate with absorption + regen)
+        for (Player p : nearbyPlayers) {
+            p.addEffect(fx(MobEffects.ABSORPTION, 400, 4));
+            p.addEffect(fx(MobEffects.REGENERATION, 200, 2));
+            p.addEffect(fx(MobEffects.DAMAGE_RESISTANCE, 200, 1));
+            level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, p.getX(), p.getY() + 1, p.getZ(), 40, 0.5, 1, 0.5, 0.3);
+        }
+
+        // Heavy cost on self
+        player.addEffect(fx(MobEffects.BLINDNESS, 200, 0));
+        player.addEffect(fx(MobEffects.CONFUSION, 200, 0));
+        player.addEffect(fx(MobEffects.MOVEMENT_SLOWDOWN, 200, 3));
+        player.addEffect(fx(MobEffects.WEAKNESS, 200, 3));
+        player.addEffect(fx(MobEffects.POISON, 200, 1));
+        player.addEffect(fx(MobEffects.DIG_SLOWDOWN, 200, 3));
+
+        level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, player.getX(), player.getY() + 1, player.getZ(), 100, 1, 2,
+                1, 0.5);
+        player.sendSystemMessage(msg("LIGHT SACRIFICE! Allies protected!", ChatFormatting.YELLOW, ChatFormatting.BOLD));
+    }
+
+    // Gravity ability: vortex that pulls enemies toward a point
+    public static void gravityVortex(ServerPlayer player, ServerLevel level) {
+        Vec3 eye = player.getEyePosition();
+        Vec3 end = eye.add(player.getLookAngle().scale(30));
+        BlockHitResult hit = level
+                .clip(new ClipContext(eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
+        Vec3 center = hit.getType() == HitResult.Type.MISS ? end : Vec3.atCenterOf(hit.getBlockPos());
+
+        // Store vortex in level data - simplified: just pull immediately
+        for (LivingEntity entity : getNearbyEnemies(player, 12)) {
+            Vec3 pull = center.subtract(entity.position()).normalize().scale(1.8);
+            entity.setDeltaMovement(entity.getDeltaMovement().add(pull.x * 1.5, pull.y * 0.5, pull.z * 1.5));
+            entity.hurtMarked = true;
+        }
+
+        // Black hole particles
+        for (int i = 0; i < 80; i++) {
+            double a = Math.random() * Math.PI * 2, r = Math.random() * 8;
+            level.sendParticles(ParticleTypes.PORTAL, center.x + r * Math.cos(a), center.y + Math.random() * 3,
+                    center.z + r * Math.sin(a), 1, 0, 0, 0, 0.2);
+        }
+        for (int i = 0; i < 20; i++)
+            level.sendParticles(ParticleTypes.REVERSE_PORTAL, center.x, center.y + 1, center.z, 5, 1, 1, 1, 0.1);
+        player.sendSystemMessage(msg("Gravity Vortex!", ChatFormatting.DARK_GRAY));
+    }
+
+    // Gravity ult: reverse gravity for all in radius
+    public static void gravityUlt(ServerPlayer player, ServerLevel level) {
+        AABB box = player.getBoundingBox().inflate(50);
+        List<LivingEntity> entities = player.level().getEntitiesOfClass(
+                LivingEntity.class, box, e -> e != player);
+
+        for (LivingEntity entity : entities) {
+            // Лёгкая левитация на 3 секунды (60 тиков), уровень 0 = слабый подъём
+            entity.addEffect(fx(MobEffects.LEVITATION, 60, 0));
+            entity.setDeltaMovement(entity.getDeltaMovement().add(0, 2.0, 0));
+            entity.hurtMarked = true;
+        }
+
+        // Через 3 секунды (60 тиков) дать резкий минус Y всем в том же радиусе
+        // Реализуем через NBT-тег на самом игроке как таймер
+        player.getPersistentData().putInt("occka_gravity_ult_ticks", 60);
+        player.getPersistentData().putDouble("occka_gravity_ult_radius", 50.0);
+
+        // Частицы
+        for (int i = 0; i < 100; i++) {
+            double a = Math.random() * Math.PI * 2,
+                    p = (Math.random() - 0.5) * Math.PI,
+                    r = Math.random() * 50;
+            level.sendParticles(ParticleTypes.REVERSE_PORTAL,
+                    player.getX() + r * Math.cos(a) * Math.cos(p),
+                    player.getY() + 2 + r * Math.abs(Math.sin(p)),
+                    player.getZ() + r * Math.sin(a) * Math.cos(p),
+                    1, 0, 0, 0, 0.1);
+        }
+        player.sendSystemMessage(msg("GRAVITY INVERSION!", ChatFormatting.DARK_GRAY, ChatFormatting.BOLD));
+    }
+
+    // Echo shift: clone + invisibility
+    public static void spawnEchoClone(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
+        // Spawn armor stand with player's name as clone visual
+        net.minecraft.world.entity.decoration.ArmorStand clone = new net.minecraft.world.entity.decoration.ArmorStand(
+                EntityType.ARMOR_STAND, level);
+        clone.moveTo(player.getX(), player.getY(), player.getZ(), player.getYRot(), 0);
+        clone.setCustomName(Component.literal(player.getName().getString())
+                .withStyle(player.getCapability(ModCapabilities.PLAYER_POWER).map(d -> d.getPowerType().getColor())
+                        .orElse(ChatFormatting.WHITE)));
+        clone.setCustomNameVisible(true);
+        clone.setNoGravity(false);
+        clone.getPersistentData().putString("occka_echo_clone", player.getUUID().toString());
+        level.addFreshEntity(clone);
+
+        player.addEffect(fx(MobEffects.INVISIBILITY, 400, 0)); // 20s
+        data.setShiftCooldown(600); // 30s
+
+        level.sendParticles(ParticleTypes.PORTAL, player.getX(), player.getY() + 1, player.getZ(), 30, 0.5, 1, 0.5,
+                0.1);
+        player.sendSystemMessage(msg("Echo Clone deployed!", ChatFormatting.GREEN));
+    }
+
+    // Echo ability: swap with nearest enemy
+    public static void echoSwap(ServerPlayer player, ServerLevel level) {
+        LivingEntity target = null;
+        double minD = Double.MAX_VALUE;
+        // Prioritize players
+        AABB box = player.getBoundingBox().inflate(30);
+        for (Player p : player.level().getEntitiesOfClass(Player.class, box, p -> p != player)) {
+            double d = p.distanceTo(player);
+            if (d < minD) {
+                minD = d;
+                target = p;
+            }
+        }
+        if (target == null) {
+            for (LivingEntity e : getNearbyEnemies(player, 12)) {
+                double d = e.distanceTo(player);
+                if (d < minD) {
+                    minD = d;
+                    target = e;
+                }
+            }
+        }
+        if (target == null) {
+            player.sendSystemMessage(msg("No targets!", ChatFormatting.RED));
+            return;
+        }
+
+        Vec3 playerPos = player.position();
+        Vec3 targetPos = target.position();
+
+        // Particles at both locations
+        level.sendParticles(ParticleTypes.PORTAL, playerPos.x, playerPos.y + 1, playerPos.z, 30, 0.5, 1, 0.5, 0.15);
+        level.sendParticles(ParticleTypes.PORTAL, targetPos.x, targetPos.y + 1, targetPos.z, 30, 0.5, 1, 0.5, 0.15);
+
+        player.teleportTo(targetPos.x, targetPos.y, targetPos.z);
+        target.teleportTo(playerPos.x, playerPos.y, playerPos.z);
+        player.sendSystemMessage(msg("Position Swap!", ChatFormatting.GREEN));
+    }
+
+    // Echo ult: blind all in radius + observer mode for 8s
+    public static void echoUlt(ServerPlayer player, ServerLevel level) {
+        for (LivingEntity entity : getNearbyEnemies(player, 12)) {
+            entity.addEffect(fx(MobEffects.BLINDNESS, 100, 0));
+            level.sendParticles(ParticleTypes.PORTAL, entity.getX(), entity.getY() + 1, entity.getZ(), 20, 0.5, 1, 0.5,
+                    0.1);
+        }
+        // Spectator for 20s - handled via gamemode change temporarily
+        player.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+        // Schedule return to survival after 8s via tag
+        player.getPersistentData().putInt("occka_echo_ult_ticks", 160);
+        level.sendParticles(ParticleTypes.FLASH, player.getX(), player.getY() + 1, player.getZ(), 1, 0, 0, 0, 0);
+        level.sendParticles(ParticleTypes.PORTAL, player.getX(), player.getY() + 1, player.getZ(), 60, 3, 3, 3, 0.1);
+        player.sendSystemMessage(msg("Echo Phase: Spectator mode for 8s!", ChatFormatting.GREEN, ChatFormatting.BOLD));
+    }
+
+    // === UTILS ===
+    // Water ability: summon 2-8 random aquatic mobs nearby
+    public static void spawnAquaticMobs(ServerPlayer player, ServerLevel level) {
+        java.util.Random rng = new java.util.Random();
+        int count = 2 + rng.nextInt(7); // 2 to 8
+
+        net.minecraft.world.entity.EntityType<?>[] aquaticTypes = {
+                net.minecraft.world.entity.EntityType.COD,
+                net.minecraft.world.entity.EntityType.SALMON,
+                net.minecraft.world.entity.EntityType.TROPICAL_FISH,
+                net.minecraft.world.entity.EntityType.SQUID,
+                net.minecraft.world.entity.EntityType.GLOW_SQUID,
+                net.minecraft.world.entity.EntityType.TURTLE,
+                net.minecraft.world.entity.EntityType.DOLPHIN,
+        };
+
+        for (int i = 0; i < count; i++) {
+            net.minecraft.world.entity.EntityType<?> type = aquaticTypes[rng.nextInt(aquaticTypes.length)];
+            net.minecraft.world.entity.Entity mob = type.create(level);
+            if (mob == null)
+                continue;
+
+            double angle = (i / (double) count) * Math.PI * 2 + rng.nextDouble();
+            double r = 1.5 + rng.nextDouble() * 2.5;
+            mob.moveTo(
+                    player.getX() + r * Math.cos(angle),
+                    player.getY() + 0.5,
+                    player.getZ() + r * Math.sin(angle),
+                    rng.nextFloat() * 360, 0);
+            if (mob instanceof net.minecraft.world.entity.Mob m) {
+                m.setPersistenceRequired();
+                m.finalizeSpawn(level,
+                        level.getCurrentDifficultyAt(mob.blockPosition()),
+                        net.minecraft.world.entity.MobSpawnType.MOB_SUMMONED, null, null);
+            }
+            level.addFreshEntity(mob);
+
+            // Splash particles at spawn
+            level.sendParticles(ParticleTypes.SPLASH,
+                    mob.getX(), mob.getY() + 0.5, mob.getZ(),
+                    8, 0.3, 0.2, 0.3, 0.1);
+        }
+
+        // Water burst
+        level.sendParticles(ParticleTypes.SPLASH,
+                player.getX(), player.getY() + 1, player.getZ(),
+                40, 3, 1.5, 3, 0.15);
+        level.sendParticles(ParticleTypes.BUBBLE_POP,
+                player.getX(), player.getY() + 1, player.getZ(),
+                20, 2, 1, 2, 0.1);
+        player.sendSystemMessage(msg("Ocean Summon! (" + count + " creatures)", ChatFormatting.AQUA));
+    }
+
+    public static void levitateEnemies(ServerPlayer player, double radius, int amp, int dur) {
+        for (LivingEntity e : getNearbyEnemies(player, radius))
+            e.addEffect(fx(MobEffects.LEVITATION, dur, amp));
+    }
+
+    // Ice ult: flash-freeze - stops all enemies in radius, encases them in ice
+    public static void iceUltFreeze(ServerPlayer player, ServerLevel level) {
+        List<LivingEntity> enemies = getNearbyEnemies(player, 15);
+
+        for (LivingEntity entity : enemies) {
+            // 15 seconds of freeze
+            entity.addEffect(fx(MobEffects.MOVEMENT_SLOWDOWN, 300, 10));
+            entity.addEffect(fx(MobEffects.JUMP, 300, 128));
+            entity.addEffect(fx(MobEffects.DIG_SLOWDOWN, 300, 10));
+            entity.setDeltaMovement(0, entity.getDeltaMovement().y, 0);
+            entity.hurtMarked = true;
+
+            // Freeze burst on each enemy - NO blocks, only particles
+            level.sendParticles(ParticleTypes.SNOWFLAKE,
+                    entity.getX(), entity.getY() + 1, entity.getZ(),
+                    80, 0.8, 1.5, 0.8, 0.25);
+            level.sendParticles(new net.minecraft.core.particles.BlockParticleOption(
+                    ParticleTypes.BLOCK, Blocks.PACKED_ICE.defaultBlockState()),
+                    entity.getX(), entity.getY() + 1, entity.getZ(),
+                    50, 0.8, 0.8, 0.8, 0.35);
+            level.sendParticles(ParticleTypes.ITEM_SNOWBALL,
+                    entity.getX(), entity.getY() + 1, entity.getZ(),
+                    20, 0.4, 0.4, 0.4, 0.2);
+        }
+
+        // Self buffs for 15s
+        player.addEffect(fx(MobEffects.DAMAGE_RESISTANCE, 300, 4));
+        player.addEffect(fx(MobEffects.MOVEMENT_SPEED, 300, 2));
+
+        // Start 15s snowstorm via tag
+        player.getPersistentData().putInt("occka_ice_snowstorm_ticks", 300);
+
+        // Massive shockwave of snowflakes
+        for (int deg = 0; deg < 360; deg += 3) {
+            for (double r = 1; r <= 25; r += 2) {
+                double x = player.getX() + r * Math.cos(Math.toRadians(deg));
+                double z = player.getZ() + r * Math.sin(Math.toRadians(deg));
+                level.sendParticles(ParticleTypes.SNOWFLAKE,
+                        x, player.getY() + 0.2, z, 1, 0, 0.1, 0, 0.03);
+            }
+        }
+        level.sendParticles(ParticleTypes.FLASH,
+                player.getX(), player.getY() + 1, player.getZ(), 1, 0, 0, 0, 0);
+
+        for (Player p : level.getEntitiesOfClass(Player.class,
+                player.getBoundingBox().inflate(30), x -> true)) {
+            ((ServerPlayer) p).sendSystemMessage(
+                    Component.literal(player.getName().getString() + " unleashed a BLIZZARD!")
+                            .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
+        }
+    }
+}
