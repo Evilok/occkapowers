@@ -23,7 +23,6 @@ public class GeoOrbitHandler {
         // Храним dimension key чтобы искать свиней в правильном мире
         public String levelKey;
         public int orbitTick = 0;
-        public int launchTimer = 0;
 
         public static final double ORBIT_RADIUS = 2.5;
         public static final double ORBIT_SPEED = 0.1;
@@ -75,10 +74,10 @@ public class GeoOrbitHandler {
             return;
         }
 
-        data.launchTimer = 40; // чуть больше — дать время свиньям прогрузиться
         ORBIT_MAP.put(pid, data);
         player.sendSystemMessage(
-                Component.literal("GEO: Свиньи на орбите. Запуск пошел!").withStyle(ChatFormatting.GREEN));
+                Component.literal("GEO: Свиньи на орбите. Нажми ульту ещё раз для выстрела.")
+                        .withStyle(ChatFormatting.GREEN));
     }
 
     public static void tick(ServerLevel level) {
@@ -132,13 +131,7 @@ public class GeoOrbitHandler {
                 }
             }
 
-            if (!data.orbitingPigs.isEmpty()) {
-                data.launchTimer--;
-                if (data.launchTimer <= 0) {
-                    launchNextPig(data, player, level);
-                    data.launchTimer = 20;
-                }
-            } else {
+            if (data.orbitingPigs.isEmpty()) {
                 orbitIterator.remove();
             }
         }
@@ -176,6 +169,41 @@ public class GeoOrbitHandler {
 
         level.sendParticles(ParticleTypes.LARGE_SMOKE,
                 pig.getX(), pig.getY(), pig.getZ(), 5, 0.1, 0.1, 0.1, 0.05);
+    }
+
+    public static boolean hasOrbit(ServerPlayer player) {
+        OrbitData data = ORBIT_MAP.get(player.getUUID());
+        return data != null && !data.orbitingPigs.isEmpty();
+    }
+
+    /**
+     * Запускает одну орбитальную свинью при нажатии ульты.
+     *
+     * @return true если после запуска орбита полностью закончилась (можно ставить КД)
+     */
+    public static boolean launchFromUltPress(ServerPlayer player, ServerLevel level) {
+        OrbitData data = ORBIT_MAP.get(player.getUUID());
+        if (data == null || data.orbitingPigs.isEmpty()) {
+            player.sendSystemMessage(
+                    Component.literal("GEO: Нет свиней на орбите. Нажми ульту для призыва.")
+                            .withStyle(ChatFormatting.YELLOW));
+            return false;
+        }
+
+        launchNextPig(data, player, level);
+
+        if (data.orbitingPigs.isEmpty()) {
+            ORBIT_MAP.remove(player.getUUID());
+            player.sendSystemMessage(
+                    Component.literal("GEO: Все свиньи выпущены. Ульта ушла в КД.")
+                            .withStyle(ChatFormatting.GOLD));
+            return true;
+        }
+
+        player.sendSystemMessage(
+                Component.literal("GEO: Свинья запущена! Осталось: " + data.orbitingPigs.size())
+                        .withStyle(ChatFormatting.AQUA));
+        return false;
     }
 
     private static void tickMissiles(ServerLevel level) {
