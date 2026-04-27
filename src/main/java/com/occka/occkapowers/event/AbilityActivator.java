@@ -137,9 +137,14 @@ public class AbilityActivator {
             case LIGHTNING -> LightningAbility.activateUlt(player, level, 40);
             case LASER     -> LaserAbility.activateUlt(player, level);
             case GEO       -> {
-                GeoAbility.activateUlt(player, level);
-                // КД ставим сразу — не ждём завершения орбиты
-                data.setUltCooldown(type.getUltCooldown());
+                if (GeoOrbitHandler.hasOrbit(player)) {
+                    boolean finished = GeoOrbitHandler.launchFromUltPress(player, level);
+                    if (finished) {
+                        data.setUltCooldown(type.getUltCooldown());
+                    }
+                } else {
+                    GeoAbility.activateUlt(player, level);
+                }
                 syncToClient(player, data);
                 return; // чтобы не дублировать setUltCooldown ниже
             }
