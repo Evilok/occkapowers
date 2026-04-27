@@ -82,7 +82,7 @@ public class GeoOrbitHandler {
 
         ORBIT_MAP.put(pid, data);
         player.sendSystemMessage(
-                Component.literal("GEO: Камни на орбите. Нажми ульту ещё раз для выстрела.")
+                Component.literal("GEO: Свиньи на орбите. Нажми ульту ещё раз для выстрела.")
                         .withStyle(ChatFormatting.GREEN));
     }
 
@@ -208,6 +208,41 @@ public class GeoOrbitHandler {
 
         player.sendSystemMessage(
                 Component.literal("GEO: Камень запущен! Осталось: " + data.orbitingPigs.size())
+                        .withStyle(ChatFormatting.AQUA));
+        return false;
+    }
+
+    public static boolean hasOrbit(ServerPlayer player) {
+        OrbitData data = ORBIT_MAP.get(player.getUUID());
+        return data != null && !data.orbitingPigs.isEmpty();
+    }
+
+    /**
+     * Запускает одну орбитальную свинью при нажатии ульты.
+     *
+     * @return true если после запуска орбита полностью закончилась (можно ставить КД)
+     */
+    public static boolean launchFromUltPress(ServerPlayer player, ServerLevel level) {
+        OrbitData data = ORBIT_MAP.get(player.getUUID());
+        if (data == null || data.orbitingPigs.isEmpty()) {
+            player.sendSystemMessage(
+                    Component.literal("GEO: Нет свиней на орбите. Нажми ульту для призыва.")
+                            .withStyle(ChatFormatting.YELLOW));
+            return false;
+        }
+
+        launchNextPig(data, player, level);
+
+        if (data.orbitingPigs.isEmpty()) {
+            ORBIT_MAP.remove(player.getUUID());
+            player.sendSystemMessage(
+                    Component.literal("GEO: Все свиньи выпущены. Ульта ушла в КД.")
+                            .withStyle(ChatFormatting.GOLD));
+            return true;
+        }
+
+        player.sendSystemMessage(
+                Component.literal("GEO: Свинья запущена! Осталось: " + data.orbitingPigs.size())
                         .withStyle(ChatFormatting.AQUA));
         return false;
     }
