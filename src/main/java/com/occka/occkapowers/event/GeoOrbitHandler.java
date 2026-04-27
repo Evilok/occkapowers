@@ -57,15 +57,21 @@ public class GeoOrbitHandler {
             stone.setSilent(true);
             stone.setInvulnerable(true);
             stone.setInvisible(true);
-            stone.setSmall(true);
+            stone.getPersistentData().putBoolean("Small", true);
             stone.addTag("geo_orbiting");
             stone.getPersistentData().putString("owner_uuid", pid.toString());
             stone.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.STONE));
-            stone.setDropChance(EquipmentSlot.HEAD, 0.0f);
+
+            // small arm_stand entity
+            var tag = stone.saveWithoutId(new net.minecraft.nbt.CompoundTag());
+            tag.putBoolean("Small", true);
+            stone.load(tag);
+            
+            //stone.setDropChance(EquipmentSlot.HEAD, 0.0f);
 
             // Спавним рядом с игроком сразу, а не в 0,0,0
             double tx = player.getX() + OrbitData.ORBIT_RADIUS * Math.cos(angle);
-            double ty = player.getY() + 1.2;
+            double ty = player.getY() + 0.75;
             double tz = player.getZ() + OrbitData.ORBIT_RADIUS * Math.sin(angle);
             stone.moveTo(tx, ty, tz, 0f, 0f);
 
@@ -76,13 +82,13 @@ public class GeoOrbitHandler {
 
         if (data.orbitingPigs.isEmpty()) {
             player.sendSystemMessage(
-                Component.literal("GEO: Ошибка спавна свиней!").withStyle(ChatFormatting.RED));
+                Component.literal("GEO: Ошибка призыва камней!").withStyle(ChatFormatting.RED));
             return;
         }
 
         ORBIT_MAP.put(pid, data);
         player.sendSystemMessage(
-                Component.literal("GEO: Свиньи на орбите. Нажми ульту ещё раз для выстрела.")
+                Component.literal("GEO: Нажми ульту ещё раз для выстрела.")
                         .withStyle(ChatFormatting.GREEN));
     }
 
@@ -126,7 +132,7 @@ public class GeoOrbitHandler {
                     data.angles.set(i, angle);
 
                     double tx = player.getX() + OrbitData.ORBIT_RADIUS * Math.cos(angle);
-                    double ty = player.getY() + 1.2;
+                    double ty = player.getY() + 0.75;
                     double tz = player.getZ() + OrbitData.ORBIT_RADIUS * Math.sin(angle);
                     stone.teleportTo(tx, ty, tz);
                 } else if (ent == null) {
@@ -191,7 +197,7 @@ public class GeoOrbitHandler {
         OrbitData data = ORBIT_MAP.get(player.getUUID());
         if (data == null || data.orbitingPigs.isEmpty()) {
             player.sendSystemMessage(
-                    Component.literal("GEO: Нет камней на орбите. Нажми ульту для призыва.")
+                    Component.literal("GEO: Нет камней. Нажми ульту для призыва.")
                             .withStyle(ChatFormatting.YELLOW));
             return false;
         }
@@ -208,41 +214,6 @@ public class GeoOrbitHandler {
 
         player.sendSystemMessage(
                 Component.literal("GEO: Камень запущен! Осталось: " + data.orbitingPigs.size())
-                        .withStyle(ChatFormatting.AQUA));
-        return false;
-    }
-
-    public static boolean hasOrbit(ServerPlayer player) {
-        OrbitData data = ORBIT_MAP.get(player.getUUID());
-        return data != null && !data.orbitingPigs.isEmpty();
-    }
-
-    /**
-     * Запускает одну орбитальную свинью при нажатии ульты.
-     *
-     * @return true если после запуска орбита полностью закончилась (можно ставить КД)
-     */
-    public static boolean launchFromUltPress(ServerPlayer player, ServerLevel level) {
-        OrbitData data = ORBIT_MAP.get(player.getUUID());
-        if (data == null || data.orbitingPigs.isEmpty()) {
-            player.sendSystemMessage(
-                    Component.literal("GEO: Нет свиней на орбите. Нажми ульту для призыва.")
-                            .withStyle(ChatFormatting.YELLOW));
-            return false;
-        }
-
-        launchNextPig(data, player, level);
-
-        if (data.orbitingPigs.isEmpty()) {
-            ORBIT_MAP.remove(player.getUUID());
-            player.sendSystemMessage(
-                    Component.literal("GEO: Все свиньи выпущены. Ульта ушла в КД.")
-                            .withStyle(ChatFormatting.GOLD));
-            return true;
-        }
-
-        player.sendSystemMessage(
-                Component.literal("GEO: Свинья запущена! Осталось: " + data.orbitingPigs.size())
                         .withStyle(ChatFormatting.AQUA));
         return false;
     }
