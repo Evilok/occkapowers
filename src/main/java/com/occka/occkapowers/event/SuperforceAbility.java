@@ -22,23 +22,6 @@ public class SuperforceAbility {
         return new MobEffectInstance(eff, dur, amp, false, false);
     }
 
-    // ===== PASSIVE: creative-style flight =====
-    // Called every tick while player has SUPERFORCE
-    public static void applyPassive(ServerPlayer player) {
-        if (player.isCreative() || player.isSpectator())
-            return;
-        // Grant creative-style flight
-        if (!player.getAbilities().mayfly) {
-            player.getAbilities().mayfly = true;
-            player.getAbilities().setFlyingSpeed(0.05f);
-            player.onUpdateAbilities();
-        }
-        // If flying, keep fall distance reset so landing doesn't hurt
-        if (player.getAbilities().flying) {
-            player.resetFallDistance();
-        }
-    }
-
     public static void applyElytraFlight(ServerPlayer player, ServerLevel level) {
 
         // Не включаем принудительно — только если игрок УЖЕ летит на элитре

@@ -80,13 +80,13 @@ public class AbilityEventHandler {
                 tickClones(player, level);
             }
 
-            // Пассивный элитра-полёт для FIRE и SUPERFORCE
-            if (type == PowerType.SUPERFORCE || type == PowerType.FIRE) {
-                SuperforceAbility.applyPassive(player); // выдаёт mayfly
+            // Пассивный элитра-полёт: FIRE (в огненной форме) и SUPERFORCE
+            if (type == PowerType.FIRE) {
+                FireAbility.tickFireFormFlight(player, level, data);
+            }
+            if (type == PowerType.SUPERFORCE) {
                 SuperforceAbility.applyElytraFlight(player, level); // элитра-движение
-                if (type == PowerType.SUPERFORCE) {
-                    SuperforceAbility.tickUlt(player, level); // ульт только у superforce
-                }
+                SuperforceAbility.tickUlt(player, level); // ульт только у superforce
             }
 
             // Добавить после блока с SUPERFORCE:

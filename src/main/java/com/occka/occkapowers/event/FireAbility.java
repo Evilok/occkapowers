@@ -1,6 +1,5 @@
 package com.occka.occkapowers.event;
 
-import com.occka.occkapowers.ability.PlayerPowerData;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -14,7 +13,6 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.ForgeMod;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import com.occka.occkapowers.ability.PlayerPowerData;
-import com.occka.occkapowers.ability.PowerType;
 
 public final class FireAbility {
     
@@ -52,6 +50,36 @@ public final class FireAbility {
                 level.sendParticles(ParticleTypes.LARGE_SMOKE,
                         start.x + dir.x, start.y + dir.y, start.z + dir.z,
                         1, 0, 0, 0, 0);
+    }
+
+    /**
+     * Огненная форма: при падении после прыжка запускаем "элитра-полёт"
+     * с постоянной скоростью по направлению взгляда.
+     */
+    public static void tickFireFormFlight(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
+        if (data.isFireUltActive()) return;
+        if (player.isCreative() || player.isSpectator()) return;
+        if (player.onGround() || player.isInWater()) return;
+
+        // "Форма активна": класс FIRE активен, и игрок реально начал падать.
+        if (!player.isFallFlying() && player.getDeltaMovement().y < -0.08) {
+            player.startFallFlying();
+        }
+
+        if (!player.isFallFlying()) return;
+
+        Vec3 look = player.getLookAngle().normalize();
+        double speed = 1.15;
+        player.setDeltaMovement(look.x * speed, look.y * speed, look.z * speed);
+        player.hurtMarked = true;
+        player.resetFallDistance();
+        player.fallDistance = 0;
+
+        if (player.tickCount % 3 == 0) {
+            level.sendParticles(ParticleTypes.FLAME,
+                    player.getX(), player.getY(), player.getZ(),
+                    2, 0.2, 0.1, 0.2, 0.03);
+        }
     }
 
     public static void activateAbility(ServerPlayer player, ServerLevel level) {
