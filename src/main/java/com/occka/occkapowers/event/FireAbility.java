@@ -1,6 +1,5 @@
 package com.occka.occkapowers.event;
 
-import com.occka.occkapowers.ability.PlayerPowerData;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -10,139 +9,78 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.LargeFireball;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.ForgeMod;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import com.occka.occkapowers.ability.PlayerPowerData;
 
 public final class FireAbility {
-
+    
     private FireAbility() {}
 
-    // ===== SHIFT: toggle огненной формы =====
-
-    /**
-     * Первое нажатие — включает форму.
-     * Второе нажатие — выключает.
-     */
     public static void activateShift(ServerPlayer player, ServerLevel level) {
-        boolean active = player.getPersistentData().getBoolean("occka_fire_form_active");
-        if (!active) {
-            enableFireForm(player, level);
-        } else {
-            disableFireForm(player, level);
-        }
-    }
 
-    private static void enableFireForm(ServerPlayer player, ServerLevel level) {
-        player.getPersistentData().putBoolean("occka_fire_form_active", true);
+        Vec3 start = player.getEyePosition();
+                Vec3 dir = player.getLookAngle().normalize();
+                double length = 10.0;
 
-        // Включаем майфлай (супергеройский полёт)
-        if (!player.isCreative() && !player.isSpectator()) {
-            player.getAbilities().mayfly = true;
-            player.getAbilities().setFlyingSpeed(0.05f);
-            player.onUpdateAbilities();
-        }
-
-        // Визуал включения: кольцо огня вокруг игрока
-        for (int i = 0; i < 20; i++) {
-            double angle = (i / 20.0) * Math.PI * 2;
-            level.sendParticles(ParticleTypes.FLAME,
-                    player.getX() + 1.2 * Math.cos(angle),
-                    player.getY() + 1.0,
-                    player.getZ() + 1.2 * Math.sin(angle),
-                    1, 0.05, 0.1, 0.05, 0.02);
-        }
-        level.sendParticles(ParticleTypes.LAVA,
-                player.getX(), player.getY() + 1, player.getZ(),
-                10, 0.5, 0.5, 0.5, 0.1);
-        level.sendParticles(ParticleTypes.LARGE_SMOKE,
-                player.getX(), player.getY() + 0.5, player.getZ(),
-                5, 0.3, 0.3, 0.3, 0.02);
-
-        player.sendSystemMessage(AbilityCommon.msg(
-                "Fire Form: ON — Press [R] again to deactivate",
-                ChatFormatting.RED, ChatFormatting.BOLD));
-    }
-
-    private static void disableFireForm(ServerPlayer player, ServerLevel level) {
-        player.getPersistentData().putBoolean("occka_fire_form_active", false);
-
-        // Снимаем полёт
-        if (!player.isCreative() && !player.isSpectator()) {
-            player.getAbilities().mayfly = false;
-            player.getAbilities().flying = false;
-            player.onUpdateAbilities();
-        }
-
-        // Гасим визуальный огонь
-        player.clearFire();
-
-        level.sendParticles(ParticleTypes.LARGE_SMOKE,
-                player.getX(), player.getY() + 1, player.getZ(),
-                15, 0.5, 0.5, 0.5, 0.05);
-
-        player.sendSystemMessage(AbilityCommon.msg(
-                "Fire Form: OFF", ChatFormatting.GRAY));
-    }
-
-    /**
-     * Вызывается каждый тик из AbilityEventHandler пока игрок имеет класс FIRE.
-     * Поддерживает визуальный огонь и плавит лёд/снег вокруг.
-     */
-    public static void tickFireForm(ServerPlayer player, ServerLevel level) {
-        if (!player.getPersistentData().getBoolean("occka_fire_form_active")) return;
-
-        // Визуальный огонь на игроке (FIRE_RESISTANCE из пассивки — урона нет)
-        player.setRemainingFireTicks(40);
-
-        // Плавим лёд и снег каждые 10 тиков (0.5 сек) — не спамим каждый тик
-        if (player.tickCount % 10 != 0) return;
-
-        BlockPos center = player.blockPosition();
-        int radius = 5;
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dy = -2; dy <= 4; dy++) {
-                for (int dz = -radius; dz <= radius; dz++) {
-                    // Сфера, не куб
-                    if (dx * dx + dy * dy + dz * dz > radius * radius) continue;
-
-                    BlockPos pos = center.offset(dx, dy, dz);
-                    BlockState state = level.getBlockState(pos);
-
-                    // Лёд всех видов → вода
-                    if (state.is(Blocks.ICE) || state.is(Blocks.BLUE_ICE)
-                            || state.is(Blocks.PACKED_ICE)) {
-                        level.setBlock(pos, Blocks.WATER.defaultBlockState(), 3);
-                        level.sendParticles(ParticleTypes.SMOKE,
-                                pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5,
-                                2, 0.2, 0.1, 0.2, 0.02);
-                    }
-                    // Снег → воздух
-                    else if (state.is(Blocks.SNOW) || state.is(Blocks.SNOW_BLOCK)
-                            || state.is(Blocks.POWDER_SNOW)) {
-                        level.removeBlock(pos, false);
+                for (LivingEntity entity : AbilityCommon.getNearbyEnemies(player, 12)) {
+                    Vec3 toE = entity.position().subtract(start);
+                    double dot = toE.dot(dir);
+                    if (dot > 0 && dot < length) {
+                        Vec3 proj = start.add(dir.scale(dot));
+                        if (proj.distanceTo(entity.position()) < 2.0) {
+                            entity.hurt(player.damageSources().onFire(), 6); // меньше чем лазер (18)
+                            entity.setSecondsOnFire(4);
+                            level.sendParticles(ParticleTypes.FLAME,
+                                    entity.getX(), entity.getY() + 1, entity.getZ(),
+                                    15, 0.3, 0.5, 0.3, 0.08);
+                        }
                     }
                 }
-            }
-        }
+                // Визуал луча — огненные частицы по линии
+                for (double d = 0.3; d < length; d += 0.3) {
+                    Vec3 p = start.add(dir.scale(d));
+                    level.sendParticles(ParticleTypes.FLAME, p.x, p.y, p.z,
+                            1, 0.02, 0.02, 0.02, 0.01);
+                    if (d % 1.5 < 0.3)
+                        level.sendParticles(ParticleTypes.LAVA, p.x, p.y, p.z,
+                                1, 0.01, 0.01, 0.01, 0);
+                }
+                level.sendParticles(ParticleTypes.LARGE_SMOKE,
+                        start.x + dir.x, start.y + dir.y, start.z + dir.z,
+                        1, 0, 0, 0, 0);
     }
 
     /**
-     * Сброс формы при смерти/смене класса/выходе из игры.
+     * Огненная форма: при падении после прыжка запускаем "элитра-полёт"
+     * с постоянной скоростью по направлению взгляда.
      */
-    public static void clearFireForm(ServerPlayer player) {
-        if (!player.getPersistentData().getBoolean("occka_fire_form_active")) return;
-        player.getPersistentData().putBoolean("occka_fire_form_active", false);
-        if (!player.isCreative() && !player.isSpectator()) {
-            player.getAbilities().mayfly = false;
-            player.getAbilities().flying = false;
-            player.onUpdateAbilities();
-        }
-        player.clearFire();
-    }
+    public static void tickFireFormFlight(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
+        if (data.isFireUltActive()) return;
+        if (player.isCreative() || player.isSpectator()) return;
+        if (player.onGround() || player.isInWater()) return;
 
-    // ===== ABILITY: Firestorm =====
+        // "Форма активна": класс FIRE активен, и игрок реально начал падать.
+        if (!player.isFallFlying() && player.getDeltaMovement().y < -0.08) {
+            player.startFallFlying();
+        }
+
+        if (!player.isFallFlying()) return;
+
+        Vec3 look = player.getLookAngle().normalize();
+        double speed = 1.15;
+        player.setDeltaMovement(look.x * speed, look.y * speed, look.z * speed);
+        player.hurtMarked = true;
+        player.resetFallDistance();
+        player.fallDistance = 0;
+
+        if (player.tickCount % 3 == 0) {
+            level.sendParticles(ParticleTypes.FLAME,
+                    player.getX(), player.getY(), player.getZ(),
+                    2, 0.2, 0.1, 0.2, 0.03);
+        }
+    }
 
     public static void activateAbility(ServerPlayer player, ServerLevel level) {
         Vec3 playerPos = player.position();
@@ -154,28 +92,20 @@ public final class FireAbility {
             entity.hurtMarked = true;
             entity.setSecondsOnFire(8);
             entity.hurt(player.damageSources().onFire(), 4);
-            level.sendParticles(ParticleTypes.FLAME,
-                    entity.getX(), entity.getY() + 1, entity.getZ(),
-                    12, 0.3, 0.5, 0.3, 0.08);
+            level.sendParticles(ParticleTypes.FLAME, entity.getX(), entity.getY() + 1, entity.getZ(), 12, 0.3, 0.5, 0.3, 0.08);
         }
 
         for (int deg = 0; deg < 360; deg += 6) {
             for (double r = 0.5; r <= 10; r += 1.5) {
                 double x = player.getX() + r * Math.cos(Math.toRadians(deg));
                 double z = player.getZ() + r * Math.sin(Math.toRadians(deg));
-                level.sendParticles(ParticleTypes.FLAME,
-                        x, player.getY() + 0.3, z, 1, 0, 0.1, 0, 0.04);
+                level.sendParticles(ParticleTypes.FLAME, x, player.getY() + 0.3, z, 1, 0, 0.1, 0, 0.04);
             }
         }
-        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
-                player.getX(), player.getY(), player.getZ(), 2, 0.5, 0, 0.5, 0.05);
-        level.sendParticles(ParticleTypes.LAVA,
-                player.getX(), player.getY() + 0.5, player.getZ(),
-                20, 1.5, 0.5, 1.5, 0.2);
+        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, player.getX(), player.getY(), player.getZ(), 2, 0.5, 0, 0.5, 0.05);
+        level.sendParticles(ParticleTypes.LAVA, player.getX(), player.getY() + 0.5, player.getZ(), 20, 1.5, 0.5, 1.5, 0.2);
         player.sendSystemMessage(AbilityCommon.msg("Firestorm!", ChatFormatting.RED));
     }
-
-    // ===== ULT: Fire Ult (без изменений) =====
 
     public static void createFireRing(ServerPlayer player, ServerLevel level, int radius) {
         double cx = player.getX(), cy = player.getY(), cz = player.getZ();
@@ -207,12 +137,8 @@ public final class FireAbility {
         data.setFireUltTicks(300);
         data.setFireUltFireballCooldown(0);
         for (int i = 0; i < 30; i++)
-            level.sendParticles(ParticleTypes.FLAME,
-                    player.getX(), player.getY() - i * 0.5, player.getZ(),
-                    5, 1, 0.2, 1, 0.05);
-        player.sendSystemMessage(AbilityCommon.msg(
-                "FIRE ULT! Shoot fireballs with LMB for 15s!",
-                ChatFormatting.RED, ChatFormatting.BOLD));
+            level.sendParticles(ParticleTypes.FLAME, player.getX(), player.getY() - i * 0.5, player.getZ(), 5, 1, 0.2, 1, 0.05);
+        player.sendSystemMessage(AbilityCommon.msg("FIRE ULT! Shoot fireballs with LMB for 15s!", ChatFormatting.RED, ChatFormatting.BOLD));
     }
 
     public static void ultShoot(ServerPlayer player, PlayerPowerData data) {
@@ -225,14 +151,11 @@ public final class FireAbility {
         fb.setDeltaMovement(dir.scale(2.5));
         fb.addTag("ult_fireball_" + player.getUUID().toString());
         level.addFreshEntity(fb);
-        level.sendParticles(ParticleTypes.LAVA,
-                player.getX(), player.getY(), player.getZ(),
-                8, 0.3, 0.3, 0.3, 0.1);
+        level.sendParticles(ParticleTypes.LAVA, player.getX(), player.getY(), player.getZ(), 8, 0.3, 0.3, 0.3, 0.1);
     }
 
     public static void endUlt(ServerPlayer player, PlayerPowerData data) {
-        player.teleportTo(
-                data.getFireUltOriginX(), data.getFireUltOriginY(), data.getFireUltOriginZ());
+        player.teleportTo(data.getFireUltOriginX(), data.getFireUltOriginY(), data.getFireUltOriginZ());
         AttributeInstance gravity = player.getAttribute(ForgeMod.ENTITY_GRAVITY.get());
         if (gravity != null) {
             gravity.setBaseValue(data.getFireUltOldGravity());
@@ -242,9 +165,7 @@ public final class FireAbility {
             level.getAllEntities().forEach(entity -> {
                 if (entity.getTags().contains(tag)) entity.discard();
             });
-            level.sendParticles(ParticleTypes.LARGE_SMOKE,
-                    player.getX(), player.getY() + 1, player.getZ(),
-                    20, 1, 1, 1, 0.05);
+            level.sendParticles(ParticleTypes.LARGE_SMOKE, player.getX(), player.getY() + 1, player.getZ(), 20, 1, 1, 1, 0.05);
         }
     }
 }
