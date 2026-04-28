@@ -20,15 +20,34 @@ public final class LightningAbility {
 
     public static void activateShift(ServerPlayer player, ServerLevel level) {
 
-        // Speed burst + sparks
-        player.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SPEED, 250, 6));
+        // Storm glide (лёгкий полёт на "грозовой тучке")
+        player.addEffect(AbilityCommon.fx(MobEffects.SLOW_FALLING, 40, 0));
+        player.addEffect(AbilityCommon.fx(MobEffects.JUMP, 40, 1));
+
+        Vec3 vel = player.getDeltaMovement();
+
+        // лёгкое удержание в воздухе + скольжение вперёд
+        Vec3 look = player.getLookAngle();
+        Vec3 newVel = new Vec3(
+                look.x * 0.6,
+                Math.max(vel.y, 0.15),
+                look.z * 0.6);
+
+        player.setDeltaMovement(newVel);
+        player.hurtMarked = true;
         for (int i = 0; i < 20; i++) {
             level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
-                    player.getX() + (Math.random() - 0.5) * 1.5, player.getY() + Math.random() * 2,
-                    player.getZ() + (Math.random() - 0.5) * 1.5, 1, 0, 0, 0, 0.3);
+                    player.getX() + (Math.random() - 0.5) * 1.2,
+                    player.getY() + 0.2 + Math.random() * 0.8,
+                    player.getZ() + (Math.random() - 0.5) * 1.2,
+                    1, 0, 0, 0, 0.2);
         }
-        level.sendParticles(ParticleTypes.CRIT,
-                player.getX(), player.getY() + 1, player.getZ(), 5, 0.3, 0.5, 0.3, 0.2);
+
+        for (int i = 0; i < 6; i++) {
+            level.sendParticles(ParticleTypes.CLOUD,
+                    player.getX(), player.getY() - 0.2, player.getZ(),
+                    1, 0.3, 0.1, 0.3, 0.02);
+        }
     }
 
     public static void activateAbility(ServerPlayer player, ServerLevel level) {

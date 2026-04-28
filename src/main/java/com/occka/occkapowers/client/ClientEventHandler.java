@@ -51,6 +51,7 @@ class ClientTickHandler {
         // --- Shift ability ---
         if (KeyBindings.KEY_SHIFT_ABILITY.isDown()) {
             shiftHeldTicks++;
+            //int shiftPacketRate = ClientPowerData.powerType == PowerType.FLASH ? 2 : 20;
             if (shiftHeldTicks == 1 || shiftHeldTicks % 20 == 0) {
                 NetworkHandler.CHANNEL.sendToServer(new PacketShiftHeld());
             }

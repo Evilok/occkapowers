@@ -60,7 +60,7 @@ public class AbilityActivator {
             case GRAVITY   -> GravityAbility.activateShift(player, level);
             case ECHO      -> EchoAbility.activateShift(player, level, data);
             case CHAOS     -> ChaosAbility.activateShift(player, level);
-            // SUPERFORCE Shift = Super Punch (без изменений)
+            case FLASH     -> FlashAbility.activateShift(player, level);
             case SUPERFORCE -> SuperforceAbility.activateShift(player, level);
             case ADEPT     -> AdeptAbility.activateShift(player, level);
             default -> {}
@@ -101,7 +101,7 @@ public class AbilityActivator {
             case GRAVITY   -> GravityAbility.activateAbility(player, level);
             case ECHO      -> EchoAbility.activateAbility(player, level);
             case CHAOS     -> ChaosAbility.activateAbility(player, level);
-            // SUPERFORCE Ability = взлёт + elytra-полёт (бывший ульт)
+            case FLASH     -> FlashAbility.activateAbility(player, level);
             case SUPERFORCE -> SuperforceAbility.activateAbility(player, level);
             case ADEPT     -> AdeptAbility.activateAbility(player, level);
             default -> {}
@@ -160,7 +160,7 @@ public class AbilityActivator {
             case GRAVITY   -> GravityAbility.activateUlt(player, level);
             case ECHO      -> EchoAbility.activateUlt(player, level);
             case CHAOS     -> ChaosAbility.activateUlt(player, level);
-            // SUPERFORCE Ult = метеор (с земли → прыжок+пикирование, с воздуха → сразу падает)
+            case FLASH     -> FlashAbility.activateUlt(player, level);
             case SUPERFORCE -> SuperforceAbility.activateUlt(player, level);
             case ADEPT     -> AdeptAbility.activateUlt(player, level);
             default -> {}

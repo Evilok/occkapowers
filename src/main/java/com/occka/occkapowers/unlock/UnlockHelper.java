@@ -23,6 +23,7 @@ public class UnlockHelper {
             case ECHO -> consume(player, Items.LEATHER, 10);
             case SUPERFORCE -> consume(player, Items.IRON_BLOCK, 4);
             case CHAOS -> consume(player, Items.NETHER_STAR, 1);
+            case FLASH -> consume(player, Items.RABBIT_FOOT, 1);
             default -> false;
         };
     }
@@ -43,6 +44,7 @@ public class UnlockHelper {
             case ECHO -> consumePotion(player);
             case CHAOS -> consume(player, Items.DRAGON_EGG, 1);
             case SUPERFORCE -> consume(player, Items.BEACON, 1);
+            case FLASH -> consumeSpeedPotion(player);
             default -> false;
         };
     }
@@ -75,6 +77,20 @@ public class UnlockHelper {
             if (s.getItem() == Items.POTION) {
                 var tag = s.getTag();
                 if (tag != null && tag.getString("Potion").contains("night_vision")) {
+                    s.shrink(1);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean consumeSpeedPotion(Player player) {
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack s = player.getInventory().getItem(i);
+            if (s.getItem() == Items.POTION) {
+                var tag = s.getTag();
+                if (tag != null && tag.getString("Potion").contains("swiftness")) {
                     s.shrink(1);
                     return true;
                 }
