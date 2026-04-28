@@ -4,7 +4,6 @@ import com.occka.occkapowers.OcckaPowers;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
-//import com.occka.occkapowers.network.KillPlayerPacket;
 
 public class NetworkHandler {
         private static final String PROTOCOL_VERSION = "2";
@@ -25,8 +24,8 @@ public class NetworkHandler {
                 CHANNEL.registerMessage(id++, PacketFireUltShoot.class, PacketFireUltShoot::encode,
                                 PacketFireUltShoot::decode,
                                 PacketFireUltShoot::handle);
-                // CHANNEL.registerMessage(id++, KillPlayerPacket.class,
-                // KillPlayerPacket::encode, KillPlayerPacket::decode,
-                // KillPlayerPacket::handle);
+                // Laser ult channel: sent every tick while [G] held, and once on release
+                CHANNEL.registerMessage(id++, PacketLaserUltChannel.class, PacketLaserUltChannel::encode,
+                                PacketLaserUltChannel::decode, PacketLaserUltChannel::handle);
         }
 }
