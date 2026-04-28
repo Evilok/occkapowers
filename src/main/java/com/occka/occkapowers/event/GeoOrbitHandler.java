@@ -11,7 +11,6 @@ import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.ChatFormatting;
-
 import java.util.*;
 
 public class GeoOrbitHandler {
@@ -46,6 +45,7 @@ public class GeoOrbitHandler {
 
             pig.setNoAi(true);
             pig.setNoGravity(true);
+            pig.setInvisible(true);
             pig.setSilent(true);
             pig.setInvulnerable(true);
             pig.addTag("geo_orbiting");
@@ -90,6 +90,7 @@ public class GeoOrbitHandler {
             for (int i = 0; i < data.orbitingPigs.size(); i++) {
                 Entity ent = level.getEntity(data.orbitingPigs.get(i));
                 if (ent instanceof Pig pig) {
+                    pig.setInvisible(true);
                     if (pig.getTags().contains("geo_missile"))
                         continue;
 
@@ -100,6 +101,7 @@ public class GeoOrbitHandler {
                     double ty = player.getY() + 1.2;
                     double tz = player.getZ() + OrbitData.ORBIT_RADIUS * Math.sin(angle);
                     pig.teleportTo(tx, ty, tz);
+
                 }
             }
 
@@ -142,7 +144,6 @@ public class GeoOrbitHandler {
             pig.getPersistentData().putDouble("vx", look.x * speed);
             pig.getPersistentData().putDouble("vy", look.y * speed);
             pig.getPersistentData().putDouble("vz", look.z * speed);
-
             // Точка старта для контроля дистанции (15 блоков)
             pig.getPersistentData().putDouble("startX", pig.getX());
             pig.getPersistentData().putDouble("startY", pig.getY());
@@ -244,7 +245,6 @@ public class GeoOrbitHandler {
             target.setDeltaMovement(kb.x, 0.5, kb.z);
             target.hurtMarked = true;
         }
-
         pig.discard();
     }
 

@@ -109,6 +109,8 @@ public class AbilityEventHandler {
      */
     @SubscribeEvent
     public static void onLevelTick(TickEvent.LevelTickEvent event) {
+
+        
         // Нам нужен только конец тика и только серверная сторона
         if (event.phase == TickEvent.Phase.END && event.level instanceof ServerLevel level) {
             GeoOrbitHandler.tick(level);
