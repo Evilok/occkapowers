@@ -49,17 +49,8 @@ public class GeoOrbitHandler {
         for (int i = 0; i < 3; i++) {
             double angle = (i / 3.0) * Math.PI * 2;
 
-<<<<<<< HEAD
-            pig.setNoAi(true);
-            pig.setNoGravity(true);
-            pig.setInvisible(true);
-            pig.setSilent(true);
-            pig.setInvulnerable(true);
-            pig.addTag("geo_orbiting");
-=======
             ArmorStand stone = EntityType.ARMOR_STAND.create(level);
             if (stone == null) continue;
->>>>>>> evilok
 
             stone.setNoGravity(true);
             stone.setSilent(true);
@@ -133,15 +124,8 @@ public class GeoOrbitHandler {
             // Двигаем орбитальных свиней
             for (int i = 0; i < data.orbitingPigs.size(); i++) {
                 Entity ent = level.getEntity(data.orbitingPigs.get(i));
-<<<<<<< HEAD
-                if (ent instanceof Pig pig) {
-                    pig.setInvisible(true);
-                    if (pig.getTags().contains("geo_missile"))
-                        continue;
-=======
                 if (ent instanceof ArmorStand stone) {
                     if (stone.getTags().contains("geo_missile")) continue;
->>>>>>> evilok
 
                     double angle = data.angles.get(i) + OrbitData.ORBIT_SPEED;
                     data.angles.set(i, angle);
@@ -149,17 +133,12 @@ public class GeoOrbitHandler {
                     double tx = player.getX() + OrbitData.ORBIT_RADIUS * Math.cos(angle);
                     double ty = player.getY() + 0.75;
                     double tz = player.getZ() + OrbitData.ORBIT_RADIUS * Math.sin(angle);
-<<<<<<< HEAD
-                    pig.teleportTo(tx, ty, tz);
-
-=======
                     stone.teleportTo(tx, ty, tz);
                 } else if (ent == null) {
                     // Свинья исчезла (убита игроком и т.п.) — убираем из списка
                     data.orbitingPigs.remove(i);
                     data.angles.remove(i);
                     i--;
->>>>>>> evilok
                 }
             }
 
@@ -176,37 +155,9 @@ public class GeoOrbitHandler {
         data.angles.remove(0);
 
         Entity ent = level.getEntity(pigUUID);
-<<<<<<< HEAD
-        if (ent instanceof Pig pig) {
-            System.out.println("DEBUG: Свинья " + pigUUID + " ОТОРВАЛАСЬ ОТ ОРБИТЫ!");
-
-            // Чистим старые теги, ставим новые
-            pig.getTags().remove("geo_orbiting");
-            pig.addTag("geo_missile");
-
-            pig.setInvulnerable(false);
-            pig.setNoAi(true); // Еще раз на всякий случай
-
-            // Расчет вектора строго в момент клика
-            Vec3 look = player.getLookAngle().normalize();
-            double speed = 1.2; // Скорость за тик
-
-            pig.getPersistentData().putDouble("vx", look.x * speed);
-            pig.getPersistentData().putDouble("vy", look.y * speed);
-            pig.getPersistentData().putDouble("vz", look.z * speed);
-            // Точка старта для контроля дистанции (15 блоков)
-            pig.getPersistentData().putDouble("startX", pig.getX());
-            pig.getPersistentData().putDouble("startY", pig.getY());
-            pig.getPersistentData().putDouble("startZ", pig.getZ());
-
-            ACTIVE_MISSILES.add(pigUUID);
-
-            level.sendParticles(ParticleTypes.LARGE_SMOKE, pig.getX(), pig.getY(), pig.getZ(), 5, 0.1, 0.1, 0.1, 0.05);
-=======
         if (!(ent instanceof ArmorStand stone)) {
             // Свинья не нашлась — пробуем следующую на следующем тике
             return;
->>>>>>> evilok
         }
 
         stone.getTags().remove("geo_orbiting");
@@ -356,12 +307,8 @@ public class GeoOrbitHandler {
             target.setDeltaMovement(kb.x, 0.5, kb.z);
             target.hurtMarked = true;
         }
-<<<<<<< HEAD
-        pig.discard();
-=======
 
         stone.discard();
->>>>>>> evilok
     }
 
     public static void clearPlayer(UUID playerUUID, ServerLevel level) {
