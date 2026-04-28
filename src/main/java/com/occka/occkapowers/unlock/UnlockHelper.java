@@ -21,10 +21,11 @@ public class UnlockHelper {
             case LIGHT -> consume(player, Items.TORCH, 16);
             case GRAVITY -> consume(player, Items.GRAVEL, 12);
             case ECHO -> consume(player, Items.LEATHER, 10);
-            case SUPERFORCE -> consume(player, Items.IRON_BLOCK, 4);
+            case SUPERFORCE -> consume(player, Items.IRON_BLOCK, 10);
             case CHAOS -> consume(player, Items.NETHER_STAR, 1);
             case FLASH -> consume(player, Items.RABBIT_FOOT, 1);
             case SPIDER -> consume(player, Items.STRING, 32);
+            case FLOWER -> consume(player, Items.BONE_MEAL, 16);
             default -> false;
         };
     }
@@ -47,6 +48,7 @@ public class UnlockHelper {
             case SUPERFORCE -> consume(player, Items.BEACON, 1);
             case FLASH -> consumeSpeedPotion(player);
             case SPIDER -> consume(player, Items.COBWEB, 25);
+            case FLOWER -> consume(player, Items.WITHER_ROSE, 1);
             default -> false;
         };
     }

@@ -19,6 +19,7 @@ public enum PowerType {
     SUPERFORCE("superforce", ChatFormatting.GOLD),
     ADEPT("adept", ChatFormatting.DARK_GREEN),
     FLASH("flash", ChatFormatting.LIGHT_PURPLE),
+    FLOWER("flower", ChatFormatting.GREEN),
     SPIDER("spider", ChatFormatting.WHITE);
 
     private final String id;
@@ -58,6 +59,7 @@ public enum PowerType {
             case FIRE -> 40;
             case AIR -> 100;
             case WATER -> 280;
+            case FLOWER -> 800;
             case ICE -> 260;
             case LIGHTNING -> 200;
             case LASER -> 240;
@@ -94,6 +96,7 @@ public enum PowerType {
             case LIGHT -> "16x Torch";
             case GRAVITY -> "12x Gravel";
             case ECHO -> "10x Leather";
+            case FLOWER -> "16x Bone Meal";
             case SUPERFORCE -> "10x Iron Block";
             case CHAOS -> "1x Nether Star";
             case FLASH -> "1x Rabbit Foot";
@@ -118,6 +121,7 @@ public enum PowerType {
             case ECHO -> "1x Night Vision Potion";
             case SUPERFORCE -> "1x Beacon";
             case CHAOS -> "1x Dragon Egg";
+            case FLOWER -> "1x Wither Rose";
             case FLASH -> "1x Speed Potion";
             case SPIDER -> "25x Cobweb";
             default -> "?";

@@ -98,6 +98,7 @@ public class PowerHudOverlay {
             case SUPERFORCE -> new int[][] { { 0xFFAA00 }, { 0xFF8800 }, { 0xFFCC44 } };
             case GRAVITY -> new int[][] { { 0x444466 }, { 0x333355 }, { 0x666688 } };
             case ECHO -> new int[][] { { 0x44EE88 }, { 0x22CC66 }, { 0x88FFAA } };
+            case FLOWER -> new int[][] { { 0xddff88 }, { 0xa2ff88 }, { 0xa2ff88 } };
             default -> new int[][] { { 0xAAAAAA }, { 0xAAAAAA }, { 0xAAAAAA } };
         };
         return colors[Math.min(slot, 2)][0];
@@ -118,6 +119,7 @@ public class PowerHudOverlay {
             case VOID -> 0x9900EE;
             case LIGHT -> 0xFFEE44;
             case GRAVITY -> 0x5555AA;
+            case FLOWER -> 0xdeffd5;
             case ECHO -> 0x44EE88;
             default -> 0xFFFFFF;
         };
