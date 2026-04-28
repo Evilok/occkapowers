@@ -10,6 +10,7 @@ public class UnlockHelper {
     public static boolean tryConsumeAbility(Player player, PowerType type) {
         return switch (type) {
             case FIRE -> consume(player, Items.LAVA_BUCKET, 1);
+            case ADEPT -> consume(player, Items.SUGAR, 8);
             case AIR -> consume(player, Items.FEATHER, 10);
             case WATER -> consume(player, Items.WATER_BUCKET, 1);
             case ICE -> consume(player, Items.SNOWBALL, 1);
@@ -34,7 +35,8 @@ public class UnlockHelper {
             case ICE -> consume(player, Items.IRON_BLOCK, 1);
             case LIGHTNING -> consume(player, Items.LIGHTNING_ROD, 1);
             case LASER -> consume(player, Items.TNT, 16);
-            case GEO -> consume(player, Items.IRON_PICKAXE, 1);
+            case GEO -> consume(player, Items.GOLD_BLOCK, 2);
+            case ADEPT -> consume(player, Items.BAMBOO, 16);
             case VOID -> consume(player, Items.GHAST_TEAR, 1);
             case LIGHT -> consume(player, Items.GLOWSTONE, 32);
             case GRAVITY -> consume(player, Items.ANVIL, 1);

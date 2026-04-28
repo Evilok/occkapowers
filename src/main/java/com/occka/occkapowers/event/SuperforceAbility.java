@@ -11,7 +11,6 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -23,283 +22,302 @@ public class SuperforceAbility {
         return new MobEffectInstance(eff, dur, amp, false, false);
     }
 
-    // Called every tick from AbilityEventHandler for superforce players
-    public static void tickUlt(ServerPlayer player, ServerLevel level) {
-        var data = player.getPersistentData();
-
-        // Ult active: keep elytra flight going
-        if (data.getBoolean("occka_sf_ult_active")) {
-            int ticks = data.getInt("occka_sf_ult_ticks");
-            data.putInt("occka_sf_ult_ticks", ticks + 1);
-
-            // Start elytra flight on tick 2 (gives time to gain height)
-            if (ticks == 2) {
-                player.startFallFlying();
-            }
-            if (player.isFallFlying()) {
-                Vec3 look = player.getLookAngle();
-                Vec3 vel = player.getDeltaMovement();
-                player.setDeltaMovement(
-                        vel.x * 0.85 + look.x * 0.07,
-                        vel.y * 0.85 + look.y * 0.07,
-                        vel.z * 0.85 + look.z * 0.07);
-                player.hurtMarked = true;
-                player.resetFallDistance();
-            }
-        }
-
-        // Camera shake ticks
-        int shakeTicks = data.getInt("occka_shake_ticks");
-        if (shakeTicks > 0) {
-            data.putInt("occka_shake_ticks", shakeTicks - 1);
-            // Rapidly rotate player view to simulate shake
-            if (shakeTicks % 2 == 0) {
-                float shakeAmt = 15f * (shakeTicks / 10f);
-                player.setYRot(player.getYRot() + (player.getRandom().nextFloat() - 0.5f) * shakeAmt);
-                player.setXRot(player.getXRot() + (player.getRandom().nextFloat() - 0.5f) * shakeAmt * 0.5f);
-                player.teleportTo(player.getX(), player.getY(), player.getZ()); // force update
-            }
-        }
-    }
-
-    // ===== PASSIVE: creative flight always on =====
+    // ===== PASSIVE: creative-style flight =====
+    // Called every tick while player has SUPERFORCE
     public static void applyPassive(ServerPlayer player) {
-        if (!player.isCreative() && !player.isSpectator()) {
+        if (player.isCreative() || player.isSpectator())
+            return;
+        // Grant creative-style flight
+        if (!player.getAbilities().mayfly) {
             player.getAbilities().mayfly = true;
-            player.getAbilities().setFlyingSpeed(0.1f);
+            player.getAbilities().setFlyingSpeed(0.05f);
             player.onUpdateAbilities();
         }
+        // If flying, keep fall distance reset so landing doesn't hurt
+        if (player.getAbilities().flying) {
+            player.resetFallDistance();
+        }
     }
 
-    // ===== SHIFT: shockwave punch - shake camera + launch enemies =====
-    public static void activateShift(ServerPlayer player, ServerLevel level) {
-        Vec3 pos = player.position();
+    public static void applyElytraFlight(ServerPlayer player, ServerLevel level) {
 
-        // Camera shake for the player himself (nausea = screen wobble)
-        player.addEffect(fx(MobEffects.CONFUSION, 30, 5)); // short intense nausea
+        // Не включаем принудительно — только если игрок УЖЕ летит на элитре
+        if (!player.isFallFlying())
+            return;
 
-        // Punch the ground - crater particles
-        BlockPos ground = player.blockPosition().below();
-        for (int deg = 0; deg < 360; deg += 8) {
-            for (double r = 0.3; r <= 5; r += 0.8) {
-                double x = pos.x + r * Math.cos(Math.toRadians(deg));
-                double z = pos.z + r * Math.sin(Math.toRadians(deg));
-                BlockPos bp = BlockPos.containing(x, pos.y - 0.5, z);
-                var state = level.getBlockState(bp).isAir()
-                        ? level.getBlockState(bp.below())
-                        : level.getBlockState(bp);
-                if (!state.isAir()) {
-                    level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state),
-                            x, pos.y + 0.1, z, 3, 0, 0.3, 0, 0.15);
+        Vec3 look = player.getLookAngle().normalize();
+        double speed = 1.15;
+
+        player.setDeltaMovement(
+                look.x * speed,
+                look.y * speed,
+                look.z * speed);
+
+        player.hurtMarked = true;
+        player.resetFallDistance();
+        player.fallDistance = 0;
+
+        if (player.tickCount % 3 == 0) {
+            level.sendParticles(ParticleTypes.CLOUD,
+                    player.getX(), player.getY(), player.getZ(),
+                    2, 0.2, 0.1, 0.2, 0.03);
+        }
+    }
+
+    // ===== ULT TICK: runs every tick for SUPERFORCE players =====
+    // В методе tickUlt замени блок с elytra:
+    public static void tickUlt(ServerPlayer player, ServerLevel level) {
+        var nbt = player.getPersistentData();
+
+        if (nbt.getBoolean("occka_sf_ult_flying")) {
+            int ticks = nbt.getInt("occka_sf_ult_ticks");
+            nbt.putInt("occka_sf_ult_ticks", ticks + 1);
+
+            // Начинаем elytra только когда игрок поднялся достаточно (тик 5+)
+            if (ticks >= 5) {
+                if (!player.isFallFlying()) {
+                    // Принудительно включаем elytra
+                    player.startFallFlying();
+                }
+
+                if (player.isFallFlying()) {
+                    Vec3 look = player.getLookAngle().normalize();
+                    double speed = 1.22; // регулируешь тут
+
+                    player.setDeltaMovement(
+                            look.x * speed,
+                            look.y * speed,
+                            look.z * speed);
+
+                    player.hurtMarked = true;
+                    player.resetFallDistance();
+                    player.fallDistance = 0;
+
+                    if (ticks % 2 == 0) {
+                        level.sendParticles(ParticleTypes.CRIT,
+                                player.getX(), player.getY(), player.getZ(),
+                                3, 0.3, 0.3, 0.3, 0.1);
+                        level.sendParticles(ParticleTypes.CLOUD,
+                                player.getX(), player.getY(), player.getZ(),
+                                2, 0.2, 0.1, 0.2, 0.03);
+                    }
+
+                    // Детект приземления: на земле после 15+ тиков
+                    if (player.onGround() && ticks > 15) {
+                        nbt.putBoolean("occka_sf_ult_flying", false);
+                        player.stopFallFlying();
+                        executeMeteorCrash(player, level);
+                        return;
+                    }
+                } else {
+                    // Если elytra не включилась (нет крыльев) — симулируем полёт вручную
+                    Vec3 look = player.getLookAngle();
+                    player.setDeltaMovement(
+                            look.x * 0.95,
+                            Math.max(look.y * 0.95, -0.1),
+                            look.z * 0.95);
+                    player.hurtMarked = true;
+                    player.resetFallDistance();
+
+                    if (player.onGround() && ticks > 15) {
+                        nbt.putBoolean("occka_sf_ult_flying", false);
+                        executeMeteorCrash(player, level);
+                    }
                 }
             }
-        }
 
-        // Launch + shake all enemies in radius 12
-        List<LivingEntity> enemies = getNearby(player, 12);
-        for (LivingEntity entity : enemies) {
-            Vec3 dir = entity.position().subtract(pos).normalize();
-            double dist = entity.distanceTo(player);
-            double force = 1.2 * (1.0 - dist / 12.0) + 0.3;
-
-            entity.setDeltaMovement(dir.x * force, 0.7 + force * 0.4, dir.z * force);
-            entity.hurtMarked = true;
-            entity.hurt(player.damageSources().playerAttack(player), 6);
-
-            // Camera shake via nausea on hit entities
-            if (entity instanceof ServerPlayer target) {
-                target.addEffect(fx(MobEffects.CONFUSION, 40, 5));
+            // Таймаут 5 секунд (100 тиков) — принудительный краш
+            if (ticks > 1000) {
+                nbt.putBoolean("occka_sf_ult_flying", false);
+                executeMeteorCrash(player, level);
             }
-
-            level.sendParticles(ParticleTypes.CRIT,
-                    entity.getX(), entity.getY() + 1, entity.getZ(),
-                    10, 0.3, 0.3, 0.3, 0.2);
         }
 
-        // Impact shockwave ring
-        for (int deg = 0; deg < 360; deg += 5) {
-            double r = 5;
-            level.sendParticles(ParticleTypes.EXPLOSION,
-                    pos.x + r * Math.cos(Math.toRadians(deg)), pos.y + 0.1,
-                    pos.z + r * Math.sin(Math.toRadians(deg)),
-                    1, 0, 0, 0, 0);
+        // Camera shake тикер (остаётся как был)
+        int shakeTicks = nbt.getInt("occka_shake_ticks");
+        if (shakeTicks > 0) {
+            nbt.putInt("occka_shake_ticks", shakeTicks - 1);
+            if (shakeTicks % 2 == 0) {
+                float amt = 12f * (shakeTicks / 10f);
+                player.setYRot(player.getYRot() + (player.getRandom().nextFloat() - 0.5f) * amt);
+                player.setXRot(Math.max(-89, Math.min(89,
+                        player.getXRot() + (player.getRandom().nextFloat() - 0.5f) * amt * 0.4f)));
+                player.teleportTo(player.getX(), player.getY(), player.getZ());
+            }
         }
-        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
-                pos.x, pos.y, pos.z, 2, 0.3, 0, 0.3, 0.05);
-
-        player.sendSystemMessage(Component.literal("GROUND SLAM!")
-                .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
     }
 
-    // ===== ABILITY: superhero punch - single target, massive knockback =====
+    // ===== SHIFT (mapped to ability slot - no cd): SUPER PUNCH =====
     public static void activateAbility(ServerPlayer player, ServerLevel level) {
-        // Find entity in crosshair up to 6 blocks
         Vec3 eye = player.getEyePosition();
         Vec3 dir = player.getLookAngle().normalize();
 
         LivingEntity target = null;
         double minDist = Double.MAX_VALUE;
-        AABB searchBox = player.getBoundingBox().inflate(6);
+        AABB box = player.getBoundingBox().inflate(6);
 
-        for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, searchBox,
-                e -> e != player)) {
-            // Check if entity is roughly in look direction
-            Vec3 toEntity = entity.position().subtract(eye);
-            double dot = toEntity.normalize().dot(dir);
-            double dist = entity.distanceTo(player);
-            if (dot > 0.7 && dist < minDist) { // ~45 degree cone
+        for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box, e -> e != player)) {
+            Vec3 toE = e.position().subtract(eye).normalize();
+            double dot = toE.dot(dir);
+            double dist = e.distanceTo(player);
+            if (dot > 0.65 && dist < minDist) {
                 minDist = dist;
-                target = entity;
+                target = e;
             }
         }
 
         if (target != null) {
-            // Mega punch
-            Vec3 punchDir = dir.normalize();
-            target.setDeltaMovement(
-                    punchDir.x * 3.5,
-                    0.8,
-                    punchDir.z * 3.5);
+            target.setDeltaMovement(dir.x * 3.2, 0.75, dir.z * 3.2);
             target.hurtMarked = true;
-            target.hurt(player.damageSources().playerAttack(player), 20);
-
-            // Camera shake on target
+            target.hurt(player.damageSources().playerAttack(player), 18);
             if (target instanceof ServerPlayer tp) {
-                tp.addEffect(fx(MobEffects.CONFUSION, 60, 8));
+                tp.addEffect(fx(MobEffects.CONFUSION, 50, 6));
             }
-
-            // Impact particles on target
-            for (int i = 0; i < 40; i++) {
-                double angle = Math.random() * Math.PI * 2;
+            // Impact particles
+            for (int i = 0; i < 30; i++) {
+                double a = Math.random() * Math.PI * 2;
                 level.sendParticles(ParticleTypes.CRIT,
-                        target.getX() + Math.cos(angle) * 0.5,
-                        target.getY() + 1 + Math.random(),
-                        target.getZ() + Math.sin(angle) * 0.5,
-                        1, 0, 0, 0, 0.3);
+                        target.getX() + Math.cos(a) * 0.4, target.getY() + 1 + Math.random(),
+                        target.getZ() + Math.sin(a) * 0.4, 1, 0, 0, 0, 0.3);
             }
-            level.sendParticles(ParticleTypes.EXPLOSION,
-                    target.getX(), target.getY() + 1, target.getZ(),
-                    5, 0.5, 0.5, 0.5, 0.1);
-            // Speed lines from player to target
-            for (double d = 0.5; d < minDist; d += 0.5) {
+            level.sendParticles(ParticleTypes.EXPLOSION, target.getX(), target.getY() + 1, target.getZ(), 3, 0.3, 0.3,
+                    0.3, 0.1);
+            // Speed lines
+            for (double d = 0.5; d < minDist; d += 0.6) {
                 Vec3 p = eye.add(dir.scale(d));
-                level.sendParticles(ParticleTypes.SWEEP_ATTACK,
-                        p.x, p.y, p.z, 1, 0.05, 0.05, 0.05, 0);
+                level.sendParticles(ParticleTypes.SWEEP_ATTACK, p.x, p.y, p.z, 1, 0.05, 0.05, 0.05, 0);
             }
-            player.sendSystemMessage(Component.literal("SUPER PUNCH!")
-                    .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+            player.sendSystemMessage(
+                    Component.literal("SUPER PUNCH!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
         } else {
-            // No target - just a haymaker into the air
-            level.sendParticles(ParticleTypes.SWEEP_ATTACK,
-                    eye.x + dir.x * 3, eye.y + dir.y * 3, eye.z + dir.z * 3,
-                    5, 0.3, 0.3, 0.3, 0.1);
-            player.sendSystemMessage(Component.literal("Miss!")
-                    .withStyle(ChatFormatting.GRAY));
+            level.sendParticles(ParticleTypes.SWEEP_ATTACK, eye.x + dir.x * 3, eye.y + dir.y * 3, eye.z + dir.z * 3, 4,
+                    0.3, 0.3, 0.3, 0.1);
+            player.sendSystemMessage(Component.literal("Miss!").withStyle(ChatFormatting.GRAY));
         }
     }
 
-    // ===== ULT: METEOR CRASH - fly up then crash down =====
+    // ===== ABILITY (cd 10s): GROUND SLAM =====
+    public static void activateShift(ServerPlayer player, ServerLevel level) {
+        Vec3 pos = player.position();
+
+        // Self nausea shake
+        player.addEffect(fx(MobEffects.CONFUSION, 25, 4));
+
+        // Ground crack particles
+        for (int deg = 0; deg < 360; deg += 10) {
+            for (double r = 0.5; r <= 7; r += 1.0) {
+                double x = pos.x + r * Math.cos(Math.toRadians(deg));
+                double z = pos.z + r * Math.sin(Math.toRadians(deg));
+                BlockPos bp = BlockPos.containing(x, pos.y - 0.3, z);
+                var state = level.getBlockState(bp).isAir() ? level.getBlockState(bp.below()) : level.getBlockState(bp);
+                if (!state.isAir()) {
+                    level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state),
+                            x, pos.y + 0.1, z, 2, 0, 0.25, 0, 0.12);
+                }
+            }
+        }
+
+        // Launch + shake enemies in radius 7 (reduced from 12)
+        for (LivingEntity entity : getNearby(player, 7)) {
+            Vec3 dir = entity.position().subtract(pos).normalize();
+            double dist = entity.distanceTo(player);
+            double force = 1.0 * (1.0 - dist / 7.0) + 0.3;
+            entity.setDeltaMovement(dir.x * force, 0.6 + force * 0.3, dir.z * force);
+            entity.hurtMarked = true;
+            entity.hurt(player.damageSources().playerAttack(player), 5);
+            if (entity instanceof ServerPlayer tp) {
+                tp.addEffect(fx(MobEffects.CONFUSION, 35, 4));
+            }
+            level.sendParticles(ParticleTypes.CRIT, entity.getX(), entity.getY() + 1, entity.getZ(), 8, 0.3, 0.3, 0.3,
+                    0.2);
+        }
+
+        // Shockwave ring
+        for (int deg = 0; deg < 360; deg += 8) {
+            level.sendParticles(ParticleTypes.EXPLOSION,
+                    pos.x + 7 * Math.cos(Math.toRadians(deg)), pos.y + 0.1, pos.z + 7 * Math.sin(Math.toRadians(deg)),
+                    1, 0, 0, 0, 0);
+        }
+        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, pos.x, pos.y, pos.z, 1, 0, 0, 0, 0.02);
+        player.sendSystemMessage(Component.literal("GROUND SLAM!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+    }
+
+    // ===== ULT: jump + elytra + crash on landing =====
     public static void activateUlt(ServerPlayer player, ServerLevel level) {
-        // Launch upward and start elytra flight
-        player.setDeltaMovement(0, 2.5, 0);
+        // Strong upward launch
+        player.setDeltaMovement(0, 2.8, 0);
         player.hurtMarked = true;
         player.resetFallDistance();
 
-        // Start elytra flight after a tiny delay (1 tick) via flag
-        player.getPersistentData().putBoolean("occka_sf_ult_active", true);
+        // Flag: start elytra after gaining height
+        player.getPersistentData().putBoolean("occka_sf_ult_flying", true);
         player.getPersistentData().putInt("occka_sf_ult_ticks", 0);
-        // Mark as "waiting to land" for crash execution
-        player.getPersistentData().putInt("occka_sf_crash_ticks", -1); // -1 = waiting for land
 
-        player.addEffect(fx(MobEffects.DAMAGE_RESISTANCE, 300, 4));
+        player.addEffect(fx(MobEffects.DAMAGE_RESISTANCE, 400, 4));
 
         // Launch particles
-        for (int i = 0; i < 30; i++) {
+        for (int i = 0; i < 25; i++) {
             level.sendParticles(ParticleTypes.CLOUD,
-                    player.getX() + (Math.random() - 0.5),
-                    player.getY(),
-                    player.getZ() + (Math.random() - 0.5),
-                    1, 0.3, -0.05, 0.3, 0.05);
+                    player.getX() + (Math.random() - 0.5) * 0.8, player.getY(),
+                    player.getZ() + (Math.random() - 0.5) * 0.8, 1, 0.2, -0.05, 0.2, 0.04);
         }
-        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
-                player.getX(), player.getY(), player.getZ(), 2, 0, 0, 0, 0.05);
-
-        player.sendSystemMessage(Component.literal("METEOR CRASH - FLY AND DIVE!")
+        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, player.getX(), player.getY(), player.getZ(), 2, 0, 0, 0,
+                0.05);
+        player.sendSystemMessage(Component.literal("METEOR DIVE! Look where you want to crash!")
                 .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
     }
 
-    // Called from tick handler when crash timer fires
+    // ===== IMPACT on landing =====
     public static void executeMeteorCrash(ServerPlayer player, ServerLevel level) {
         Vec3 pos = player.position();
 
-        // Crater particles - ground impact
-        for (int deg = 0; deg < 360; deg += 3) {
-            for (double r = 0.5; r <= 15; r += 1.8) {
+        // Crater particles (radius 8, down from 15)
+        for (int deg = 0; deg < 360; deg += 5) {
+            for (double r = 0.5; r <= 8; r += 1.5) {
                 double x = pos.x + r * Math.cos(Math.toRadians(deg));
                 double z = pos.z + r * Math.sin(Math.toRadians(deg));
-                BlockPos bp = BlockPos.containing(x, pos.y - 0.5, z);
-                var state = level.getBlockState(bp).isAir()
-                        ? level.getBlockState(bp.below())
-                        : level.getBlockState(bp);
+                BlockPos bp = BlockPos.containing(x, pos.y - 0.3, z);
+                var state = level.getBlockState(bp).isAir() ? level.getBlockState(bp.below()) : level.getBlockState(bp);
                 if (!state.isAir()) {
                     level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state),
-                            x, pos.y + 0.2, z, 3, 0, 0.5, 0, 0.25);
+                            x, pos.y + 0.2, z, 2, 0, 0.4, 0, 0.2);
                 }
-                if (r < 6) {
-                    level.sendParticles(ParticleTypes.EXPLOSION,
-                            x, pos.y + 0.1, z, 1, 0, 0, 0, 0);
+                if (r < 4) {
+                    level.sendParticles(ParticleTypes.EXPLOSION, x, pos.y + 0.1, z, 1, 0, 0, 0, 0);
                 }
             }
         }
-        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
-                pos.x, pos.y, pos.z, 8, 2, 0.5, 2, 0.1);
-        level.sendParticles(ParticleTypes.FLASH,
-                pos.x, pos.y + 1, pos.z, 1, 0, 0, 0, 0);
+        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, pos.x, pos.y, pos.z, 5, 1.5, 0.3, 1.5, 0.08);
+        level.sendParticles(ParticleTypes.FLASH, pos.x, pos.y + 1, pos.z, 1, 0, 0, 0, 0);
 
-        // Launch + shake all enemies in radius 15
-        List<LivingEntity> enemies = getNearby(player, 15);
-        for (LivingEntity entity : enemies) {
+        // Launch enemies in radius 10 (down from 15)
+        for (LivingEntity entity : getNearby(player, 10)) {
             Vec3 dir = entity.position().subtract(pos);
-            double dist = dir.length();
+            double dist = Math.max(0.1, dir.length());
             dir = dir.normalize();
+            double force = 1.5 * (1.0 - dist / 10.0) + 0.4;
 
-            // Launch upward ~10 blocks
-            entity.setDeltaMovement(
-                    dir.x * 1.2,
-                    1.8 + (1.0 - dist / 15.0) * 0.8, // ~10 blocks up
-                    dir.z * 1.2);
+            entity.setDeltaMovement(dir.x * force, 1.5 + (1.0 - dist / 10.0) * 0.6, dir.z * force);
             entity.hurtMarked = true;
-            entity.hurt(player.damageSources().playerAttack(player),
-                    (float) (15 * (1 - dist / 15.0)));
+            entity.hurt(player.damageSources().playerAttack(player), (float) (12 * (1 - dist / 10.0)));
 
-            // Camera shake: apply nausea + rapid teleport trick
-            if (entity instanceof ServerPlayer target) {
-                shakeCameraPlayer(target, level);
+            if (entity instanceof ServerPlayer tp) {
+                tp.getPersistentData().putInt("occka_shake_ticks", 10);
+                tp.addEffect(fx(MobEffects.CONFUSION, 50, 7));
             }
-
-            level.sendParticles(ParticleTypes.CRIT,
-                    entity.getX(), entity.getY() + 1, entity.getZ(),
-                    15, 0.4, 0.4, 0.4, 0.25);
+            level.sendParticles(ParticleTypes.CRIT, entity.getX(), entity.getY() + 1, entity.getZ(), 12, 0.4, 0.4, 0.4,
+                    0.2);
         }
 
-        // Shake player's own camera
-        player.addEffect(fx(MobEffects.CONFUSION, 30, 5));
+        // Shake own camera
+        player.addEffect(fx(MobEffects.CONFUSION, 15, 3));
+        player.getPersistentData().putInt("occka_shake_ticks", 6);
 
-        // Announce
-        for (Player p : level.getEntitiesOfClass(Player.class,
-                player.getBoundingBox().inflate(20), x -> true)) {
+        // Announce to nearby
+        for (Player p : level.getEntitiesOfClass(Player.class, player.getBoundingBox().inflate(15), x -> true)) {
             ((ServerPlayer) p).sendSystemMessage(
-                    Component.literal("METEOR CRASH!")
-                            .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+                    Component.literal("METEOR CRASH!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
         }
-    }
-
-    // Camera shake via micro-teleport + rotation change
-    private static void shakeCameraPlayer(ServerPlayer target, ServerLevel level) {
-        target.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 60, 8, false, false));
-        // Additional shake: move player view suddenly via setYRot
-        // Schedule 5 rapid tiny teleports over next 10 ticks via nbt flag
-        target.getPersistentData().putInt("occka_shake_ticks", 10);
     }
 
     private static List<LivingEntity> getNearby(ServerPlayer player, double radius) {
@@ -307,4 +325,5 @@ public class SuperforceAbility {
         return player.level().getEntitiesOfClass(LivingEntity.class, box,
                 e -> e != player && !(e instanceof Player p && p.isAlliedTo(player)));
     }
+                
 }
