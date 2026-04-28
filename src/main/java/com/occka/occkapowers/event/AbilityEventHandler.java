@@ -122,6 +122,16 @@ public class AbilityEventHandler {
                 player.fallDistance = 0.0f;
             }
 
+            if (type == PowerType.FLOWER) {
+                FlowerAbility.tickFlowerForm(player, level);
+                FlowerAbility.tickFlowerTrailCleanup(player, level);
+                FlowerAbility.tickUlt(player, level);
+                if (player.tickCount % 20 == 0) {
+                    FlowerAbility.tickWolves(player, level);
+                }
+            }
+
+
             // 10. Fire form tick — огонь, плавление льда (пока форма активна)
             if (type == PowerType.FIRE) {
                 FireAbility.tickFireForm(player, level);
@@ -346,6 +356,7 @@ public class AbilityEventHandler {
         // Сбрасываем огненную форму после смерти — mayfly не должен оставаться
         if (event.isWasDeath()) {
             FireAbility.clearFireForm(event.getEntity());
+            FlowerAbility.clearFlowerForm(event.getEntity());
         }
     }
 
@@ -368,6 +379,7 @@ public class AbilityEventHandler {
         if (event.getEntity() instanceof ServerPlayer player) {
             // Сбрасываем огненную форму при выходе
             FireAbility.clearFireForm(player);
+            
 
             if (player.level() instanceof ServerLevel level) {
                 GeoOrbitHandler.clearPlayer(player.getUUID(), level);

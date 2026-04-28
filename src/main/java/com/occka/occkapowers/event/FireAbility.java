@@ -274,6 +274,8 @@ public final class FireAbility {
     }
 
     public static void startUlt(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
+        if (player.getPersistentData().getBoolean("occka_fire_form_active"))
+            return;
         data.setFireUltOrigin(player.getX(), player.getY(), player.getZ());
         player.teleportTo(player.getX(), player.getY() + 14, player.getZ());
         AttributeInstance gravity = player.getAttribute(ForgeMod.ENTITY_GRAVITY.get());

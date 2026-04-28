@@ -55,6 +55,7 @@ public class AbilityActivator {
             case LIGHTNING -> AirAbility.activateShift(player, level);
             case LASER     -> LaserAbility.activateShift(player, level);
             case GEO       -> GeoAbility.activateShift(player, level);
+            case FLOWER    -> FlowerAbility.activateShift(player, level);
             case VOID      -> VoidAbility.activateShift(player, level);
             case LIGHT     -> LightAbility.activateShift(player, level);
             case GRAVITY   -> GravityAbility.activateShift(player, level);
@@ -98,6 +99,7 @@ public class AbilityActivator {
             case LASER     -> LaserAbility.activateAbility(player, level);
             case GEO       -> GeoAbility.activateAbility(player, level);
             case VOID      -> VoidAbility.activateAbility(player, level);
+            case FLOWER    -> FlowerAbility.activateAbility(player, level);
             case LIGHT     -> LightAbility.activateAbility(player, level);
             case GRAVITY   -> GravityAbility.activateAbility(player, level);
             case ECHO      -> EchoAbility.activateAbility(player, level);
@@ -163,6 +165,7 @@ public class AbilityActivator {
             case ECHO      -> EchoAbility.activateUlt(player, level);
             case CHAOS     -> ChaosAbility.activateUlt(player, level);
             case SPIDER    -> SpiderAbility.activateUlt(player, level);
+            case FLOWER    -> FlowerAbility.activateUlt(player, level);
             case FLASH     -> FlashAbility.activateUlt(player, level);
             case SUPERFORCE -> SuperforceAbility.activateUlt(player, level);
             case ADEPT     -> AdeptAbility.activateUlt(player, level);
