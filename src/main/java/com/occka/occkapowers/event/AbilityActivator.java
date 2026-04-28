@@ -47,20 +47,20 @@ public class AbilityActivator {
         if (!(player.level() instanceof ServerLevel level)) return;
 
         switch (type) {
-            case FIRE     -> FireAbility.activateShift(player, level);
-            case AIR      -> AirAbility.activateShift(player, level);
-            case WATER    -> WaterAbility.activateShift(player, level);
-            case ICE      -> IceAbility.activateShift(player, level);
+            case FIRE      -> FireAbility.activateShift(player, level);
+            case AIR       -> AirAbility.activateShift(player, level);
+            case WATER     -> WaterAbility.activateShift(player, level);
+            case ICE       -> IceAbility.activateShift(player, level);
             case LIGHTNING -> LightningAbility.activateShift(player, level);
-            case LASER    -> LaserAbility.activateShift(player, level);
-            case GEO      -> GeoAbility.activateShift(player, level);
-            case VOID     -> VoidAbility.activateShift(player, level);
-            case LIGHT    -> LightAbility.activateShift(player, level);
-            case GRAVITY  -> GravityAbility.activateShift(player, level);
-            case ECHO     -> EchoAbility.activateShift(player, level, data);
-            case CHAOS    -> ChaosAbility.activateShift(player, level);
-            case SUPERFORCE -> SuperforceAbility.activateAbility(player, level); // punch (no cd)
-            case ADEPT    -> AdeptAbility.activateShift(player, level);
+            case LASER     -> LaserAbility.activateShift(player, level);
+            case GEO       -> GeoAbility.activateShift(player, level);
+            case VOID      -> VoidAbility.activateShift(player, level);
+            case LIGHT     -> LightAbility.activateShift(player, level);
+            case GRAVITY   -> GravityAbility.activateShift(player, level);
+            case ECHO      -> EchoAbility.activateShift(player, level, data);
+            case CHAOS     -> ChaosAbility.activateShift(player, level);
+            case SUPERFORCE -> SuperforceAbility.activateAbility(player, level);
+            case ADEPT     -> AdeptAbility.activateShift(player, level);
             default -> {}
         }
     }
@@ -99,7 +99,7 @@ public class AbilityActivator {
             case GRAVITY   -> GravityAbility.activateAbility(player, level);
             case ECHO      -> EchoAbility.activateAbility(player, level);
             case CHAOS     -> ChaosAbility.activateAbility(player, level);
-            case SUPERFORCE -> SuperforceAbility.activateShift(player, level); // ground slam (cd)
+            case SUPERFORCE -> SuperforceAbility.activateShift(player, level);
             case ADEPT     -> AdeptAbility.activateAbility(player, level);
             default -> {}
         }
@@ -135,7 +135,13 @@ public class AbilityActivator {
             case WATER     -> WaterAbility.activateUlt(player, level);
             case ICE       -> IceAbility.activateUlt(player, level);
             case LIGHTNING -> LightningAbility.activateUlt(player, level, 40);
-            case LASER     -> LaserAbility.activateUlt(player, level);
+            case LASER     -> {
+                // Запускаем канал — КД ставится только когда канал заканчивается
+                // (в PacketLaserUltChannel или по таймеру в AbilityEventHandler)
+                LaserAbility.startUlt(player);
+                syncToClient(player, data);
+                return; // НЕ ставим КД здесь
+            }
             case GEO       -> {
                 if (GeoOrbitHandler.hasOrbit(player)) {
                     boolean finished = GeoOrbitHandler.launchFromUltPress(player, level);
@@ -146,7 +152,7 @@ public class AbilityActivator {
                     GeoAbility.activateUlt(player, level);
                 }
                 syncToClient(player, data);
-                return; // чтобы не дублировать setUltCooldown ниже
+                return;
             }
             case VOID      -> VoidAbility.activateUlt(player, level);
             case LIGHT     -> LightAbility.activateUlt(player, level);
@@ -162,7 +168,7 @@ public class AbilityActivator {
         syncToClient(player, data);
     }
 
-    // ===== FIRE ULT HELPERS (вызываются из AbilityEventHandler) =====
+    // ===== FIRE ULT HELPERS =====
 
     public static void fireUltShoot(ServerPlayer player, PlayerPowerData data) {
         FireAbility.ultShoot(player, data);

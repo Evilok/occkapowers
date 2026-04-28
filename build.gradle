@@ -76,3 +76,17 @@ publishing {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
+
+tasks.register('mod', Copy) {
+    dependsOn build
+
+    doFirst {
+        delete fileTree("C:/Users/Prolapis/AppData/Roaming/.minecraft/mods") {
+            include "occkapowers-*.jar"
+        }
+    }
+
+    from("$buildDir/libs/${archivesBaseName}-${version}.jar")
+
+    into("C:/Users/Prolapis/AppData/Roaming/.minecraft/mods")
+}
