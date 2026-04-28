@@ -47,6 +47,7 @@ public class AbilityActivator {
         if (!(player.level() instanceof ServerLevel level)) return;
 
         switch (type) {
+            // FIRE: toggle огненной формы (одиночное нажатие, не удержание)
             case FIRE      -> FireAbility.activateShift(player, level);
             case AIR       -> AirAbility.activateShift(player, level);
             case WATER     -> WaterAbility.activateShift(player, level);
@@ -59,7 +60,8 @@ public class AbilityActivator {
             case GRAVITY   -> GravityAbility.activateShift(player, level);
             case ECHO      -> EchoAbility.activateShift(player, level, data);
             case CHAOS     -> ChaosAbility.activateShift(player, level);
-            case SUPERFORCE -> SuperforceAbility.activateAbility(player, level);
+            // SUPERFORCE Shift = Super Punch (без изменений)
+            case SUPERFORCE -> SuperforceAbility.activateShift(player, level);
             case ADEPT     -> AdeptAbility.activateShift(player, level);
             default -> {}
         }
@@ -99,7 +101,8 @@ public class AbilityActivator {
             case GRAVITY   -> GravityAbility.activateAbility(player, level);
             case ECHO      -> EchoAbility.activateAbility(player, level);
             case CHAOS     -> ChaosAbility.activateAbility(player, level);
-            case SUPERFORCE -> SuperforceAbility.activateShift(player, level);
+            // SUPERFORCE Ability = взлёт + elytra-полёт (бывший ульт)
+            case SUPERFORCE -> SuperforceAbility.activateAbility(player, level);
             case ADEPT     -> AdeptAbility.activateAbility(player, level);
             default -> {}
         }
@@ -136,11 +139,9 @@ public class AbilityActivator {
             case ICE       -> IceAbility.activateUlt(player, level);
             case LIGHTNING -> LightningAbility.activateUlt(player, level, 40);
             case LASER     -> {
-                // Запускаем канал — КД ставится только когда канал заканчивается
-                // (в PacketLaserUltChannel или по таймеру в AbilityEventHandler)
                 LaserAbility.startUlt(player);
                 syncToClient(player, data);
-                return; // НЕ ставим КД здесь
+                return; // КД ставится при завершении канала
             }
             case GEO       -> {
                 if (GeoOrbitHandler.hasOrbit(player)) {
@@ -159,6 +160,7 @@ public class AbilityActivator {
             case GRAVITY   -> GravityAbility.activateUlt(player, level);
             case ECHO      -> EchoAbility.activateUlt(player, level);
             case CHAOS     -> ChaosAbility.activateUlt(player, level);
+            // SUPERFORCE Ult = метеор (с земли → прыжок+пикирование, с воздуха → сразу падает)
             case SUPERFORCE -> SuperforceAbility.activateUlt(player, level);
             case ADEPT     -> AdeptAbility.activateUlt(player, level);
             default -> {}
