@@ -35,13 +35,6 @@ public final class LightningAbility {
 
         player.setDeltaMovement(newVel);
         player.hurtMarked = true;
-        for (int i = 0; i < 20; i++) {
-            level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
-                    player.getX() + (Math.random() - 0.5) * 1.2,
-                    player.getY() + 0.2 + Math.random() * 0.8,
-                    player.getZ() + (Math.random() - 0.5) * 1.2,
-                    1, 0, 0, 0, 0.2);
-        }
 
         for (int i = 0; i < 6; i++) {
             level.sendParticles(ParticleTypes.CLOUD,

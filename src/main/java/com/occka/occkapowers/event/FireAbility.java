@@ -31,7 +31,7 @@ public final class FireAbility {
      * Первое нажатие — включает форму.
      * Второе нажатие — выключает.
      */
-    public static void activateShift(ServerPlayer player, ServerLevel level) {
+    public static void activateAbility(ServerPlayer player, ServerLevel level) {
         boolean active = player.getPersistentData().getBoolean("occka_fire_form_active");
         if (!active) {
             enableFireForm(player, level);
@@ -194,37 +194,65 @@ public final class FireAbility {
 
     // ===== ABILITY: Firestorm =====
 
-    public static void activateAbility(ServerPlayer player, ServerLevel level) {
+    public static void activateShift(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
+
+        // КД проверка
+        if (data.getShiftCooldown() > 0)
+            return;
+
         Vec3 playerPos = player.position();
+
         for (LivingEntity entity : AbilityCommon.getNearbyEnemies(player, 10)) {
+
             Vec3 dir = entity.position().subtract(playerPos).normalize();
             double dist = entity.distanceTo(player);
+
             double force = 1.8 * (1.0 - dist / 10.0) + 0.4;
-            entity.setDeltaMovement(dir.x * force, 0.45 + (force * 0.3), dir.z * force);
+
+            entity.setDeltaMovement(
+                    dir.x * force,
+                    0.45 + (force * 0.3),
+                    dir.z * force);
+
             entity.hurtMarked = true;
             entity.setSecondsOnFire(8);
             entity.hurt(player.damageSources().onFire(), 4);
-            level.sendParticles(ParticleTypes.FLAME,
+
+            level.sendParticles(
+                    ParticleTypes.FLAME,
                     entity.getX(), entity.getY() + 1, entity.getZ(),
                     12, 0.3, 0.5, 0.3, 0.08);
         }
 
+        // кольцо огня
         for (int deg = 0; deg < 360; deg += 6) {
             for (double r = 0.5; r <= 10; r += 1.5) {
                 double x = player.getX() + r * Math.cos(Math.toRadians(deg));
                 double z = player.getZ() + r * Math.sin(Math.toRadians(deg));
-                level.sendParticles(ParticleTypes.FLAME,
-                        x, player.getY() + 0.3, z, 1, 0, 0.1, 0, 0.04);
+
+                level.sendParticles(
+                        ParticleTypes.FLAME,
+                        x, player.getY() + 0.3, z,
+                        1, 0, 0.1, 0, 0.04);
             }
         }
-        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
-                player.getX(), player.getY(), player.getZ(), 2, 0.5, 0, 0.5, 0.05);
-        level.sendParticles(ParticleTypes.LAVA,
+
+        level.sendParticles(
+                ParticleTypes.EXPLOSION_EMITTER,
+                player.getX(), player.getY(), player.getZ(),
+                2, 0.5, 0, 0.5, 0.05);
+
+        level.sendParticles(
+                ParticleTypes.LAVA,
                 player.getX(), player.getY() + 0.5, player.getZ(),
                 20, 1.5, 0.5, 1.5, 0.2);
-        player.sendSystemMessage(AbilityCommon.msg("Firestorm!", ChatFormatting.RED));
-    }
 
+        player.sendSystemMessage(
+                AbilityCommon.msg("Firestorm!", ChatFormatting.RED));
+
+        // ✔️ ВОТ ЭТО ТЫ ЗАБЫЛ
+        data.setShiftCooldown(400); // 20 секунд
+    }
     // ===== ULT: Fire Ult (без изменений) =====
 
     public static void createFireRing(ServerPlayer player, ServerLevel level, int radius) {

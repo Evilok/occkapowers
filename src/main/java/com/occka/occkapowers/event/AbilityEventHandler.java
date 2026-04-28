@@ -7,6 +7,7 @@ import com.occka.occkapowers.network.NetworkHandler;
 import com.occka.occkapowers.network.PacketSyncPowerData;
 import com.occka.occkapowers.registry.ModCapabilities;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -16,6 +17,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Team;
 import net.minecraftforge.event.TickEvent;
@@ -27,6 +29,8 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import com.occka.occkapowers.event.GeoOrbitHandler;
 import java.util.List;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraftforge.event.entity.living.LivingFallEvent;
 
 @Mod.EventBusSubscriber(modid = OcckaPowers.MOD_ID)
 public class AbilityEventHandler {
@@ -103,14 +107,19 @@ public class AbilityEventHandler {
                 }
             }
 
-            //if (type == PowerType.FLASH && player.isShiftKeyDown()) {
-            //    FlashAbility.tickHeldShift(player, level);
-            //}
+            // if (type == PowerType.FLASH && player.isShiftKeyDown()) {
+            // FlashAbility.tickHeldShift(player, level);
+            // }
 
             if (type == PowerType.SUPERFORCE) {
                 SuperforceAbility.applyElytraFlight(player, level); // элитра-движение
                 SuperforceAbility.tickFlyAbility(player, level);
                 SuperforceAbility.tickUlt(player, level); // ульт только у superforce
+            }
+
+            if (type == PowerType.SPIDER) {
+                SpiderAbility.tick(player, level);
+                player.fallDistance = 0.0f;
             }
 
             // 10. Fire form tick — огонь, плавление льда (пока форма активна)
@@ -269,6 +278,13 @@ public class AbilityEventHandler {
                 level.sendParticles(ParticleTypes.FLAME,
                         player.getX(), player.getY() + 0.7, player.getZ(), 1, 0.25, 0.2, 0.25, 0.02);
             }
+
+            case SPIDER -> {
+                level.sendParticles(ParticleTypes.SPIT,
+                        player.getX(), player.getY() + 1, player.getZ(), 2, 0.3, 0.3, 0.3, 0.01);
+                level.sendParticles(ParticleTypes.CLOUD,
+                        player.getX(), player.getY() + 0.3, player.getZ(), 1, 0.2, 0.06, 0.2, 0.01);
+            }
             case SUPERFORCE -> {
                 level.sendParticles(ParticleTypes.CRIT,
                         player.getX(), player.getY() + 1, player.getZ(), 2, 0.5, 0.5, 0.5, 0.1);
@@ -305,6 +321,19 @@ public class AbilityEventHandler {
     }
 
     // === СОБЫТИЯ ЖИЗНЕННОГО ЦИКЛА ===
+
+    @SubscribeEvent
+    public static void onLivingFall(LivingFallEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
+            if (data.getPowerType() == PowerType.SPIDER) {
+                event.setCanceled(true);
+                player.fallDistance = 0.0f;
+            }
+        });
+    }
 
     @SubscribeEvent
     public static void onPlayerClone(PlayerEvent.Clone event) {

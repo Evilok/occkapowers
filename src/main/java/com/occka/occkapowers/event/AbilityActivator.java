@@ -48,11 +48,11 @@ public class AbilityActivator {
 
         switch (type) {
             // FIRE: toggle огненной формы (одиночное нажатие, не удержание)
-            case FIRE      -> FireAbility.activateShift(player, level);
-            case AIR       -> AirAbility.activateShift(player, level);
+            case FIRE      -> FireAbility.activateShift(player, level, data);
+            case AIR       -> LightningAbility.activateShift(player, level);
             case WATER     -> WaterAbility.activateShift(player, level);
             case ICE       -> IceAbility.activateShift(player, level);
-            case LIGHTNING -> LightningAbility.activateShift(player, level);
+            case LIGHTNING -> AirAbility.activateShift(player, level);
             case LASER     -> LaserAbility.activateShift(player, level);
             case GEO       -> GeoAbility.activateShift(player, level);
             case VOID      -> VoidAbility.activateShift(player, level);
@@ -61,6 +61,7 @@ public class AbilityActivator {
             case ECHO      -> EchoAbility.activateShift(player, level, data);
             case CHAOS     -> ChaosAbility.activateShift(player, level);
             case FLASH     -> FlashAbility.activateShift(player, level);
+            case SPIDER    -> SpiderAbility.activateShift(player, level);
             case SUPERFORCE -> SuperforceAbility.activateShift(player, level);
             case ADEPT     -> AdeptAbility.activateShift(player, level);
             default -> {}
@@ -102,6 +103,7 @@ public class AbilityActivator {
             case ECHO      -> EchoAbility.activateAbility(player, level);
             case CHAOS     -> ChaosAbility.activateAbility(player, level);
             case FLASH     -> FlashAbility.activateAbility(player, level);
+            case SPIDER    -> SpiderAbility.activateAbility(player, level);
             case SUPERFORCE -> SuperforceAbility.activateAbility(player, level);
             case ADEPT     -> AdeptAbility.activateAbility(player, level);
             default -> {}
@@ -160,6 +162,7 @@ public class AbilityActivator {
             case GRAVITY   -> GravityAbility.activateUlt(player, level);
             case ECHO      -> EchoAbility.activateUlt(player, level);
             case CHAOS     -> ChaosAbility.activateUlt(player, level);
+            case SPIDER    -> SpiderAbility.activateUlt(player, level);
             case FLASH     -> FlashAbility.activateUlt(player, level);
             case SUPERFORCE -> SuperforceAbility.activateUlt(player, level);
             case ADEPT     -> AdeptAbility.activateUlt(player, level);

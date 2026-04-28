@@ -1,6 +1,7 @@
 package com.occka.occkapowers.event;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -25,19 +26,55 @@ public final class IceAbility {
 
     public static void activateShift(ServerPlayer player, ServerLevel level) {
 
-        // Blizzard aura
-                AbilityCommon.getNearbyEnemies(player, 5).forEach(e -> {
-                    e.hurt(player.damageSources().playerAttack(player), 0.5f);
-                    e.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SLOWDOWN, 50, 1));
-                });
-                for (int i = 0; i < 25; i++) {
-                    double angle = Math.random() * Math.PI * 2;
-                    double r = Math.random() * 5;
-                    level.sendParticles(ParticleTypes.SNOWFLAKE,
-                            player.getX() + r * Math.cos(angle), player.getY() + Math.random() * 3,
-                            player.getZ() + r * Math.sin(angle), 1, (Math.random() - 0.5) * 0.2, 0.03,
-                            (Math.random() - 0.5) * 0.2, 0);
+        AbilityCommon.getNearbyEnemies(player, 5).forEach(e -> {
+            e.hurt(player.damageSources().playerAttack(player), 0.5f);
+            e.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SLOWDOWN, 50, 1));
+        });
+
+        for (int i = 0; i < 25; i++) {
+            double angle = Math.random() * Math.PI * 2;
+            double r = Math.random() * 5;
+
+            level.sendParticles(
+                    ParticleTypes.SNOWFLAKE,
+                    player.getX() + r * Math.cos(angle),
+                    player.getY() + Math.random() * 3,
+                    player.getZ() + r * Math.sin(angle),
+                    1,
+                    (Math.random() - 0.5) * 0.2,
+                    0.03,
+                    (Math.random() - 0.5) * 0.2,
+                    0);
+        }
+
+        int radius = 5;
+        BlockPos center = player.blockPosition();
+
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -2; y <= 2; y++) {
+                for (int z = -radius; z <= radius; z++) {
+
+                    BlockPos pos = center.offset(x, y, z);
+                    var state = level.getBlockState(pos);
+
+                    if (state.is(net.minecraft.world.level.block.Blocks.WATER)) {
+
+                        level.setBlock(pos,
+                                net.minecraft.world.level.block.Blocks.ICE.defaultBlockState(),
+                                3);
+
+                        level.sendParticles(
+                                ParticleTypes.SNOWFLAKE,
+                                pos.getX() + 0.5,
+                                pos.getY() + 0.5,
+                                pos.getZ() + 0.5,
+                                2,
+                                0.2, 0.2, 0.2,
+                                0.01);
+                    }
                 }
+            }
+        }
     }
 
     public static void activateAbility(ServerPlayer player, ServerLevel level) {

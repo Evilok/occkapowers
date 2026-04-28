@@ -18,7 +18,8 @@ public enum PowerType {
     ECHO("echo", ChatFormatting.GREEN),
     SUPERFORCE("superforce", ChatFormatting.GOLD),
     ADEPT("adept", ChatFormatting.DARK_GREEN),
-    FLASH("flash", ChatFormatting.LIGHT_PURPLE);
+    FLASH("flash", ChatFormatting.LIGHT_PURPLE),
+    SPIDER("spider", ChatFormatting.WHITE);
 
     private final String id;
     private final ChatFormatting color;
@@ -47,13 +48,14 @@ public enum PowerType {
     public int getShiftCooldown() {
         return switch (this) {
             case ECHO -> 600; // 30s
+            case FIRE -> 400;
             default -> 0; // continuous
         };
     }
 
     public int getAbilityCooldown() {
         return switch (this) {
-            case FIRE -> 150;
+            case FIRE -> 40;
             case AIR -> 100;
             case WATER -> 280;
             case ICE -> 260;
@@ -68,6 +70,7 @@ public enum PowerType {
             case SUPERFORCE -> 200; // 10s
             case CHAOS -> 200; // 15 sec
             case FLASH -> 160; // ~8s
+            case SPIDER -> 160; // ~8s
             default -> 0;
         };
     }
@@ -94,6 +97,7 @@ public enum PowerType {
             case SUPERFORCE -> "10x Iron Block";
             case CHAOS -> "1x Nether Star";
             case FLASH -> "1x Rabbit Foot";
+            case SPIDER -> "32x String";
             default -> "?";
         };
     }
@@ -115,6 +119,7 @@ public enum PowerType {
             case SUPERFORCE -> "1x Beacon";
             case CHAOS -> "1x Dragon Egg";
             case FLASH -> "1x Speed Potion";
+            case SPIDER -> "25x Cobweb";
             default -> "?";
         };
     }
