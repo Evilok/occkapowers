@@ -78,8 +78,7 @@ public class AbilityEventHandler {
 
             // 8. Chaos/Echo клон тикер — каждые 20 тиков
             PowerType type = data.getPowerType();
-            if (player.tickCount % 20 == 0 &&
-                    (type == PowerType.CHAOS || type == PowerType.ECHO)) {
+            if (type == PowerType.CHAOS || type == PowerType.ECHO) {
                 tickClones(player, level);
             }
 
@@ -130,7 +129,6 @@ public class AbilityEventHandler {
                     FlowerAbility.tickWolves(player, level);
                 }
             }
-
 
             // 10. Fire form tick — огонь, плавление льда (пока форма активна)
             if (type == PowerType.FIRE) {
@@ -192,13 +190,26 @@ public class AbilityEventHandler {
     private static void tickClones(ServerPlayer player, ServerLevel level) {
         player.level().getEntitiesOfClass(
                 net.minecraft.world.entity.decoration.ArmorStand.class,
-                player.getBoundingBox().inflate(40),
-                e -> e.getPersistentData().contains("occka_clone_lifetime")).forEach(stand -> {
-                    int life = stand.getPersistentData().getInt("occka_clone_lifetime") - 20;
-                    if (life <= 0)
+                player.getBoundingBox().inflate(60), // Увеличен радиус поиска
+                e -> {
+                    var data = e.getPersistentData();
+                    // Обрабатываем И chaos-клоны И echo-клоны
+                    return data.contains("occka_clone_lifetime") &&
+                            (data.contains("occka_chaos_clone") || data.contains("occka_echo_clone"));
+                }).forEach(stand -> {
+                    // Декрементируем на 1 каждый тик (вызов идёт из onPlayerTick)
+                    int life = stand.getPersistentData().getInt("occka_clone_lifetime") - 1;
+                    if (life <= 0) {
+                        // Частицы исчезновения
+                        if (level != null) {
+                            level.sendParticles(ParticleTypes.POOF,
+                                    stand.getX(), stand.getY() + 1, stand.getZ(),
+                                    8, 0.3, 0.5, 0.3, 0.05);
+                        }
                         stand.discard();
-                    else
+                    } else {
                         stand.getPersistentData().putInt("occka_clone_lifetime", life);
+                    }
                 });
     }
 
@@ -379,7 +390,6 @@ public class AbilityEventHandler {
         if (event.getEntity() instanceof ServerPlayer player) {
             // Сбрасываем огненную форму при выходе
             FireAbility.clearFireForm(player);
-            
 
             if (player.level() instanceof ServerLevel level) {
                 GeoOrbitHandler.clearPlayer(player.getUUID(), level);

@@ -50,6 +50,7 @@ public enum PowerType {
         return switch (this) {
             case ECHO -> 600; // 30s
             case FIRE -> 400;
+            case CHAOS -> 200;
             default -> 0; // continuous
         };
     }
