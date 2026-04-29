@@ -188,24 +188,22 @@ public class AbilityEventHandler {
     }
 
     private static void tickClones(ServerPlayer player, ServerLevel level) {
-        player.level().getEntitiesOfClass(
+        // Ищем ВСЕ armor stand в радиусе с нашими тегами
+        level.getEntitiesOfClass(
                 net.minecraft.world.entity.decoration.ArmorStand.class,
-                player.getBoundingBox().inflate(60), // Увеличен радиус поиска
+                player.getBoundingBox().inflate(60),
                 e -> {
-                    var data = e.getPersistentData();
-                    // Обрабатываем И chaos-клоны И echo-клоны
-                    return data.contains("occka_clone_lifetime") &&
-                            (data.contains("occka_chaos_clone") || data.contains("occka_echo_clone"));
+                    var pd = e.getPersistentData();
+                    String chaosOwner = pd.getString("occka_chaos_clone");
+                    String echoOwner = pd.getString("occka_echo_clone");
+                    return pd.contains("occka_clone_lifetime") &&
+                            (!chaosOwner.isEmpty() || !echoOwner.isEmpty());
                 }).forEach(stand -> {
-                    // Декрементируем на 1 каждый тик (вызов идёт из onPlayerTick)
                     int life = stand.getPersistentData().getInt("occka_clone_lifetime") - 1;
                     if (life <= 0) {
-                        // Частицы исчезновения
-                        if (level != null) {
-                            level.sendParticles(ParticleTypes.POOF,
-                                    stand.getX(), stand.getY() + 1, stand.getZ(),
-                                    8, 0.3, 0.5, 0.3, 0.05);
-                        }
+                        level.sendParticles(ParticleTypes.POOF,
+                                stand.getX(), stand.getY() + 1, stand.getZ(),
+                                8, 0.3, 0.5, 0.3, 0.05);
                         stand.discard();
                     } else {
                         stand.getPersistentData().putInt("occka_clone_lifetime", life);

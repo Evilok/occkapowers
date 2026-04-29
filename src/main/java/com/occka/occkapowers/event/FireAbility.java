@@ -38,51 +38,36 @@ public final class FireAbility {
         } else {
             disableFireForm(player, level);
         }
+        // Плавим лёд и снег абилкой (разовое)
+        meltIceAndSnow(player, level);
     }
 
-    /**
-     * Огненная форма: при падении после прыжка запускаем "элитра-полёт"
-     * с постоянной скоростью по направлению взгляда.
-     */
-    // Логика вынесена в отдельный метод, чтобы не мешать обычному полёту элитрой
-    // (Superforce)
-    /*
-     * public static void tickFireFormFlight(ServerPlayer player, ServerLevel level,
-     * PlayerPowerData data) {
-     * if (data.isFireUltActive())
-     * return;
-     * if (player.isCreative() || player.isSpectator())
-     * return;
-     * if (player.onGround() || player.isInWater())
-     * return;
-     * 
-     * boolean active =
-     * player.getPersistentData().getBoolean("occka_fire_form_active");
-     * if (!active)
-     * return;
-     * 
-     * // Elytra включаем один раз
-     * if (!player.isFallFlying()) {
-     * player.startFallFlying();
-     * return;
-     * }
-     * 
-     * // ТОЧНО КАК У SUPERFORCE
-     * Vec3 look = player.getLookAngle().normalize();
-     * double speed = 1.15;
-     * 
-     * player.setDeltaMovement(look.x * speed, look.y * speed, look.z * speed);
-     * player.hurtMarked = true;
-     * player.resetFallDistance();
-     * player.fallDistance = 0;
-     * 
-     * if (player.tickCount % 3 == 0) {
-     * level.sendParticles(ParticleTypes.FLAME,
-     * player.getX(), player.getY(), player.getZ(),
-     * 2, 0.2, 0.1, 0.2, 0.03);
-     * }
-     * }
-     */
+    public static void meltIceAndSnow(ServerPlayer player, ServerLevel level) {
+        BlockPos center = player.blockPosition();
+        int radius = 8; // чуть больше радиус для абилки
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dy = -3; dy <= 5; dy++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (dx * dx + dy * dy + dz * dz > radius * radius)
+                        continue;
+                    BlockPos pos = center.offset(dx, dy, dz);
+                    BlockState state = level.getBlockState(pos);
+                    if (state.is(Blocks.ICE) || state.is(Blocks.BLUE_ICE) || state.is(Blocks.PACKED_ICE)) {
+                        level.setBlock(pos, Blocks.WATER.defaultBlockState(), 3);
+                        level.sendParticles(ParticleTypes.SMOKE,
+                                pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5,
+                                2, 0.2, 0.1, 0.2, 0.02);
+                    } else if (state.is(Blocks.SNOW) || state.is(Blocks.SNOW_BLOCK) || state.is(Blocks.POWDER_SNOW)) {
+                        level.removeBlock(pos, false);
+                    }
+                }
+            }
+        }
+        level.sendParticles(ParticleTypes.LAVA,
+                player.getX(), player.getY() + 1, player.getZ(),
+                15, 1.5, 0.5, 1.5, 0.2);
+        player.sendSystemMessage(AbilityCommon.msg("Ice Melt!", ChatFormatting.RED));
+    }
 
     private static void enableFireForm(ServerPlayer player, ServerLevel level) {
         player.getPersistentData().putBoolean("occka_fire_form_active", true);
@@ -141,38 +126,6 @@ public final class FireAbility {
         // Визуальный огонь на игроке (FIRE_RESISTANCE из пассивки — урона нет)
         player.setRemainingFireTicks(40);
 
-        // Плавим лёд и снег каждые 10 тиков (0.5 сек) — не спамим каждый тик
-        if (player.tickCount % 10 != 0)
-            return;
-
-        BlockPos center = player.blockPosition();
-        int radius = 5;
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dy = -2; dy <= 4; dy++) {
-                for (int dz = -radius; dz <= radius; dz++) {
-                    // Сфера, не куб
-                    if (dx * dx + dy * dy + dz * dz > radius * radius)
-                        continue;
-
-                    BlockPos pos = center.offset(dx, dy, dz);
-                    BlockState state = level.getBlockState(pos);
-
-                    // Лёд всех видов → вода
-                    if (state.is(Blocks.ICE) || state.is(Blocks.BLUE_ICE)
-                            || state.is(Blocks.PACKED_ICE)) {
-                        level.setBlock(pos, Blocks.WATER.defaultBlockState(), 3);
-                        level.sendParticles(ParticleTypes.SMOKE,
-                                pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5,
-                                2, 0.2, 0.1, 0.2, 0.02);
-                    }
-                    // Снег → воздух
-                    else if (state.is(Blocks.SNOW) || state.is(Blocks.SNOW_BLOCK)
-                            || state.is(Blocks.POWDER_SNOW)) {
-                        level.removeBlock(pos, false);
-                    }
-                }
-            }
-        }
     }
 
     /**
@@ -276,6 +229,13 @@ public final class FireAbility {
     public static void startUlt(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
         if (player.getPersistentData().getBoolean("occka_fire_form_active"))
             return;
+
+        // Блокируем ульт если игрок летит (elytra или в воздухе с формой)
+        if (player.isFallFlying()) {
+            player.sendSystemMessage(AbilityCommon.msg(
+                    "Can't use ult while flying!", ChatFormatting.RED));
+            return;
+        }
         data.setFireUltOrigin(player.getX(), player.getY(), player.getZ());
         player.teleportTo(player.getX(), player.getY() + 14, player.getZ());
         AttributeInstance gravity = player.getAttribute(ForgeMod.ENTITY_GRAVITY.get());

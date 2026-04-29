@@ -361,10 +361,24 @@ public final class FlowerAbility {
         // Телепортируем игрока в центр листвы каждые 20 тиков (1 раз в секунду)
         if (ticks % 20 == 0 && ticks > 0) {
             // Небольшое смещение чтоб не глитчило в блоке
-            player.teleportTo(cx + 0.5, cy, cz + 0.5);
+            player.teleportTo(cx, cy, cz);
 
-            level.sendParticles(ParticleTypes.COMPOSTER,
-                    cx + 0.5, cy + 1, cz + 0.5, 5, 0.3, 0.3, 0.3, 0.05);
+            BlockPos lower = BlockPos.of(nbt.getLong("occka_flower_ult_lower"));
+            BlockPos upper = BlockPos.of(nbt.getLong("occka_flower_ult_upper"));
+            String leafKey = nbt.getString("occka_flower_ult_leaf");
+            try {
+                var leafBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                        .get(new net.minecraft.resources.ResourceLocation(leafKey));
+                if (leafBlock != null) {
+                    BlockState leaf = leafBlock.defaultBlockState();
+                    level.setBlock(lower, leaf, 3);
+                    level.setBlock(upper, leaf, 3);
+                }
+            } catch (Exception ignored) {
+            }
+
+            //level.sendParticles(ParticleTypes.COMPOSTER,
+            //        cx + 0.5, cy + 1, cz + 0.5, 5, 0.3, 0.3, 0.3, 0.05);
         }
 
         // Конец ульты

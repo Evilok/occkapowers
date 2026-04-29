@@ -31,7 +31,9 @@ public final class FlashAbility {
         tickHeldShift(player, level);
     }
 
-    /** Called by Shift-hold packet to create Flash trail and maintain speed buff. */
+    /**
+     * Called by Shift-hold packet to create Flash trail and maintain speed buff.
+     */
     public static void tickHeldShift(ServerPlayer player, ServerLevel level) {
         player.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SPEED, 45, 7));
         player.addEffect(AbilityCommon.fx(MobEffects.JUMP, 45, 1));
@@ -83,12 +85,16 @@ public final class FlashAbility {
 
     public static void activateUlt(ServerPlayer player, ServerLevel level) {
         AABB area = player.getBoundingBox().inflate(30.0);
-        for (Mob mob : level.getEntitiesOfClass(Mob.class, area, m -> m.isAlive())) {
-            mob.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SLOWDOWN, 200, 254));
-            mob.addEffect(AbilityCommon.fx(MobEffects.DIG_SLOWDOWN, 200, 4));
+
+        // Было: Mob.class — не захватывает игроков и некоторых мобов
+        // Стало: LivingEntity.class с исключением самого игрока
+        for (LivingEntity entity : level.getEntitiesOfClass(
+                LivingEntity.class, area, e -> e != player && e.isAlive())) {
+            entity.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SLOWDOWN, 200, 254));
+            entity.addEffect(AbilityCommon.fx(MobEffects.DIG_SLOWDOWN, 200, 4));
         }
 
-        // "x5" fantasy boost approximation
+        // "x5" fantasy boost на себя
         player.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SPEED, 200, 9));
         player.addEffect(AbilityCommon.fx(MobEffects.DIG_SPEED, 200, 9));
         player.addEffect(AbilityCommon.fx(MobEffects.REGENERATION, 200, 9));
@@ -96,14 +102,16 @@ public final class FlashAbility {
         for (int i = 0; i < 100; i++) {
             double a = Math.random() * Math.PI * 2;
             double r = Math.random() * 30;
-            level.sendParticles(new DustParticleOptions(new Vector3f(1f, 0.75f, 0.05f), 1.0f),
+            level.sendParticles(new net.minecraft.core.particles.DustParticleOptions(
+                    new org.joml.Vector3f(1f, 0.75f, 0.05f), 1.0f),
                     player.getX() + Math.cos(a) * r,
                     player.getY() + 0.5 + Math.random() * 2.0,
                     player.getZ() + Math.sin(a) * r,
                     1, 0, 0, 0, 0);
         }
 
-        player.sendSystemMessage(Component.literal("BULLET TIME: mobs slowed for 5s!")
+        player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                "BULLET TIME: all entities slowed for 10s!")
                 .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
     }
 
@@ -125,7 +133,8 @@ public final class FlashAbility {
         }
     }
 
-    private static ArmorStand spawnAfterimage(ServerLevel level, Vec3 base, float yRot, float xRot, int rgb, Vec3 offset) {
+    private static ArmorStand spawnAfterimage(ServerLevel level, Vec3 base, float yRot, float xRot, int rgb,
+            Vec3 offset) {
         ArmorStand ghost = new ArmorStand(EntityType.ARMOR_STAND, level);
         ghost.moveTo(base.x + offset.x, base.y + offset.y, base.z + offset.z, yRot, xRot);
         ghost.setNoGravity(true);
