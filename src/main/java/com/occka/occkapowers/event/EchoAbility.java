@@ -19,10 +19,13 @@ import java.util.List;
 import java.util.UUID;
 
 public final class EchoAbility {
-    private EchoAbility() {}
+    private EchoAbility() {
+    }
 
     // ===== SHIFT: свап с ближайшим + урон + инвиз =====
     public static void activateShift(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
+        if (data.getShiftCooldown() > 0)
+            return;
         // Ищем ближайшего — сначала игроков, потом всех остальных
         LivingEntity target = null;
         double minD = Double.MAX_VALUE;
@@ -32,13 +35,19 @@ public final class EchoAbility {
         // Приоритет — игроки
         for (Player p : level.getEntitiesOfClass(Player.class, box, p -> p != player)) {
             double d = p.distanceTo(player);
-            if (d < minD) { minD = d; target = p; }
+            if (d < minD) {
+                minD = d;
+                target = p;
+            }
         }
         // Если игроков нет — любая живая сущность
         if (target == null) {
             for (LivingEntity e : AbilityCommon.getNearbyEnemies(player, 20)) {
                 double d = e.distanceTo(player);
-                if (d < minD) { minD = d; target = e; }
+                if (d < minD) {
+                    minD = d;
+                    target = e;
+                }
             }
         }
         if (target == null) {
@@ -76,17 +85,21 @@ public final class EchoAbility {
                 : target.getType().getDescription().getString();
         player.sendSystemMessage(AbilityCommon.msg(
                 "Swapped with " + targetName + "! Invisible 10s.", ChatFormatting.GREEN));
+        data.setShiftCooldown(300);
     }
 
     // ===== ABILITY: луч-метка → повторное нажатие = свап =====
     // Логика: если метки нет — пускаем луч и вешаем метку (без КД).
-    //         если метка есть — телепортируемся к цели и ставим КД.
+    // если метка есть — телепортируемся к цели и ставим КД.
     public static void activateAbility(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
         // Если метка уже стоит — выполняем свап
         if (player.getPersistentData().hasUUID("occka_echo_mark_target")) {
             executeMarkSwap(player, level, data);
             return;
         }
+
+        if (data.getAbilityCooldown() > 0)
+            return;
         // Иначе — пускаем луч и вешаем метку (КД не ставим)
         fireMark(player, level);
     }
@@ -219,9 +232,9 @@ public final class EchoAbility {
         for (LivingEntity entity : candidates) {
             // Проверяем несколько точек хитбокса сущности для надёжного попадания
             Vec3[] checkPoints = {
-                entity.getEyePosition(),
-                entity.position().add(0, entity.getBbHeight() * 0.5, 0), // центр
-                entity.position().add(0, entity.getBbHeight() * 0.1, 0), // низ
+                    entity.getEyePosition(),
+                    entity.position().add(0, entity.getBbHeight() * 0.5, 0), // центр
+                    entity.position().add(0, entity.getBbHeight() * 0.1, 0), // низ
             };
 
             for (Vec3 checkPoint : checkPoints) {

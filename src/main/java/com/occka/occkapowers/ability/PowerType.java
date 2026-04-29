@@ -48,7 +48,7 @@ public enum PowerType {
     // Shift: 0 = continuous (no cd), else ticks
     public int getShiftCooldown() {
         return switch (this) {
-            case ECHO -> 600; // 30s
+            case ECHO -> 300;
             case FIRE -> 400;
             case CHAOS -> 200;
             default -> 0; // continuous
@@ -69,7 +69,7 @@ public enum PowerType {
             case LIGHT -> 200;
             case ADEPT -> 500;
             case GRAVITY -> 340;
-            case ECHO -> 200;
+            case ECHO -> 600;
             case SUPERFORCE -> 200; // 10s
             case CHAOS -> 200; // 15 sec
             case FLASH -> 160; // ~8s

@@ -61,7 +61,7 @@ public class AbilityActivator {
             case LIGHT -> LightAbility.activateShift(player, level);
             case GRAVITY -> GravityAbility.activateShift(player, level);
             case ECHO -> EchoAbility.activateShift(player, level, data);
-            case CHAOS -> ChaosAbility.activateShift(player, level);
+            case CHAOS -> ChaosAbility.activateShift(player, level, data);
             case FLASH -> FlashAbility.activateShift(player, level);
             case SPIDER -> SpiderAbility.activateShift(player, level);
             case SUPERFORCE -> SuperforceAbility.activateShift(player, level);

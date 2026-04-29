@@ -38,8 +38,7 @@ public final class FireAbility {
         } else {
             disableFireForm(player, level);
         }
-        // Плавим лёд и снег абилкой (разовое)
-        meltIceAndSnow(player, level);
+
     }
 
     public static void meltIceAndSnow(ServerPlayer player, ServerLevel level) {
@@ -176,7 +175,7 @@ public final class FireAbility {
                     entity.getX(), entity.getY() + 1, entity.getZ(),
                     12, 0.3, 0.5, 0.3, 0.08);
         }
-
+        meltIceAndSnow(player, level);
         // кольцо огня
         for (int deg = 0; deg < 360; deg += 6) {
             for (double r = 0.5; r <= 10; r += 1.5) {
@@ -203,7 +202,6 @@ public final class FireAbility {
         player.sendSystemMessage(
                 AbilityCommon.msg("Firestorm!", ChatFormatting.RED));
 
-        // ✔️ ВОТ ЭТО ТЫ ЗАБЫЛ
         data.setShiftCooldown(400); // 20 секунд
     }
     // ===== ULT: Fire Ult (без изменений) =====
@@ -227,15 +225,12 @@ public final class FireAbility {
     }
 
     public static void startUlt(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
-        if (player.getPersistentData().getBoolean("occka_fire_form_active"))
-            return;
-
-        // Блокируем ульт если игрок летит (elytra или в воздухе с формой)
-        if (player.isFallFlying()) {
+        if (!player.onGround() || player.isFallFlying() || player.getAbilities().flying) {
             player.sendSystemMessage(AbilityCommon.msg(
-                    "Can't use ult while flying!", ChatFormatting.RED));
+                    "Can't use ability while flying!", ChatFormatting.RED));
             return;
         }
+        
         data.setFireUltOrigin(player.getX(), player.getY(), player.getZ());
         player.teleportTo(player.getX(), player.getY() + 14, player.getZ());
         AttributeInstance gravity = player.getAttribute(ForgeMod.ENTITY_GRAVITY.get());
