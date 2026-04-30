@@ -60,7 +60,7 @@ public final class LaserAbility {
 
         if (hitEntity != null) {
             // Есть моб — бьём, блоки не трогаем
-            hitEntity.hurt(player.damageSources().magic(), 18);
+            hitEntity.hurt(player.damageSources().magic(), 12);
             level.sendParticles(LASER_DUST_GLOW,
                     hitEntity.getX(), hitEntity.getY() + 1, hitEntity.getZ(),
                     20, 0.4, 0.4, 0.4, 0);
@@ -169,7 +169,7 @@ public final class LaserAbility {
 
         if (hitEntity != null) {
             // Есть моб — бьём, блоки не трогаем
-            hitEntity.hurt(player.damageSources().magic(), 3.0f);
+            hitEntity.hurt(player.damageSources().magic(), 3.5f);
             Vec3 kb = dir.scale(0.15);
             hitEntity.setDeltaMovement(hitEntity.getDeltaMovement().add(kb));
             hitEntity.hurtMarked = true;
@@ -197,11 +197,6 @@ public final class LaserAbility {
     }
 
     // ===== HELPERS =====
-
-    /**
-     * Ищет ближайшую сущность в луче.
-     * thickness — толщина луча для хитбокса.
-     */
     private static LivingEntity findFirstEntityInBeam(ServerPlayer player, ServerLevel level,
             Vec3 start, Vec3 dir, double length, double thickness) {
 

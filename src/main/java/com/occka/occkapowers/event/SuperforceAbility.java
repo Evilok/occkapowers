@@ -189,14 +189,24 @@ public class SuperforceAbility {
 
         player.getPersistentData().putBoolean("occka_sf_ult_flying", true);
         player.getPersistentData().putInt("occka_sf_ult_ticks", 0);
-        // Запоминаем: активировали с воздуха или с земли
-        player.getPersistentData().putBoolean("occka_sf_ult_from_air", inAir);
-
-        // Сопротивление урону во время полёта
         player.addEffect(fx(MobEffects.DAMAGE_RESISTANCE, 100, 3));
 
-        if (inAir) {
-            // Уже в воздухе — сразу летим вниз как метеор
+        // Ищем ближайший пол под игроком
+        int distToGround = 0;
+        for (int i = 1; i <= 50; i++) {
+            BlockPos below = BlockPos.containing(player.getX(), player.getY() - i, player.getZ());
+            if (level.getBlockState(below).isSolid()) {
+                distToGround = i;
+                break;
+            }
+        }
+
+        boolean shouldLaunchUp = inAir && distToGround > 0 && distToGround < 5;
+        boolean shouldDive = inAir && (distToGround == 0 || distToGround >= 5);
+
+        player.getPersistentData().putBoolean("occka_sf_ult_from_air", shouldDive);
+
+        if (shouldDive) {
             player.setDeltaMovement(
                     player.getDeltaMovement().x * 0.2,
                     -3.5,
@@ -205,7 +215,6 @@ public class SuperforceAbility {
             player.resetFallDistance();
             player.fallDistance = 0;
 
-            // Хвост кометы вверх
             for (int i = 0; i < 20; i++) {
                 level.sendParticles(ParticleTypes.FLAME,
                         player.getX() + (Math.random() - 0.5) * 0.5,
@@ -218,8 +227,9 @@ public class SuperforceAbility {
                     10, 0.5, 0.5, 0.5, 0.1);
             player.sendSystemMessage(Component.literal("METEOR DIVE! Incoming!")
                     .withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+
         } else {
-            // На земле — прыжок, потом ульта сама направит вниз
+            // На земле или низко в воздухе — взлетаем
             player.setDeltaMovement(0, 2.8, 0);
             player.hurtMarked = true;
             player.resetFallDistance();

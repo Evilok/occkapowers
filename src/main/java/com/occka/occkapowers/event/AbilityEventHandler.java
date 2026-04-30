@@ -77,10 +77,13 @@ public class AbilityEventHandler {
             // 7. Gravity ult — таймер падения
             tickGravityUlt(player, level);
 
-            // 8. Chaos/Echo клон тикер — каждые 20 тиков
             PowerType type = data.getPowerType();
-            if (type == PowerType.CHAOS || type == PowerType.ECHO) {
+            if (type == PowerType.CHAOS) {
                 tickClones(player, level);
+            }
+
+            if (type == PowerType.LIGHTNING) {
+                LightningAbility.tickUlt(player, level);
             }
 
             if (type == PowerType.FIRE) {
@@ -132,17 +135,10 @@ public class AbilityEventHandler {
                 }
             }
 
-            // 10. Fire form tick — огонь, плавление льда (пока форма активна)
-            if (type == PowerType.FIRE) {
-                FireAbility.tickFireForm(player, level);
-            }
-
-            // 11. Adept tick
             if (type == PowerType.ADEPT && player.tickCount % 20 == 0) {
                 AdeptAbility.tick(player, level);
             }
 
-            // 12. Синхронизация HUD каждые 10 тиков
             if (player.tickCount % 10 == 0) {
                 NetworkHandler.CHANNEL.send(
                         PacketDistributor.PLAYER.with(() -> player),

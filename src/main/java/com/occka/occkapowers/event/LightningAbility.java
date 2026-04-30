@@ -13,6 +13,7 @@ import net.minecraft.world.phys.Vec3;
 import com.occka.occkapowers.ability.PlayerPowerData;
 import com.occka.occkapowers.ability.PowerType;
 import com.occka.occkapowers.event.AbilityCommon;
+import net.minecraft.world.entity.LivingEntity;
 
 public final class LightningAbility {
     private LightningAbility() {
@@ -45,10 +46,34 @@ public final class LightningAbility {
 
     public static void activateAbility(ServerPlayer player, ServerLevel level) {
         Vec3 eye = player.getEyePosition();
-        Vec3 end = eye.add(player.getLookAngle().scale(50));
-        BlockHitResult hit = level
-                .clip(new ClipContext(eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
-        Vec3 strikePos = hit.getType() == HitResult.Type.MISS ? end : Vec3.atCenterOf(hit.getBlockPos());
+        Vec3 look = player.getLookAngle().normalize();
+
+        // Ищем моба в конусе прицела — до 20 блоков, угол 30 градусов
+        LivingEntity target = null;
+        double minDist = Double.MAX_VALUE;
+
+        for (LivingEntity entity : AbilityCommon.getNearbyEnemies(player, 20)) {
+            Vec3 toEntity = entity.getEyePosition().subtract(eye).normalize();
+            double dot = toEntity.dot(look); // 1.0 = прямо в прицеле, 0.0 = сбоку
+            if (dot < 0.85)
+                continue; // ~30 градусов от центра прицела
+            double dist = entity.distanceTo(player);
+            if (dist < minDist) {
+                minDist = dist;
+                target = entity;
+            }
+        }
+
+        Vec3 strikePos;
+        if (target != null) {
+            strikePos = target.position();
+        } else {
+            // Нет мобов в прицеле — стреляем по прицелу как раньше
+            Vec3 end = eye.add(look.scale(50));
+            BlockHitResult hit = level.clip(
+                    new ClipContext(eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
+            strikePos = hit.getType() == HitResult.Type.MISS ? end : Vec3.atCenterOf(hit.getBlockPos());
+        }
 
         net.minecraft.world.entity.LightningBolt bolt = new net.minecraft.world.entity.LightningBolt(
                 EntityType.LIGHTNING_BOLT, level);
@@ -65,13 +90,13 @@ public final class LightningAbility {
     }
 
     public static void activateUlt(ServerPlayer player, ServerLevel level, double radius) {
-        for (var entity : AbilityCommon.getNearbyEnemies(player, radius)) {
-            net.minecraft.world.entity.LightningBolt bolt = new net.minecraft.world.entity.LightningBolt(
-                    EntityType.LIGHTNING_BOLT, level);
-            bolt.moveTo(entity.position());
-            bolt.setVisualOnly(false);
-            level.addFreshEntity(bolt);
-        }
+        player.getPersistentData().putInt("occka_lightning_ult_ticks", 900); // 45 сек
+        player.getPersistentData().putDouble("occka_lightning_ult_radius", radius);
+        player.getPersistentData().putInt("occka_lightning_ult_count", 0);
+        player.getPersistentData().putInt("occka_lightning_ult_max", 10 + new java.util.Random().nextInt(3)); // 10-12
+
+        level.setWeatherParameters(0, 18000, true, true); // гроза на 15 минут
+
         for (int i = 0; i < 60; i++) {
             double a = Math.random() * Math.PI * 2, r = Math.random() * radius;
             level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
@@ -81,5 +106,46 @@ public final class LightningAbility {
                     1, 0, 0, 0, 0.5);
         }
         player.sendSystemMessage(AbilityCommon.msg("LIGHTNING STORM!", ChatFormatting.YELLOW, ChatFormatting.BOLD));
+    }
+
+    public static void tickUlt(ServerPlayer player, ServerLevel level) {
+        int ticks = player.getPersistentData().getInt("occka_lightning_ult_ticks");
+        if (ticks <= 0)
+            return;
+
+        ticks--;
+        player.getPersistentData().putInt("occka_lightning_ult_ticks", ticks);
+
+        int count = player.getPersistentData().getInt("occka_lightning_ult_count");
+        int max = player.getPersistentData().getInt("occka_lightning_ult_max");
+        double radius = player.getPersistentData().getDouble("occka_lightning_ult_radius");
+
+        int interval = 900 / max;
+        if (count < max && ticks % interval == 0) {
+            // Ищем ближайшего врага
+            LivingEntity target = null;
+            double minDist = Double.MAX_VALUE;
+            for (LivingEntity e : AbilityCommon.getNearbyEnemies(player, radius)) {
+                double d = e.distanceTo(player);
+                if (d < minDist) {
+                    minDist = d;
+                    target = e;
+                }
+            }
+
+            if (target != null) {
+                net.minecraft.world.entity.LightningBolt bolt = new net.minecraft.world.entity.LightningBolt(
+                        EntityType.LIGHTNING_BOLT, level);
+                bolt.moveTo(target.position());
+                bolt.setVisualOnly(false);
+                level.addFreshEntity(bolt);
+                player.getPersistentData().putInt("occka_lightning_ult_count", count + 1);
+            }
+        }
+
+        if (ticks == 0) {
+            level.setWeatherParameters(6000, 0, false, false);
+            player.sendSystemMessage(AbilityCommon.msg("Storm ended.", ChatFormatting.YELLOW));
+        }
     }
 }

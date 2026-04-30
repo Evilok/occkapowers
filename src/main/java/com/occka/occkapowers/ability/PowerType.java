@@ -53,7 +53,7 @@ public enum PowerType {
             case FLOWER -> 800;
             case ICE -> 440; // 22 сек
             case LIGHTNING -> 200;
-            case LASER -> 240;
+            case LASER -> 382;
             case GEO -> 240;
             case VOID -> 300;
             case LIGHT -> 200;
@@ -123,6 +123,7 @@ public enum PowerType {
     /** Максимальное количество зарядов. 0 = система зарядов не используется. */
     public int getAbilityMaxCharges() {
         return switch (this) {
+            case AIR -> 2;
             default -> 0;
         };
     }
@@ -154,6 +155,7 @@ public enum PowerType {
 
     public int getUltCooldown() {
         return switch (this) {
+            case SUPERFORCE -> 650;
             default -> 2400; // 120 сек для всех
         };
     }

@@ -46,8 +46,8 @@ public class GeoOrbitHandler {
         OrbitData data = new OrbitData(pid);
         data.levelKey = level.dimension().location().toString();
 
-        for (int i = 0; i < 3; i++) {
-            double angle = (i / 3.0) * Math.PI * 2;
+        for (int i = 0; i < 5; i++) {
+            double angle = (i / 5.0) * Math.PI * 2;
 
             ArmorStand stone = EntityType.ARMOR_STAND.create(level);
             if (stone == null) continue;
@@ -291,8 +291,8 @@ public class GeoOrbitHandler {
         level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, pos.x, pos.y, pos.z, 1, 0, 0, 0, 0);
         level.sendParticles(ParticleTypes.FLASH, pos.x, pos.y, pos.z, 1, 0, 0, 0, 0);
 
-        float damage = 22.0f;
-        double radius = 6.0;
+        float damage = 10.2f;
+        double radius = 7.5;
         String ownerUUIDStr = stone.getPersistentData().getString("owner_uuid");
 
         List<LivingEntity> targets = level.getEntitiesOfClass(
