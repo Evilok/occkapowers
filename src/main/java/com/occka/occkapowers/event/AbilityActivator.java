@@ -76,11 +76,10 @@ public class AbilityActivator {
             }
         }
 
-        // В самом конце activateShift, после switch:
         if (data.getShiftMaxCharges() > 0) {
-            data.getShiftChargeCdQueue().add(data.getShiftChargeCdMax());
-        } else if (type.getShiftCooldown() > 0) {
-            data.setShiftCooldown(type.getShiftCooldown());
+            data.getShiftChargeCdQueue().add(type.getShiftCooldown(player));
+        } else if (type.getShiftCooldown(player) > 0) {
+            data.setShiftCooldown(type.getShiftCooldown(player));
         }
     }
 
@@ -128,7 +127,14 @@ public class AbilityActivator {
             return;
 
         switch (type) {
-            case FIRE -> FireAbility.activateAbility(player, level);
+            case FIRE -> {
+                if (data.isFireUltActive()) { // если ультуешь нельзя активировать форму
+                    player.sendSystemMessage(AbilityCommon.msg(
+                            "Cannot use Fire Form during Ultimate!", ChatFormatting.RED));
+                    return;
+                }
+                FireAbility.activateAbility(player, level);
+            }
             case AIR -> AirAbility.activateAbility(player, level, data);
             case WATER -> WaterAbility.activateAbility(player, level);
             case ICE -> IceAbility.activateAbility(player, level);

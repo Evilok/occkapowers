@@ -115,16 +115,14 @@ public enum PowerType {
     }
 
     public int getShiftMaxCharges() {
-    return switch (this) {
-        case FIRE -> 2;
-        default -> 0;
-    };
-}
+        return switch (this) {
+            default -> 0;
+        };
+    }
 
     /** Максимальное количество зарядов. 0 = система зарядов не используется. */
     public int getAbilityMaxCharges() {
         return switch (this) {
-            case AIR -> 2;
             default -> 0;
         };
     }
@@ -132,11 +130,10 @@ public enum PowerType {
     /** Максимальное количество зарядов ульты. 0 = обычный КД. */
     public int getUltMaxCharges() {
         return switch (this) {
-            case SUPERFORCE -> 2;
             default -> 0;
         };
     }
-    
+
     public int getShiftCooldown() {
         return switch (this) {
             case ECHO -> 300;
@@ -144,6 +141,14 @@ public enum PowerType {
             case CHAOS -> 200;
             default -> 0;
         };
+    }
+
+    public int getShiftCooldown(net.minecraft.server.level.ServerPlayer player) { // ДЛЯ ФОРМЫ И ЕСЛИ В БУДУЩЕМ БУДУТ ФОРМЫ ТО ТУТ КД ДЛЯ СКИЛЛОВ С ФОРМОЙ.
+        if (this == FIRE) {
+            return player.getPersistentData()
+                    .getBoolean("occka_fire_form_active") ? 100 : 400;
+        }
+        return getShiftCooldown(); // все остальные делегируют в старый
     }
 
     public int getUltCooldown() {

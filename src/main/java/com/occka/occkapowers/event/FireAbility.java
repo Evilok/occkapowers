@@ -267,20 +267,28 @@ public final class FireAbility {
             player.clearFire();
         }
 
+        player.setDeltaMovement(Vec3.ZERO);
+        player.hurtMarked = true;
+        player.fallDistance = 0.0F;
+
         data.setFireUltOrigin(player.getX(), player.getY(), player.getZ());
         player.teleportTo(player.getX(), player.getY() + 14, player.getZ());
+
         AttributeInstance gravity = player.getAttribute(ForgeMod.ENTITY_GRAVITY.get());
         if (gravity != null) {
             data.setFireUltOldGravity(gravity.getBaseValue());
             gravity.setBaseValue(0.0);
         }
+
         data.setFireUltActive(true);
         data.setFireUltTicks(300);
         data.setFireUltFireballCooldown(0);
+
         for (int i = 0; i < 30; i++)
             level.sendParticles(ParticleTypes.FLAME,
                     player.getX(), player.getY() - i * 0.5, player.getZ(),
                     5, 1, 0.2, 1, 0.05);
+
         player.sendSystemMessage(AbilityCommon.msg(
                 "FIRE ULT! Shoot fireballs!",
                 ChatFormatting.RED, ChatFormatting.BOLD));
