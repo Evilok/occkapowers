@@ -232,7 +232,7 @@ public class AbilityActivator {
             case CHAOS -> ChaosAbility.activateUlt(player, level);
             case SPIDER -> SpiderAbility.activateUlt(player, level);
             case FLOWER -> FlowerAbility.activateUlt(player, level);
-            case FLASH -> FlashAbility.activateUlt(player, level);
+            case FLASH -> FlashAbility.activateUlt(player, level, data);
             case SUPERFORCE -> SuperforceAbility.activateUlt(player, level);
             case ADEPT -> AdeptAbility.activateUlt(player, level);
             default -> {

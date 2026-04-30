@@ -16,7 +16,10 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.DyeableLeatherItem;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.core.BlockPos;
 import org.joml.Vector3f;
+
+import com.occka.occkapowers.ability.PlayerPowerData;
 
 import java.util.HashSet;
 import java.util.List;
@@ -83,36 +86,101 @@ public final class FlashAbility {
         player.sendSystemMessage(AbilityCommon.msg("Afterimage Dash!", ChatFormatting.GOLD, ChatFormatting.BOLD));
     }
 
-    public static void activateUlt(ServerPlayer player, ServerLevel level) {
+    public static void activateUlt(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
         AABB area = player.getBoundingBox().inflate(30.0);
-
-        // Было: Mob.class — не захватывает игроков и некоторых мобов
-        // Стало: LivingEntity.class с исключением самого игрока
         for (LivingEntity entity : level.getEntitiesOfClass(
                 LivingEntity.class, area, e -> e != player && e.isAlive())) {
-            entity.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SLOWDOWN, 200, 254));
+            entity.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SLOWDOWN, 200, 3)); // не 254, а 3
             entity.addEffect(AbilityCommon.fx(MobEffects.DIG_SLOWDOWN, 200, 4));
         }
-
-        // "x5" fantasy boost на себя
         player.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SPEED, 200, 9));
-        player.addEffect(AbilityCommon.fx(MobEffects.DIG_SPEED, 200, 9));
-        player.addEffect(AbilityCommon.fx(MobEffects.REGENERATION, 200, 9));
-
-        for (int i = 0; i < 100; i++) {
+        player.addEffect(AbilityCommon.fx(MobEffects.REGENERATION, 200, 4));
+        player.addEffect(AbilityCommon.fx(MobEffects.DAMAGE_RESISTANCE, 200, 2));
+        data.setFlashUltActive(true);
+        data.setFlashUltTicks(200);
+        for (int i = 0; i < 80; i++) {
             double a = Math.random() * Math.PI * 2;
             double r = Math.random() * 30;
-            level.sendParticles(new net.minecraft.core.particles.DustParticleOptions(
-                    new org.joml.Vector3f(1f, 0.75f, 0.05f), 1.0f),
+            level.sendParticles(new DustParticleOptions(new Vector3f(1f, 0.85f, 0.05f), 1.2f),
                     player.getX() + Math.cos(a) * r,
                     player.getY() + 0.5 + Math.random() * 2.0,
                     player.getZ() + Math.sin(a) * r,
                     1, 0, 0, 0, 0);
         }
-
-        player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                "BULLET TIME: all entities slowed for 10s!")
+        player.sendSystemMessage(Component.literal("BULLET TIME — you are the bullet!")
                 .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+    }
+
+    public static void tickFlashUlt(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
+        int ticks = data.getFlashUltTicks() - 1;
+        data.setFlashUltTicks(ticks);
+
+        if (ticks <= 0) {
+            data.setFlashUltActive(false);
+            player.sendSystemMessage(Component.literal("BULLET TIME ended.")
+                    .withStyle(ChatFormatting.GRAY));
+            return;
+        }
+
+        if (ticks % 2 == 0) {
+            level.sendParticles(new DustParticleOptions(new Vector3f(1f, 0.75f, 0.0f), 1.0f),
+                    player.getX(), player.getY() + 0.5, player.getZ(),
+                    3, 0.15, 0.15, 0.15, 0);
+            level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                    player.getX(), player.getY() + 0.5, player.getZ(),
+                    2, 0.2, 0.2, 0.2, 0.06);
+        }
+
+        Vec3 motion = player.getDeltaMovement();
+        double speedSqr = motion.horizontalDistanceSqr();
+
+        double speed = Math.sqrt(speedSqr);
+        double radius = 2.2 + Math.min(speed * 0.8, 2.5);
+
+        Vec3 prevPos = new Vec3(player.xOld, player.yOld, player.zOld);
+        Vec3 currPos = player.position();
+        AABB sweepBox = new AABB(prevPos, currPos).inflate(radius);
+
+        List<LivingEntity> nearby = level.getEntitiesOfClass(
+                LivingEntity.class,
+                sweepBox,
+                e -> e != player && e.isAlive());
+        for (LivingEntity target : nearby) {
+            int cd = target.getPersistentData().getInt("flash_hit_cd");
+            if (cd > 0) {
+                target.getPersistentData().putInt("flash_hit_cd", cd - 1);
+                continue;
+            }
+
+            if (!target.getBoundingBox().intersects(sweepBox))
+                continue;
+
+            float damage = (float) (4.0 + speed * 2.5);
+            Vec3 dir = target.position().subtract(player.position()).normalize();
+            double force = 2.0 + speed * 1.4;
+            double yBoost = 0.5 + speed * 0.3;
+
+            target.invulnerableTime = 0;
+            target.hurt(player.damageSources().playerAttack(player), damage);
+            target.setDeltaMovement(dir.x * force, yBoost, dir.z * force);
+            target.hurtMarked = true;
+
+            level.sendParticles(ParticleTypes.EXPLOSION,
+                    target.getX(), target.getY() + 1, target.getZ(),
+                    2, 0.2, 0.2, 0.2, 0.05);
+            level.sendParticles(ParticleTypes.FLASH,
+                    target.getX(), target.getY() + 1, target.getZ(),
+                    1, 0, 0, 0, 0);
+            level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                    target.getX(), target.getY() + 1, target.getZ(),
+                    15, 0.4, 0.4, 0.4, 0.15);
+            level.sendParticles(ParticleTypes.CRIT,
+                    target.getX(), target.getY() + 1, target.getZ(),
+                    12, 0.5, 0.5, 0.5, 0.25);
+
+            target.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SLOWDOWN, 8, 1));
+            target.getPersistentData().putInt("flash_hit_cd", 4);
+        }
     }
 
     public static void tickAfterimages(ServerLevel level) {

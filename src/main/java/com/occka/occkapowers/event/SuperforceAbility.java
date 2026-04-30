@@ -56,7 +56,7 @@ public class SuperforceAbility {
             Vec3 toE = e.position().subtract(eye).normalize();
             double dot = toE.dot(dir);
             double dist = e.distanceTo(player);
-            if (dot > 0.65 && dist < minDist) {
+            if (dot > 0.82 && dist < minDist) {
                 minDist = dist;
                 target = e;
             }
@@ -65,7 +65,7 @@ public class SuperforceAbility {
         if (target != null) {
             target.setDeltaMovement(dir.x * 3.2, 0.75, dir.z * 3.2);
             target.hurtMarked = true;
-            target.hurt(player.damageSources().playerAttack(player), 18);
+            target.hurt(player.damageSources().playerAttack(player), 14);
             if (target instanceof ServerPlayer tp) {
                 tp.addEffect(fx(MobEffects.CONFUSION, 50, 6));
             }

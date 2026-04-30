@@ -139,6 +139,7 @@ public enum PowerType {
             case ECHO -> 300;
             case FIRE -> 400;
             case CHAOS -> 200;
+            case SUPERFORCE -> 150; //7.5
             default -> 0;
         };
     }

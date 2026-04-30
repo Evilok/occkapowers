@@ -15,13 +15,18 @@ public class PlayerPowerData {
     private int ultCooldown = 0;
     private boolean abilityUnlocked = false;
     private boolean ultUnlocked = false;
+
     private boolean fireUltActive = false;
     private int fireUltTicks = 0;
     private double fireUltOriginX, fireUltOriginY, fireUltOriginZ;
     private int fireUltFireballCooldown = 0;
+
     private boolean fireUltShouldShoot = false;
     private boolean fireUltJustEnded = false;
     private int abilityMaxCdOverride = 0;
+
+    private boolean flashUltActive = false;
+    private int flashUltTicks = 0;
 
     // Charges
     private int abilityMaxCharges = 0;
@@ -57,6 +62,8 @@ public class PlayerPowerData {
         this.shiftMaxCharges = t.getShiftMaxCharges();
         this.shiftChargeCdMax = t.getShiftChargeCooldown();
         this.shiftChargeCdQueue = new ArrayList<>();
+        this.flashUltActive = false;
+        this.flashUltTicks = 0;
     }
 
     // ===== TICK =====
@@ -267,6 +274,22 @@ public class PlayerPowerData {
     }
 
     // ===== MISC =====
+
+    public boolean isFlashUltActive() {
+        return flashUltActive;
+    }
+
+    public void setFlashUltActive(boolean v) {
+        flashUltActive = v;
+    }
+
+    public int getFlashUltTicks() {
+        return flashUltTicks;
+    }
+
+    public void setFlashUltTicks(int v) {
+        flashUltTicks = v;
+    }
 
     public int getAbilityMaxCdOverride() {
         return abilityMaxCdOverride;

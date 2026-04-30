@@ -87,18 +87,13 @@ public class AbilityEventHandler {
                 boolean fireForm = player.getPersistentData().getBoolean("occka_fire_form_active");
 
                 if (fireForm) {
-                    // Только если игрок уже в воздухе (не с земли)
                     if (!player.onGround() && !player.isInWater()) {
 
                         if (!player.isFallFlying()) {
                             player.startFallFlying();
                         }
-
-                        // Та же логика что у SUPERFORCE
                         SuperforceAbility.applyElytraFlight(player, level);
                     }
-
-                    // Частицы (по желанию)
                     if (player.tickCount % 3 == 0) {
                         level.sendParticles(ParticleTypes.FLAME,
                                 player.getX(), player.getY(), player.getZ(),
@@ -107,12 +102,14 @@ public class AbilityEventHandler {
                 }
             }
 
-            // if (type == PowerType.FLASH && player.isShiftKeyDown()) {
-            // FlashAbility.tickHeldShift(player, level);
-            // }
-
             if (type == PowerType.ICE) {
                 IceAbility.tickIceCage(player, level);
+            }
+
+            if (type == PowerType.FLASH) {
+                if (data.isFlashUltActive()) {
+                    FlashAbility.tickFlashUlt(player, level, data);
+                }
             }
 
             if (type == PowerType.SUPERFORCE) {
