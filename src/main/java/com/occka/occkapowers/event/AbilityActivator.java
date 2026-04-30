@@ -47,12 +47,11 @@ public class AbilityActivator {
             return;
 
         if (data.getShiftMaxCharges() > 0) {
-            if (data.getShiftCharges() <= 0) {
-                player.sendSystemMessage(AbilityCommon.msg(
-                        "No shift charges! Next in: " + String.format("%.1f", data.getShiftChargeCd() / 20f) + "s",
-                        ChatFormatting.RED));
-                return;
-            }
+        } else if (data.getShiftCooldown() > 0) {
+            player.sendSystemMessage(AbilityCommon.msg(
+                    "Shift on cooldown: " + String.format("%.1f", data.getShiftCooldown() / 20f) + "s",
+                    ChatFormatting.RED));
+            return;
         }
 
         switch (type) {
@@ -73,11 +72,15 @@ public class AbilityActivator {
             case SPIDER -> SpiderAbility.activateShift(player, level);
             case SUPERFORCE -> SuperforceAbility.activateShift(player, level);
             case ADEPT -> AdeptAbility.activateShift(player, level);
-            default -> { }
+            default -> {
+            }
         }
 
+        // В самом конце activateShift, после switch:
         if (data.getShiftMaxCharges() > 0) {
             data.getShiftChargeCdQueue().add(data.getShiftChargeCdMax());
+        } else if (type.getShiftCooldown() > 0) {
+            data.setShiftCooldown(type.getShiftCooldown());
         }
     }
 
@@ -146,7 +149,8 @@ public class AbilityActivator {
             case SPIDER -> SpiderAbility.activateAbility(player, level);
             case SUPERFORCE -> SuperforceAbility.activateAbility(player, level);
             case ADEPT -> AdeptAbility.activateAbility(player, level);
-            default -> { }
+            default -> {
+            }
         }
 
         if (type.getAbilityMaxCharges() > 0) {
@@ -225,7 +229,8 @@ public class AbilityActivator {
             case FLASH -> FlashAbility.activateUlt(player, level);
             case SUPERFORCE -> SuperforceAbility.activateUlt(player, level);
             case ADEPT -> AdeptAbility.activateUlt(player, level);
-            default -> { }
+            default -> {
+            }
         }
 
         if (data.getUltMaxCharges() > 0) {

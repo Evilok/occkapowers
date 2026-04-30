@@ -186,7 +186,6 @@ public final class FireAbility {
             }
 
             player.sendSystemMessage(AbilityCommon.msg("Fire Shot!", ChatFormatting.RED));
-            data.setShiftCooldown(170);
 
         } else {
             if (data.getShiftCooldown() > 0)
@@ -233,7 +232,6 @@ public final class FireAbility {
                     20, 1.5, 0.5, 1.5, 0.2);
 
             player.sendSystemMessage(AbilityCommon.msg("Firestorm!", ChatFormatting.RED));
-            data.setShiftCooldown(400);
         }
     }
 

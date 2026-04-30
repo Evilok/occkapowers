@@ -116,7 +116,7 @@ public enum PowerType {
 
     public int getShiftMaxCharges() {
     return switch (this) {
-        case ECHO -> 2;
+        case FIRE -> 2;
         default -> 0;
     };
 }
@@ -132,7 +132,7 @@ public enum PowerType {
     /** Максимальное количество зарядов ульты. 0 = обычный КД. */
     public int getUltMaxCharges() {
         return switch (this) {
-            case ICE -> 2;
+            case SUPERFORCE -> 2;
             default -> 0;
         };
     }
