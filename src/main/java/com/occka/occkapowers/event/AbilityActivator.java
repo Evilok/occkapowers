@@ -29,7 +29,6 @@ public class AbilityActivator {
         });
     }
 
-    /** Called every 20 ticks (1s) while shift key held */
     public static void activateShiftHeld(ServerPlayer player) {
         player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
             activateShift(player, data, data.getPowerType());
@@ -47,8 +46,16 @@ public class AbilityActivator {
         if (!(player.level() instanceof ServerLevel level))
             return;
 
+        if (data.getShiftMaxCharges() > 0) {
+            if (data.getShiftCharges() <= 0) {
+                player.sendSystemMessage(AbilityCommon.msg(
+                        "No shift charges! Next in: " + String.format("%.1f", data.getShiftChargeCd() / 20f) + "s",
+                        ChatFormatting.RED));
+                return;
+            }
+        }
+
         switch (type) {
-            // FIRE: toggle огненной формы (одиночное нажатие, не удержание)
             case FIRE -> FireAbility.activateShift(player, level, data);
             case AIR -> LightningAbility.activateShift(player, level);
             case WATER -> WaterAbility.activateShift(player, level);
@@ -66,8 +73,11 @@ public class AbilityActivator {
             case SPIDER -> SpiderAbility.activateShift(player, level);
             case SUPERFORCE -> SuperforceAbility.activateShift(player, level);
             case ADEPT -> AdeptAbility.activateShift(player, level);
-            default -> {
-            }
+            default -> { }
+        }
+
+        if (data.getShiftMaxCharges() > 0) {
+            data.getShiftChargeCdQueue().add(data.getShiftChargeCdMax());
         }
     }
 
@@ -86,6 +96,7 @@ public class AbilityActivator {
             syncToClient(player, data);
             return;
         }
+
         if (type == PowerType.ECHO) {
             if (!(player.level() instanceof ServerLevel level))
                 return;
@@ -93,19 +104,29 @@ public class AbilityActivator {
             syncToClient(player, data);
             return;
         }
-        if (data.getAbilityCooldown() > 0) {
-            player.sendSystemMessage(
-                    AbilityCommon.msg(
-                            "Ability on cooldown: " + String.format("%.1f", data.getAbilityCooldown() / 20f) + "s",
-                            ChatFormatting.YELLOW));
-            return;
+
+        if (type.getAbilityMaxCharges() > 0) {
+            if (data.getAbilityCharges() <= 0) {
+                player.sendSystemMessage(AbilityCommon.msg(
+                        "No ability charges! Next in: " + String.format("%.1f", data.getAbilityChargeCd() / 20f) + "s",
+                        ChatFormatting.YELLOW));
+                return;
+            }
+        } else {
+            if (data.getAbilityCooldown() > 0) {
+                player.sendSystemMessage(AbilityCommon.msg(
+                        "Ability on cooldown: " + String.format("%.1f", data.getAbilityCooldown() / 20f) + "s",
+                        ChatFormatting.YELLOW));
+                return;
+            }
         }
+
         if (!(player.level() instanceof ServerLevel level))
             return;
 
         switch (type) {
             case FIRE -> FireAbility.activateAbility(player, level);
-            case AIR -> AirAbility.activateAbility(player, level);
+            case AIR -> AirAbility.activateAbility(player, level, data);
             case WATER -> WaterAbility.activateAbility(player, level);
             case ICE -> IceAbility.activateAbility(player, level);
             case LIGHTNING -> LightningAbility.activateAbility(player, level);
@@ -117,20 +138,22 @@ public class AbilityActivator {
             case GRAVITY -> GravityAbility.activateAbility(player, level);
             case ECHO -> {
                 EchoAbility.activateAbility(player, level, data);
-                // КД управляется внутри EchoAbility.executeMarkSwap — не ставим здесь!
                 syncToClient(player, data);
-                return; // выходим до data.setAbilityCooldown(...)
+                return;
             }
             case CHAOS -> ChaosAbility.activateAbility(player, level);
             case FLASH -> FlashAbility.activateAbility(player, level);
             case SPIDER -> SpiderAbility.activateAbility(player, level);
             case SUPERFORCE -> SuperforceAbility.activateAbility(player, level);
             case ADEPT -> AdeptAbility.activateAbility(player, level);
-            default -> {
-            }
+            default -> { }
         }
 
-        data.setAbilityCooldown(type.getAbilityCooldown());
+        if (type.getAbilityMaxCharges() > 0) {
+            data.getAbilityChargeCdQueue().add(data.getAbilityChargeCdMax());
+        } else {
+            data.setAbilityCooldown(type.getAbilityCooldown());
+        }
         syncToClient(player, data);
     }
 
@@ -149,12 +172,23 @@ public class AbilityActivator {
             syncToClient(player, data);
             return;
         }
-        if (data.getUltCooldown() > 0) {
-            player.sendSystemMessage(
-                    AbilityCommon.msg("Ult on cooldown: " + String.format("%.1f", data.getUltCooldown() / 20f) + "s",
-                            ChatFormatting.RED));
-            return;
+
+        if (data.getUltMaxCharges() > 0) {
+            if (data.getUltCharges() <= 0) {
+                player.sendSystemMessage(AbilityCommon.msg(
+                        "No ult charges! Next in: " + String.format("%.1f", data.getUltChargeCd() / 20f) + "s",
+                        ChatFormatting.RED));
+                return;
+            }
+        } else {
+            if (data.getUltCooldown() > 0) {
+                player.sendSystemMessage(AbilityCommon.msg(
+                        "Ult on cooldown: " + String.format("%.1f", data.getUltCooldown() / 20f) + "s",
+                        ChatFormatting.RED));
+                return;
+            }
         }
+
         if (!(player.level() instanceof ServerLevel level))
             return;
 
@@ -167,7 +201,7 @@ public class AbilityActivator {
             case LASER -> {
                 LaserAbility.startUlt(player);
                 syncToClient(player, data);
-                return; // КД ставится при завершении канала
+                return;
             }
             case GEO -> {
                 if (GeoOrbitHandler.hasOrbit(player)) {
@@ -191,11 +225,14 @@ public class AbilityActivator {
             case FLASH -> FlashAbility.activateUlt(player, level);
             case SUPERFORCE -> SuperforceAbility.activateUlt(player, level);
             case ADEPT -> AdeptAbility.activateUlt(player, level);
-            default -> {
-            }
+            default -> { }
         }
 
-        data.setUltCooldown(type.getUltCooldown());
+        if (data.getUltMaxCharges() > 0) {
+            data.getUltChargeCdQueue().add(data.getUltChargeCdMax());
+        } else {
+            data.setUltCooldown(type.getUltCooldown());
+        }
         syncToClient(player, data);
     }
 

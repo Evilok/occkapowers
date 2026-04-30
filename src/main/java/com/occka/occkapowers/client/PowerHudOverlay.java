@@ -1,77 +1,135 @@
 package com.occka.occkapowers.client;
-
+ 
 import com.occka.occkapowers.ability.PowerType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-
+ 
 public class PowerHudOverlay {
-
+ 
     public void renderHud(GuiGraphics graphics) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null)
             return;
         if (ClientPowerData.powerType == PowerType.NONE)
             return;
-
+ 
         int sw = mc.getWindow().getGuiScaledWidth();
         int sh = mc.getWindow().getGuiScaledHeight();
-
-        int barW = 52;
-        int barH = 6;
-        int gap = 6;
+        int barW = 52, gap = 6;
         int totalW = 3 * barW + 2 * gap;
         int bx = sw / 2 - totalW / 2;
         int by = sh - 65;
-
-        // Class name label centered above bars
+ 
         String label = "[ " + ClientPowerData.powerType.getId().toUpperCase() + " ]";
         graphics.drawCenteredString(mc.font, label, sw / 2, by - 11, getPowerArgb() | 0xFF000000);
-
-        // Shift bar (always unlocked, no lock icon)
-        renderBar(graphics, mc, bx, by, "SHIFT", ClientPowerData.shiftProgress(),
-                ClientPowerData.shiftReady(), ClientPowerData.shiftCd, true, getSlotColor(0));
-
-        // Ability bar
-        renderBar(graphics, mc, bx + barW + gap, by, "ABILITY", ClientPowerData.abilityProgress(),
-                ClientPowerData.abilityReady(), ClientPowerData.abilityCd, ClientPowerData.abilityUnlocked,
-                getSlotColor(1));
-
-        // Ult bar
-        renderBar(graphics, mc, bx + 2 * (barW + gap), by, "ULT", ClientPowerData.ultProgress(),
-                ClientPowerData.ultReady(), ClientPowerData.ultCd, ClientPowerData.ultUnlocked, getSlotColor(2));
+ 
+        // SHIFT
+        boolean hasShiftCharges = ClientPowerData.shiftMaxCharges > 0;
+        float shiftProgress = hasShiftCharges
+                ? (ClientPowerData.shiftCharges >= ClientPowerData.shiftMaxCharges ? 1f
+                        : (float) (ClientPowerData.shiftChargeCdMax - ClientPowerData.shiftChargeCd)
+                                / ClientPowerData.shiftChargeCdMax)
+                : ClientPowerData.shiftProgress();
+        boolean shiftReady = hasShiftCharges
+                ? ClientPowerData.shiftCharges > 0
+                : ClientPowerData.shiftReady();
+        int shiftCdTicks = hasShiftCharges
+                ? ClientPowerData.shiftChargeCd
+                : ClientPowerData.shiftCd;
+ 
+        renderBar(graphics, mc, bx, by, "SHIFT",
+                shiftProgress, shiftReady,
+                shiftCdTicks,
+                true, getSlotColor(0),
+                ClientPowerData.shiftCharges, ClientPowerData.shiftMaxCharges,
+                ClientPowerData.shiftChargeCd, ClientPowerData.shiftChargeCdMax);
+ 
+        // ABILITY
+        boolean hasAbilityCharges = ClientPowerData.abilityMaxCharges > 0;
+        float abilityProgress = hasAbilityCharges
+                ? (ClientPowerData.abilityCharges >= ClientPowerData.abilityMaxCharges ? 1f
+                        : (float) (ClientPowerData.abilityChargeCdMax - ClientPowerData.abilityChargeCd)
+                                / ClientPowerData.abilityChargeCdMax)
+                : ClientPowerData.abilityProgress();
+        boolean abilityReady = hasAbilityCharges
+                ? ClientPowerData.abilityCharges > 0
+                : ClientPowerData.abilityReady();
+        int abilityCdTicks = hasAbilityCharges
+                ? ClientPowerData.abilityChargeCd
+                : ClientPowerData.abilityCd;
+ 
+        renderBar(graphics, mc, bx + barW + gap, by, "ABILITY",
+                abilityProgress, abilityReady,
+                abilityCdTicks,
+                ClientPowerData.abilityUnlocked, getSlotColor(1),
+                ClientPowerData.abilityCharges, ClientPowerData.abilityMaxCharges,
+                ClientPowerData.abilityChargeCd, ClientPowerData.abilityChargeCdMax);
+ 
+        // ULT
+        boolean hasUltCharges = ClientPowerData.ultMaxCharges > 0;
+        float ultProgress = hasUltCharges
+                ? (ClientPowerData.ultCharges >= ClientPowerData.ultMaxCharges ? 1f
+                        : (float) (ClientPowerData.ultChargeCdMax - ClientPowerData.ultChargeCd)
+                                / ClientPowerData.ultChargeCdMax)
+                : ClientPowerData.ultProgress();
+        boolean ultReady = hasUltCharges
+                ? ClientPowerData.ultCharges > 0
+                : ClientPowerData.ultReady();
+        int ultCdTicks = hasUltCharges
+                ? ClientPowerData.ultChargeCd
+                : ClientPowerData.ultCd;
+ 
+        renderBar(graphics, mc, bx + 2 * (barW + gap), by, "ULT",
+                ultProgress, ultReady,
+                ultCdTicks,
+                ClientPowerData.ultUnlocked, getSlotColor(2),
+                ClientPowerData.ultCharges, ClientPowerData.ultMaxCharges,
+                ClientPowerData.ultChargeCd, ClientPowerData.ultChargeCdMax);
     }
-
+ 
     private void renderBar(GuiGraphics g, Minecraft mc,
             int x, int y, String name,
             float progress, boolean ready, int cdTicks,
-            boolean unlocked, int color) {
+            boolean unlocked, int color,
+            int charges, int maxCharges, int chargeCd, int chargeCdMax) {
         int bw = 52, bh = 6, barY = y + 9;
-
-        // Background panel
+ 
         g.fill(x - 1, y - 1, x + bw + 1, y + 25, 0xAA000000);
-
+ 
         if (!unlocked) {
-            // Locked state - grey fill with lock indicator
             g.fill(x, barY, x + bw, barY + bh, 0xFF555555);
             g.drawCenteredString(mc.font, name, x + bw / 2, y, 0xFFAAAAAA);
             g.drawCenteredString(mc.font, "LOCKED", x + bw / 2, y + 16, 0xFFFF5555);
+            return;
+        }
+ 
+        int fillW = (int) (bw * Math.max(0, Math.min(1, progress)));
+        int fillColor = (ready ? color : darken(color, 0.45f)) | 0xFF000000;
+        g.fill(x, barY, x + fillW, barY + bh, fillColor);
+ 
+        // Border
+        g.fill(x, barY, x + bw, barY + 1, 0x88FFFFFF);
+        g.fill(x, barY + bh - 1, x + bw, barY + bh, 0x88FFFFFF);
+        g.fill(x, barY, x + 1, barY + bh, 0x88FFFFFF);
+        g.fill(x + bw - 1, barY, x + bw, barY + bh, 0x88FFFFFF);
+ 
+        int nameColor = ready ? 0xFFFFFFFF : 0xFFAAAAAA;
+ 
+        if (maxCharges > 0) {
+            String displayName = charges > 0 ? name + " x" + charges : name;
+            g.drawCenteredString(mc.font, displayName, x + bw / 2, y, nameColor);
+ 
+            if (charges >= maxCharges) {
+                g.drawCenteredString(mc.font, "READY", x + bw / 2, y + 16, 0xFF55FF55);
+            } else if (charges > 0) {
+                String cdText = String.format("%.1fs", chargeCd / 20f);
+                g.drawCenteredString(mc.font, cdText, x + bw / 2, y + 16, 0xFFFFAA00);
+            } else {
+                String cdText = String.format("%.1fs", chargeCd / 20f);
+                g.drawCenteredString(mc.font, cdText, x + bw / 2, y + 16, 0xFFFF5555);
+            }
         } else {
-            // Progress fill
-            int fillW = (int) (bw * progress);
-            int fillColor = (ready ? color : darken(color, 0.45f)) | 0xFF000000;
-            g.fill(x, barY, x + fillW, barY + bh, fillColor);
-
-            // Thin border
-            g.fill(x, barY, x + bw, barY + 1, 0x88FFFFFF);
-            g.fill(x, barY + bh - 1, x + bw, barY + bh, 0x88FFFFFF);
-            g.fill(x, barY, x + 1, barY + bh, 0x88FFFFFF);
-            g.fill(x + bw - 1, barY, x + bw, barY + bh, 0x88FFFFFF);
-
-            // Name label
-            int nameColor = ready ? 0xFFFFFFFF : 0xFFAAAAAA;
             g.drawCenteredString(mc.font, name, x + bw / 2, y, nameColor);
-
-            // CD or READY text
             if (!ready) {
                 String cdText = String.format("%.1fs", cdTicks / 20f);
                 g.drawCenteredString(mc.font, cdText, x + bw / 2, y + 16, 0xFFFF5555);
@@ -80,8 +138,7 @@ public class PowerHudOverlay {
             }
         }
     }
-
-    // Returns color as int (no alpha) for a given slot index
+ 
     private int getSlotColor(int slot) {
         int[][] colors = switch (ClientPowerData.powerType) {
             case FIRE -> new int[][] { { 0xFF4400 }, { 0xFF7700 }, { 0xFF0000 } };
@@ -103,7 +160,7 @@ public class PowerHudOverlay {
         };
         return colors[Math.min(slot, 2)][0];
     }
-
+ 
     private int getPowerArgb() {
         return switch (ClientPowerData.powerType) {
             case FIRE -> 0xFF4400;
@@ -124,7 +181,7 @@ public class PowerHudOverlay {
             default -> 0xFFFFFF;
         };
     }
-
+ 
     private int darken(int color, float f) {
         int r = (int) (((color >> 16) & 0xFF) * f);
         int g = (int) (((color >> 8) & 0xFF) * f);

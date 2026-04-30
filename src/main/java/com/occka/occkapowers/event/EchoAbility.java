@@ -24,8 +24,6 @@ public final class EchoAbility {
 
     // ===== SHIFT: свап с ближайшим + урон + инвиз =====
     public static void activateShift(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
-        if (data.getShiftCooldown() > 0)
-            return;
         // Ищем ближайшего — сначала игроков, потом всех остальных
         LivingEntity target = null;
         double minD = Double.MAX_VALUE;
@@ -85,7 +83,6 @@ public final class EchoAbility {
                 : target.getType().getDescription().getString();
         player.sendSystemMessage(AbilityCommon.msg(
                 "Swapped with " + targetName + "! Invisible 10s.", ChatFormatting.GREEN));
-        data.setShiftCooldown(300);
     }
 
     // ===== ABILITY: луч-метка → повторное нажатие = свап =====

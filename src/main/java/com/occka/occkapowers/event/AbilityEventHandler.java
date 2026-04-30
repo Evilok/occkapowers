@@ -9,6 +9,7 @@ import com.occka.occkapowers.registry.ModCapabilities;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import com.occka.occkapowers.event.IceAbility;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -109,6 +110,10 @@ public class AbilityEventHandler {
             // if (type == PowerType.FLASH && player.isShiftKeyDown()) {
             // FlashAbility.tickHeldShift(player, level);
             // }
+
+            if (type == PowerType.ICE) {
+                IceAbility.tickIceCage(player, level);
+            }
 
             if (type == PowerType.SUPERFORCE) {
                 SuperforceAbility.applyElytraFlight(player, level); // элитра-движение

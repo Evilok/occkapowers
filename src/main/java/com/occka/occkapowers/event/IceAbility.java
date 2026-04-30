@@ -122,6 +122,52 @@ public final class IceAbility {
         level.sendParticles(ParticleTypes.ITEM_SNOWBALL, target.getX(), target.getY() + 1, target.getZ(), 25, 0.5, 0.5,
                 0.5, 0.2);
         player.sendSystemMessage(AbilityCommon.msg("Ice Cage!", ChatFormatting.AQUA));
+
+        net.minecraft.nbt.ListTag cageList = new net.minecraft.nbt.ListTag();
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 2; dy++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    if (Math.abs(dx) == 1 || dy == -1 || dy == 2 || Math.abs(dz) == 1) {
+                        net.minecraft.nbt.CompoundTag entry = new net.minecraft.nbt.CompoundTag();
+                        entry.putLong("p", center.offset(dx, dy, dz).asLong());
+                        cageList.add(entry);
+                    }
+                }
+            }
+        }
+        net.minecraft.nbt.CompoundTag s1 = new net.minecraft.nbt.CompoundTag();
+        s1.putLong("p", center.asLong());
+        net.minecraft.nbt.CompoundTag s2 = new net.minecraft.nbt.CompoundTag();
+        s2.putLong("p", center.above().asLong());
+        cageList.add(s1);
+        cageList.add(s2);
+
+        player.getPersistentData().put("occka_ice_cage", cageList);
+        player.getPersistentData().putLong("occka_ice_cage_remove_at", level.getGameTime() + 246); //remove ice cage
+    }
+
+    public static void tickIceCage(ServerPlayer player, ServerLevel level) {
+        if (!player.getPersistentData().contains("occka_ice_cage"))
+            return;
+        if (level.getGameTime() < player.getPersistentData().getLong("occka_ice_cage_remove_at"))
+            return;
+
+        net.minecraft.nbt.ListTag list = player.getPersistentData()
+                .getList("occka_ice_cage", net.minecraft.nbt.Tag.TAG_COMPOUND);
+
+        for (net.minecraft.nbt.Tag t : list) {
+            BlockPos pos = BlockPos.of(((net.minecraft.nbt.CompoundTag) t).getLong("p"));
+            var state = level.getBlockState(pos);
+            if (state.is(Blocks.BLUE_ICE) || state.is(Blocks.POWDER_SNOW)) {
+                level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
+                level.sendParticles(ParticleTypes.SNOWFLAKE,
+                        pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                        3, 0.2, 0.2, 0.2, 0.02);
+            }
+        }
+
+        player.getPersistentData().remove("occka_ice_cage");
+        player.getPersistentData().remove("occka_ice_cage_remove_at");
     }
 
     public static void spawnMinions(ServerPlayer player, ServerLevel level) {

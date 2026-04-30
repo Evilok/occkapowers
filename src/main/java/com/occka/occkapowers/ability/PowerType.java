@@ -45,23 +45,13 @@ public enum PowerType {
         return NONE;
     }
 
-    // Shift: 0 = continuous (no cd), else ticks
-    public int getShiftCooldown() {
-        return switch (this) {
-            case ECHO -> 300;
-            case FIRE -> 400;
-            case CHAOS -> 200;
-            default -> 0; // continuous
-        };
-    }
-
     public int getAbilityCooldown() {
         return switch (this) {
             case FIRE -> 40;
-            case AIR -> 100;
+            case AIR -> 200; // кд восстановления 1 заряда (10 сек)
             case WATER -> 280;
             case FLOWER -> 800;
-            case ICE -> 260;
+            case ICE -> 440; // 22 сек
             case LIGHTNING -> 200;
             case LASER -> 240;
             case GEO -> 240;
@@ -70,19 +60,14 @@ public enum PowerType {
             case ADEPT -> 500;
             case GRAVITY -> 340;
             case ECHO -> 600;
-            case SUPERFORCE -> 200; // 10s
-            case CHAOS -> 200; // 15 sec
-            case FLASH -> 160; // ~8s
-            case SPIDER -> 160; // ~8s
+            case SUPERFORCE -> 200;
+            case CHAOS -> 200;
+            case FLASH -> 160;
+            case SPIDER -> 160;
             default -> 0;
         };
     }
 
-    public int getUltCooldown() {
-        return 2400;
-    }
-
-    // Unlock resources displayed in chat
     public String getAbilityUnlockHint() {
         return switch (this) {
             case FIRE -> "1x Lava Bucket";
@@ -128,5 +113,56 @@ public enum PowerType {
             default -> "?";
         };
     }
+
+    public int getShiftMaxCharges() {
+    return switch (this) {
+        case ECHO -> 2;
+        default -> 0;
+    };
+}
+
+    /** Максимальное количество зарядов. 0 = система зарядов не используется. */
+    public int getAbilityMaxCharges() {
+        return switch (this) {
+            case AIR -> 2;
+            default -> 0;
+        };
+    }
+
+    /** Максимальное количество зарядов ульты. 0 = обычный КД. */
+    public int getUltMaxCharges() {
+        return switch (this) {
+            case ICE -> 2;
+            default -> 0;
+        };
+    }
     
+    public int getShiftCooldown() {
+        return switch (this) {
+            case ECHO -> 300;
+            case FIRE -> 400;
+            case CHAOS -> 200;
+            default -> 0;
+        };
+    }
+
+    public int getUltCooldown() {
+        return switch (this) {
+            default -> 2400; // 120 сек для всех
+        };
+    }
+
+    /** КД восстановления одного заряда ульты. По умолчанию = getUltCooldown(). */
+    public int getUltChargeCooldown() {
+        return switch (this) {
+            default -> getUltCooldown();
+        };
+    }
+
+    /** КД восстановления одного заряда шифта. По умолчанию = getShiftCooldown(). */
+    public int getShiftChargeCooldown() {
+        return switch (this) {
+            default -> getShiftCooldown();
+        };
+    }
 }

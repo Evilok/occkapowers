@@ -25,12 +25,6 @@ public final class FireAbility {
     private FireAbility() {
     }
 
-    // ===== SHIFT: toggle огненной формы =====
-
-    /**
-     * Первое нажатие — включает форму.
-     * Второе нажатие — выключает.
-     */
     public static void activateAbility(ServerPlayer player, ServerLevel level) {
         boolean active = player.getPersistentData().getBoolean("occka_fire_form_active");
         if (!active) {
@@ -38,12 +32,11 @@ public final class FireAbility {
         } else {
             disableFireForm(player, level);
         }
-
     }
 
     public static void meltIceAndSnow(ServerPlayer player, ServerLevel level) {
         BlockPos center = player.blockPosition();
-        int radius = 8; // чуть больше радиус для абилки
+        int radius = 8;
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dy = -3; dy <= 5; dy++) {
                 for (int dz = -radius; dz <= radius; dz++) {
@@ -71,7 +64,6 @@ public final class FireAbility {
     private static void enableFireForm(ServerPlayer player, ServerLevel level) {
         player.getPersistentData().putBoolean("occka_fire_form_active", true);
 
-        // Визуал включения: кольцо огня вокруг игрока
         for (int i = 0; i < 20; i++) {
             double angle = (i / 20.0) * Math.PI * 2;
             level.sendParticles(ParticleTypes.FLAME,
@@ -95,13 +87,11 @@ public final class FireAbility {
     private static void disableFireForm(ServerPlayer player, ServerLevel level) {
         player.getPersistentData().putBoolean("occka_fire_form_active", false);
 
-        // Снимаем полёт
         if (!player.isCreative() && !player.isSpectator()) {
             player.getAbilities().flying = false;
             player.onUpdateAbilities();
         }
 
-        // Гасим визуальный огонь
         player.clearFire();
 
         level.sendParticles(ParticleTypes.LARGE_SMOKE,
@@ -112,24 +102,45 @@ public final class FireAbility {
                 "Fire Form: OFF", ChatFormatting.GRAY));
     }
 
-    /**
-     * Вызывается каждый тик из AbilityEventHandler пока игрок имеет класс FIRE.
-     * Поддерживает визуальный огонь и плавит лёд/снег вокруг.
-     */
     public static void tickFireForm(ServerPlayer player, ServerLevel level) {
         if (!player.getPersistentData().getBoolean("occka_fire_form_active"))
             return;
-        // Плавное падение всегда в форме
-        player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 15, 0, false, false));
 
-        // Визуальный огонь на игроке (FIRE_RESISTANCE из пассивки — урона нет)
+        // Гасим форму если игрок в воде или под дождём
+        if (player.isInWater() || (player.level().isRainingAt(player.blockPosition())
+                && player.level().canSeeSky(player.blockPosition()))) {
+            level.sendParticles(ParticleTypes.LARGE_SMOKE,
+                    player.getX(), player.getY() + 1, player.getZ(),
+                    20, 0.5, 0.5, 0.5, 0.05);
+            player.sendSystemMessage(AbilityCommon.msg("Fire Form extinguished!", ChatFormatting.GRAY));
+            disableFireForm(player, level);
+            player.getCapability(com.occka.occkapowers.registry.ModCapabilities.PLAYER_POWER)
+                    .ifPresent(data -> {
+                        data.setAbilityMaxCdOverride(300);
+                        data.setAbilityCooldown(300);
+                        AbilityActivator.syncToClient(player, data);
+                    });
+            return;
+        }
+
+        player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 15, 0, false, false));
         player.setRemainingFireTicks(40);
 
+        int life = player.getPersistentData().getInt("occka_shift_fb_life");
+        if (life > 0) {
+            player.getPersistentData().putInt("occka_shift_fb_life", life - 1);
+            if (life == 1 && player.getPersistentData().hasUUID("occka_shift_fb")) {
+                java.util.UUID fbId = player.getPersistentData().getUUID("occka_shift_fb");
+                if (level.getEntity(fbId) instanceof LargeFireball fb) {
+                    level.sendParticles(ParticleTypes.LARGE_SMOKE, fb.getX(), fb.getY(), fb.getZ(), 10, 0.3, 0.3, 0.3,
+                            0.05);
+                    fb.discard();
+                }
+                player.getPersistentData().remove("occka_shift_fb");
+            }
+        }
     }
 
-    /**
-     * Сброс формы при смерти/смене класса/выходе из игры.
-     */
     public static void clearFireForm(Player player) {
         if (!player.getPersistentData().getBoolean("occka_fire_form_active"))
             return;
@@ -144,67 +155,89 @@ public final class FireAbility {
         player.clearFire();
     }
 
-    // ===== ABILITY: Firestorm =====
+    // ===== SHIFT =====
 
     public static void activateShift(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
 
-        // КД проверка
-        if (data.getShiftCooldown() > 0)
-            return;
+        if (player.getPersistentData().getBoolean("occka_fire_form_active")) {
+            if (data.getShiftCooldown() > 0)
+                return;
 
-        Vec3 playerPos = player.position();
+            Vec3 dir = player.getLookAngle().normalize();
+            Vec3 spawnPos = player.getEyePosition().add(dir.scale(1.5));
 
-        for (LivingEntity entity : AbilityCommon.getNearbyEnemies(player, 10)) {
+            LargeFireball fb = new LargeFireball(EntityType.FIREBALL, level);
+            fb.setOwner(player);
+            fb.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
+            fb.setDeltaMovement(dir.scale(3.0));
+            level.addFreshEntity(fb);
 
-            Vec3 dir = entity.position().subtract(playerPos).normalize();
-            double dist = entity.distanceTo(player);
+            player.getPersistentData().putUUID("occka_shift_fb", fb.getUUID());
+            player.getPersistentData().putInt("occka_shift_fb_life", 100);
 
-            double force = 1.8 * (1.0 - dist / 10.0) + 0.4;
+            level.sendParticles(ParticleTypes.FLAME, spawnPos.x, spawnPos.y, spawnPos.z, 15, 0.3, 0.3, 0.3, 0.1);
+            level.sendParticles(ParticleTypes.LAVA, spawnPos.x, spawnPos.y, spawnPos.z, 5, 0.2, 0.2, 0.2, 0.05);
+            level.sendParticles(ParticleTypes.EXPLOSION, spawnPos.x, spawnPos.y, spawnPos.z, 2, 0.1, 0.1, 0.1, 0.05);
 
-            entity.setDeltaMovement(
-                    dir.x * force,
-                    0.45 + (force * 0.3),
-                    dir.z * force);
-
-            entity.hurtMarked = true;
-            entity.setSecondsOnFire(8);
-            entity.hurt(player.damageSources().onFire(), 4);
-
-            level.sendParticles(
-                    ParticleTypes.FLAME,
-                    entity.getX(), entity.getY() + 1, entity.getZ(),
-                    12, 0.3, 0.5, 0.3, 0.08);
-        }
-        meltIceAndSnow(player, level);
-        // кольцо огня
-        for (int deg = 0; deg < 360; deg += 6) {
-            for (double r = 0.5; r <= 10; r += 1.5) {
-                double x = player.getX() + r * Math.cos(Math.toRadians(deg));
-                double z = player.getZ() + r * Math.sin(Math.toRadians(deg));
-
-                level.sendParticles(
-                        ParticleTypes.FLAME,
-                        x, player.getY() + 0.3, z,
-                        1, 0, 0.1, 0, 0.04);
+            if (!player.onGround()) {
+                Vec3 kickback = dir.scale(-0.4);
+                player.setDeltaMovement(player.getDeltaMovement().add(kickback));
+                player.hurtMarked = true;
             }
+
+            player.sendSystemMessage(AbilityCommon.msg("Fire Shot!", ChatFormatting.RED));
+            data.setShiftCooldown(170);
+
+        } else {
+            if (data.getShiftCooldown() > 0)
+                return;
+
+            Vec3 playerPos = player.position();
+
+            for (LivingEntity entity : AbilityCommon.getNearbyEnemies(player, 10)) {
+                Vec3 dir = entity.position().subtract(playerPos).normalize();
+                double dist = entity.distanceTo(player);
+                double force = 1.8 * (1.0 - dist / 10.0) + 0.4;
+
+                entity.setDeltaMovement(
+                        dir.x * force,
+                        0.45 + (force * 0.3),
+                        dir.z * force);
+
+                entity.hurtMarked = true;
+                entity.setSecondsOnFire(8);
+                entity.hurt(player.damageSources().onFire(), 4);
+
+                level.sendParticles(ParticleTypes.FLAME,
+                        entity.getX(), entity.getY() + 1, entity.getZ(),
+                        12, 0.3, 0.5, 0.3, 0.08);
+            }
+
+            meltIceAndSnow(player, level);
+
+            for (int deg = 0; deg < 360; deg += 6) {
+                for (double r = 0.5; r <= 10; r += 1.5) {
+                    double x = player.getX() + r * Math.cos(Math.toRadians(deg));
+                    double z = player.getZ() + r * Math.sin(Math.toRadians(deg));
+                    level.sendParticles(ParticleTypes.FLAME,
+                            x, player.getY() + 0.3, z,
+                            1, 0, 0.1, 0, 0.04);
+                }
+            }
+
+            level.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
+                    player.getX(), player.getY(), player.getZ(),
+                    2, 0.5, 0, 0.5, 0.05);
+            level.sendParticles(ParticleTypes.LAVA,
+                    player.getX(), player.getY() + 0.5, player.getZ(),
+                    20, 1.5, 0.5, 1.5, 0.2);
+
+            player.sendSystemMessage(AbilityCommon.msg("Firestorm!", ChatFormatting.RED));
+            data.setShiftCooldown(400);
         }
-
-        level.sendParticles(
-                ParticleTypes.EXPLOSION_EMITTER,
-                player.getX(), player.getY(), player.getZ(),
-                2, 0.5, 0, 0.5, 0.05);
-
-        level.sendParticles(
-                ParticleTypes.LAVA,
-                player.getX(), player.getY() + 0.5, player.getZ(),
-                20, 1.5, 0.5, 1.5, 0.2);
-
-        player.sendSystemMessage(
-                AbilityCommon.msg("Firestorm!", ChatFormatting.RED));
-
-        data.setShiftCooldown(400); // 20 секунд
     }
-    // ===== ULT: Fire Ult (без изменений) =====
+
+    // ===== ULT =====
 
     public static void createFireRing(ServerPlayer player, ServerLevel level, int radius) {
         double cx = player.getX(), cy = player.getY(), cz = player.getZ();
@@ -225,12 +258,17 @@ public final class FireAbility {
     }
 
     public static void startUlt(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
-        if (!player.onGround() || player.isFallFlying() || player.getAbilities().flying) {
-            player.sendSystemMessage(AbilityCommon.msg(
-                    "Can't use ability while flying!", ChatFormatting.RED));
-            return;
+        // Гасим fire form если активна
+        if (player.getPersistentData().getBoolean("occka_fire_form_active")) {
+            disableFireForm(player, level);
         }
-        
+
+        if (!player.onGround() || player.isFallFlying() || player.getAbilities().flying) {
+            player.getAbilities().flying = false;
+            player.onUpdateAbilities();
+            player.clearFire();
+        }
+
         data.setFireUltOrigin(player.getX(), player.getY(), player.getZ());
         player.teleportTo(player.getX(), player.getY() + 14, player.getZ());
         AttributeInstance gravity = player.getAttribute(ForgeMod.ENTITY_GRAVITY.get());
@@ -246,7 +284,7 @@ public final class FireAbility {
                     player.getX(), player.getY() - i * 0.5, player.getZ(),
                     5, 1, 0.2, 1, 0.05);
         player.sendSystemMessage(AbilityCommon.msg(
-                "FIRE ULT! Shoot fireballs with LMB for 15s!",
+                "FIRE ULT! Shoot fireballs!",
                 ChatFormatting.RED, ChatFormatting.BOLD));
     }
 
@@ -284,5 +322,4 @@ public final class FireAbility {
                     20, 1, 1, 1, 0.05);
         }
     }
-
 }

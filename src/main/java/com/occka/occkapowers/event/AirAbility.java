@@ -1,5 +1,6 @@
 package com.occka.occkapowers.event;
 
+import com.occka.occkapowers.ability.PlayerPowerData;
 import com.occka.occkapowers.ability.PowerType;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleTypes;
@@ -29,14 +30,14 @@ public final class AirAbility {
         }
     }
 
-    public static void activateAbility(ServerPlayer player, ServerLevel level) {
+    public static void activateAbility(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
         dashForward(player, level);
     }
 
 
     private static void dashForward(ServerPlayer player, ServerLevel level) {
         Vec3 look = player.getLookAngle();
-        Vec3 vel = new Vec3(look.x * 2.8, 0.35, look.z * 2.8);
+        Vec3 vel = look.scale(2.8);
         player.setDeltaMovement(vel);
         player.hurtMarked = true;
         player.addEffect(AbilityCommon.fx(MobEffects.SLOW_FALLING, 100, 0));
