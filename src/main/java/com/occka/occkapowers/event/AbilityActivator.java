@@ -38,7 +38,7 @@ public class AbilityActivator {
     public static void syncToClient(ServerPlayer player, PlayerPowerData data) {
         NetworkHandler.CHANNEL.send(
                 PacketDistributor.PLAYER.with(() -> player),
-                new PacketSyncPowerData(data));
+                new PacketSyncPowerData(player, data));
     }
 
     // ===== SHIFT =====
@@ -47,6 +47,12 @@ public class AbilityActivator {
             return;
 
         if (data.getShiftMaxCharges() > 0) {
+            if (data.getShiftCharges() <= 0) {
+                player.sendSystemMessage(AbilityCommon.msg(
+                        "Shift charges empty: " + String.format("%.1f", data.getShiftChargeCd() / 20f) + "s",
+                        ChatFormatting.RED));
+                return;
+            }
         } else if (data.getShiftCooldown() > 0) {
             player.sendSystemMessage(AbilityCommon.msg(
                     "Shift on cooldown: " + String.format("%.1f", data.getShiftCooldown() / 20f) + "s",
@@ -74,6 +80,7 @@ public class AbilityActivator {
             case SPIDER -> SpiderAbility.activateShift(player, level);
             case SUPERFORCE -> SuperforceAbility.activateShift(player, level);
             case ADEPT -> AdeptAbility.activateShift(player, level);
+            case MERC -> MercAbility.activateShift(player, level);
             default -> {}
         }
 
@@ -104,6 +111,21 @@ public class AbilityActivator {
             if (!(player.level() instanceof ServerLevel level))
                 return;
             EchoAbility.activateAbility(player, level, data);
+            syncToClient(player, data);
+            return;
+        }
+
+        if (type == PowerType.MERC) {
+            if (!(player.level() instanceof ServerLevel level))
+                return;
+            boolean comboWaiting = player.getPersistentData().getInt(MercAbility.NBT_COMBO_STEP) == 1;
+            if (!comboWaiting && data.getAbilityCooldown() > 0) {
+                player.sendSystemMessage(AbilityCommon.msg(
+                        "Ability on cooldown: " + String.format("%.1f", data.getAbilityCooldown() / 20f) + "s",
+                        ChatFormatting.YELLOW));
+                return;
+            }
+            MercAbility.activateAbility(player, level, data);
             syncToClient(player, data);
             return;
         }
@@ -158,6 +180,7 @@ public class AbilityActivator {
             case SPIDER -> SpiderAbility.activateAbility(player, level);
             case SUPERFORCE -> SuperforceAbility.activateAbility(player, level);
             case ADEPT -> AdeptAbility.activateAbility(player, level);
+            case MERC -> MercAbility.activateAbility(player, level, data);
             default -> {
             }
         }
@@ -240,6 +263,12 @@ public class AbilityActivator {
             case FLASH -> FlashAbility.activateUlt(player, level, data);
             case SUPERFORCE -> SuperforceAbility.activateUlt(player, level);
             case ADEPT -> AdeptAbility.activateUlt(player, level);
+            case MERC -> {
+                MercAbility.activateUlt(player, level, data);
+                data.setUltCooldown(type.getUltCooldown());
+                syncToClient(player, data);
+                return;
+            }
             default -> {
             }
         }

@@ -103,7 +103,7 @@ public class OcckaCommand {
 
                     NetworkHandler.CHANNEL.send(
                             PacketDistributor.PLAYER.with(() -> player),
-                            new PacketSyncPowerData(data));
+                            new PacketSyncPowerData(player, data));
 
                     player.sendSystemMessage(msg("You received class: ", ChatFormatting.GREEN)
                             .append(Component.literal(type.getId().toUpperCase())
@@ -139,7 +139,7 @@ public class OcckaCommand {
                     data.setPowerType(PowerType.NONE);
                     NetworkHandler.CHANNEL.send(
                             PacketDistributor.PLAYER.with(() -> player),
-                            new PacketSyncPowerData(data));
+                            new PacketSyncPowerData(player, data));
                     player.sendSystemMessage(msg("Your class was reset.", ChatFormatting.GRAY));
                 });
                 ctx.getSource().sendSuccess(
@@ -185,7 +185,7 @@ public class OcckaCommand {
                     }
                     NetworkHandler.CHANNEL.send(
                             PacketDistributor.PLAYER.with(() -> player),
-                            new PacketSyncPowerData(data));
+                            new PacketSyncPowerData(player, data));
                 });
                 ctx.getSource().sendSuccess(
                         () -> msg("Unlocked " + type + " for " + player.getName().getString(),

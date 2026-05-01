@@ -23,6 +23,8 @@ import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Team;
 import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -150,6 +152,15 @@ public class AbilityEventHandler {
                 player.fallDistance = 0.0f;
             }
 
+            if (type == PowerType.MERC) {
+                MercAbility.tickMadness(player, level);
+                MercAbility.tickCombo(player, data);
+                MercAbility.tickExposedEntities(player, level);
+                MercAbility.tickPassive(player, level);
+                MercAbility.tickUlt(player, level, data);
+                MercAbility.tickDebtPayment(player, level, data);
+            }
+
             if (type == PowerType.AIR) {
                 AirAbility.tickTornado(player, level);
             }
@@ -176,7 +187,7 @@ public class AbilityEventHandler {
             if (player.tickCount % 10 == 0) {
                 NetworkHandler.CHANNEL.send(
                         PacketDistributor.PLAYER.with(() -> player),
-                        new PacketSyncPowerData(data));
+                        new PacketSyncPowerData(player, data));
             }
         });
     }
@@ -202,6 +213,7 @@ public class AbilityEventHandler {
         if (event.phase == TickEvent.Phase.END && event.level instanceof ServerLevel level) {
             GeoOrbitHandler.tick(level);
             FlashAbility.tickAfterimages(level);
+            MercAbility.tickAfterimages(level);
         }
     }
 
@@ -288,6 +300,7 @@ public class AbilityEventHandler {
                 case CREEPER -> {
 
                 }
+                case MERC -> player.addEffect(fx(MobEffects.REGENERATION, 120, 0));
 
                 case GRAVITY -> player.addEffect(fx(MobEffects.JUMP, 200, 1));
                 case CHAOS -> {
@@ -373,8 +386,47 @@ public class AbilityEventHandler {
                             player.getX(), player.getY(), player.getZ(), 3, 0.3, 0.1, 0.3, 0.03);
                 }
             }
+            case MERC -> {
+                level.sendParticles(ParticleTypes.DAMAGE_INDICATOR,
+                        player.getX(), player.getY() + 1, player.getZ(), 2, 0.3, 0.4, 0.3, 0.03);
+                if (MercAbility.getMadness(player) >= 40) {
+                    level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,
+                            player.getX(), player.getY() + 1, player.getZ(), 2, 0.3, 0.4, 0.3, 0.03);
+                }
+            }
             default -> {
             }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLivingHurt(LivingHurtEvent event) {
+        if (event.getEntity() instanceof ServerPlayer victim) {
+            victim.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
+                if (data.getPowerType() == PowerType.MERC) {
+                    event.setAmount(MercAbility.onDamageEvent(victim, data, event.getAmount(), true, false));
+                }
+            });
+        }
+
+        if (event.getSource().getEntity() instanceof ServerPlayer attacker) {
+            attacker.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
+                if (data.getPowerType() == PowerType.MERC) {
+                    boolean isMelee = event.getSource().getDirectEntity() == attacker;
+                    event.setAmount(MercAbility.onDamageEvent(attacker, data, event.getAmount(), false, isMelee));
+                }
+            });
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLivingDeath(LivingDeathEvent event) {
+        if (event.getSource().getEntity() instanceof ServerPlayer killer) {
+            killer.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
+                if (data.getPowerType() == PowerType.MERC) {
+                    MercAbility.onKillDuringUlt(killer);
+                }
+            });
         }
     }
 
@@ -437,7 +489,7 @@ public class AbilityEventHandler {
         player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
             NetworkHandler.CHANNEL.send(
                     PacketDistributor.PLAYER.with(() -> player),
-                    new PacketSyncPowerData(data));
+                    new PacketSyncPowerData(player, data));
             if (data.getPowerType() != PowerType.NONE) {
                 applyNickColor(player, data.getPowerType());
             }
@@ -462,7 +514,7 @@ public class AbilityEventHandler {
             return;
         player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> NetworkHandler.CHANNEL.send(
                 PacketDistributor.PLAYER.with(() -> player),
-                new PacketSyncPowerData(data)));
+                new PacketSyncPowerData(player, data)));
     }
 
     private static void tickGravityUlt(ServerPlayer player, ServerLevel level) {

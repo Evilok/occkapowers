@@ -28,6 +28,7 @@ public class UnlockHelper {
             case FLASH -> consume(player, Items.RABBIT_FOOT, 1);
             case SPIDER -> consume(player, Items.STRING, 32);
             case FLOWER -> consume(player, Items.BONE_MEAL, 16);
+            case MERC -> consume(player, Items.IRON_SWORD, 2);
             default -> false;
         };
     }
@@ -53,6 +54,7 @@ public class UnlockHelper {
             case FLASH -> consumeSpeedPotion(player);
             case SPIDER -> consume(player, Items.COBWEB, 25);
             case FLOWER -> consume(player, Items.WITHER_ROSE, 1);
+            case MERC -> consume(player, Items.NETHERITE_SWORD, 1);
             default -> false;
         };
     }

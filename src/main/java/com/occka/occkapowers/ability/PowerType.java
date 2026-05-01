@@ -22,7 +22,8 @@ public enum PowerType {
     FLOWER("flower", ChatFormatting.GREEN),
     VADER("vader", ChatFormatting.DARK_RED),
     CREEPER("creeper", ChatFormatting.DARK_GREEN),
-    SPIDER("spider", ChatFormatting.WHITE);
+    SPIDER("spider", ChatFormatting.WHITE),
+    MERC("merc", ChatFormatting.DARK_RED);
 
     private final String id;
     private final ChatFormatting color;
@@ -68,6 +69,7 @@ public enum PowerType {
             case CHAOS -> 200;
             case FLASH -> 160;
             case SPIDER -> 160;
+            case MERC -> 120;
             default -> 0;
         };
     }
@@ -93,6 +95,7 @@ public enum PowerType {
             case CHAOS -> "1x Nether Star";
             case FLASH -> "1x Rabbit Foot";
             case SPIDER -> "32x String";
+            case MERC -> "2x Iron Sword";
             default -> "?";
         };
     }
@@ -118,6 +121,7 @@ public enum PowerType {
             case FLOWER -> "1x Wither Rose";
             case FLASH -> "1x Speed Potion";
             case SPIDER -> "25x Cobweb";
+            case MERC -> "1x Netherite Sword";
             default -> "?";
         };
     }
@@ -149,6 +153,7 @@ public enum PowerType {
             case FIRE -> 400;
             case CHAOS -> 200;
             case SUPERFORCE -> 150; //7.5
+            case MERC -> 80;
             default -> 0;
         };
     }
