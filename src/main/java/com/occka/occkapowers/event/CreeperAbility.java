@@ -151,7 +151,7 @@ public final class CreeperAbility {
         } else if (charge >= CHARGE_TICKS_MAX) {
             player.addEffect(new MobEffectInstance(MobEffects.JUMP, dur, 2, false, false));
             player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, dur, 1, false, false));
-            player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, regenDur, 1, false, false));
+            player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, regenDur, 0, false, false));
             player.getPersistentData().putBoolean(NBT_POWERED, true);
         }
     }
