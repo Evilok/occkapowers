@@ -140,7 +140,7 @@ public final class CreeperAbility {
     // ===================================================================
     private static void applyChargeEffects(ServerPlayer player, int charge, boolean isCharging) {
         int dur = isCharging ? 5 : 30;
-
+        int regenDur = 25;
         if (charge >= CHARGE_TICKS_LEVEL1 && charge < CHARGE_TICKS_LEVEL2) {
             player.addEffect(new MobEffectInstance(MobEffects.JUMP, dur, 0, false, false));
         } else if (charge >= CHARGE_TICKS_LEVEL2 && charge < CHARGE_TICKS_LEVEL3) {
@@ -151,7 +151,6 @@ public final class CreeperAbility {
         } else if (charge >= CHARGE_TICKS_MAX) {
             player.addEffect(new MobEffectInstance(MobEffects.JUMP, dur, 2, false, false));
             player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, dur, 1, false, false));
-            int regenDur = isCharging ? 25 : 30;
             player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, regenDur, 1, false, false));
             player.getPersistentData().putBoolean(NBT_POWERED, true);
         }
