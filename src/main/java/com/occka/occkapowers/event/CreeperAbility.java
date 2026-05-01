@@ -15,20 +15,24 @@ import org.joml.Vector3f;
 import java.util.List;
 
 public final class CreeperAbility {
-    private CreeperAbility() {}
+    private CreeperAbility() {
+    }
 
     // ===== CHARGE LEVELS (тики) =====
-    public static final int CHARGE_TICKS_MAX    = 320; // 16 сек = макс заряд (уровень 4)
+    public static final int CHARGE_TICKS_MAX = 320; // 16 сек = макс заряд (уровень 4)
     public static final int CHARGE_TICKS_LEVEL3 = 240; // 12 сек
     public static final int CHARGE_TICKS_LEVEL2 = 160; // 8 сек
-    public static final int CHARGE_TICKS_LEVEL1 = 80;  // 4 сек
+    public static final int CHARGE_TICKS_LEVEL1 = 80; // 4 сек
 
-    public static final String NBT_CHARGE         = "occka_creeper_charge";
-    public static final String NBT_CHARGING       = "occka_creeper_charging";
-    public static final String NBT_CHARGE_EXPIRE  = "occka_creeper_charge_expire";
-    public static final String NBT_LAST_TICK      = "occka_creeper_last_tick";
-    public static final String NBT_ULT_TICKS      = "occka_creeper_ult_ticks";
-    public static final String NBT_POWERED        = "occka_creeper_powered";
+    public static final String NBT_CHARGE = "occka_creeper_charge";
+    public static final String NBT_CHARGING = "occka_creeper_charging";
+    public static final String NBT_CHARGE_EXPIRE = "occka_creeper_charge_expire";
+    public static final String NBT_LAST_TICK = "occka_creeper_last_tick";
+    public static final String NBT_ULT_TICKS = "occka_creeper_ult_ticks";
+    public static final String NBT_POWERED = "occka_creeper_powered";
+    public static final String NBT_LAST_STAGE_MSG = "occka_creeper_last_stage_msg";
+    public static final String NBT_LAST_PCT_MSG = "occka_creeper_last_pct_msg";
+    public static final String NBT_CATAPULT_ACTIVE = "occka_creeper_catapult_active";
 
     // ===================================================================
     // PASSIVE — снимаем агро злых мобов с игрока
@@ -68,6 +72,7 @@ public final class CreeperAbility {
 
         // Эффекты по уровню заряда
         applyChargeEffects(player, charge, true);
+        sendChargeProgressMessage(player, charge);
 
         // Аура
         spawnChargeAura(player, level, charge);
@@ -82,6 +87,8 @@ public final class CreeperAbility {
             // Сохраняем заряд на 400 тиков (20 сек)
             player.getPersistentData().putLong(NBT_CHARGE_EXPIRE, level.getGameTime() + 400);
         }
+        player.getPersistentData().putInt(NBT_LAST_PCT_MSG, -1);
+        player.getPersistentData().putInt(NBT_LAST_STAGE_MSG, -1);
     }
 
     // ===================================================================
@@ -99,10 +106,12 @@ public final class CreeperAbility {
             }
         }
 
-        if (wasCharging) return; // пока заряжаемся — не тикаем истечение
+        if (wasCharging)
+            return; // пока заряжаемся — не тикаем истечение
 
         int charge = player.getPersistentData().getInt(NBT_CHARGE);
-        if (charge <= 0) return;
+        if (charge <= 0)
+            return;
 
         long expireAt = player.getPersistentData().getLong(NBT_CHARGE_EXPIRE);
         if (expireAt > 0 && level.getGameTime() >= expireAt) {
@@ -142,7 +151,8 @@ public final class CreeperAbility {
         } else if (charge >= CHARGE_TICKS_MAX) {
             player.addEffect(new MobEffectInstance(MobEffects.JUMP, dur, 2, false, false));
             player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, dur, 1, false, false));
-            player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, dur, 1, false, false));
+            int regenDur = isCharging ? 25 : 30;
+            player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, regenDur, 1, false, false));
             player.getPersistentData().putBoolean(NBT_POWERED, true);
         }
     }
@@ -154,7 +164,7 @@ public final class CreeperAbility {
         float g = 1f - t * 0.7f;
         float b = t;
 
-        int count = 2 + (int)(t * 5);
+        int count = 2 + (int) (t * 5);
         double radius = 0.7 + t * 1.0;
 
         for (int i = 0; i < count; i++) {
@@ -174,6 +184,40 @@ public final class CreeperAbility {
         }
     }
 
+    private static int getChargeStage(int charge) {
+        if (charge >= CHARGE_TICKS_MAX)
+            return 4;
+        if (charge >= CHARGE_TICKS_LEVEL3)
+            return 3;
+        if (charge >= CHARGE_TICKS_LEVEL2)
+            return 2;
+        if (charge >= CHARGE_TICKS_LEVEL1)
+            return 1;
+        return 0;
+    }
+
+    private static void sendChargeProgressMessage(ServerPlayer player, int charge) {
+        int stage = getChargeStage(charge);
+        int percent = (int) Math.floor(getChargeProgress(charge) * 100.0f);
+        int percentStep = (percent / 10) * 10;
+
+        int lastStage = player.getPersistentData().getInt(NBT_LAST_STAGE_MSG);
+        int lastPercentStep = player.getPersistentData().getInt(NBT_LAST_PCT_MSG);
+
+        boolean stageChanged = stage != lastStage;
+        boolean pctChanged = percentStep != lastPercentStep;
+        if (!stageChanged && !pctChanged)
+            return;
+
+        player.getPersistentData().putInt(NBT_LAST_STAGE_MSG, stage);
+        player.getPersistentData().putInt(NBT_LAST_PCT_MSG, percentStep);
+
+        ChatFormatting color = stage >= 4 ? ChatFormatting.BLUE : ChatFormatting.GREEN;
+        player.sendSystemMessage(AbilityCommon.msg(
+                "Charge: " + percent + "% (Stage " + stage + "/4)",
+                color));
+    }
+
     /**
      * Прогресс для HUD (0..1). Используется как shiftProgress.
      */
@@ -188,7 +232,6 @@ public final class CreeperAbility {
         boolean powered = player.getPersistentData().getBoolean(NBT_POWERED);
         Vec3 look = player.getLookAngle().normalize();
 
-        // Рывок: устанавливаем velocity, чтобы за ~8-10 тиков пролететь нужное расстояние
         double distance = powered ? 45.0 : 25.0;
         double speed = distance / 8.0;
 
@@ -197,7 +240,8 @@ public final class CreeperAbility {
         player.hurtMarked = true;
         player.resetFallDistance();
         player.fallDistance = 0;
-        player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 80, 0, false, false));
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 400, 2, false, false));
+        player.getPersistentData().putBoolean(NBT_CATAPULT_ACTIVE, true);
 
         Vec3 startPos = player.position();
 
@@ -219,7 +263,6 @@ public final class CreeperAbility {
         }
 
         if (powered) {
-            // AoE: замедление + прибить к земле
             double aoeRadius = 15.0;
             AABB box = new AABB(
                     startPos.x - aoeRadius, startPos.y - 1, startPos.z - aoeRadius,
@@ -228,7 +271,7 @@ public final class CreeperAbility {
                     LivingEntity.class, box, e -> e != player);
             for (LivingEntity entity : nearby) {
                 entity.addEffect(new MobEffectInstance(
-                        MobEffects.MOVEMENT_SLOWDOWN, 100, 1, false, false));
+                        MobEffects.MOVEMENT_SLOWDOWN, 100, 2, false, false));
                 Vec3 cur = entity.getDeltaMovement();
                 entity.setDeltaMovement(cur.x * 0.4, -2.5, cur.z * 0.4);
                 entity.hurtMarked = true;
@@ -246,10 +289,33 @@ public final class CreeperAbility {
             }
 
             player.sendSystemMessage(AbilityCommon.msg(
-                    "POWERED CATAPULT! Ground slam AoE!", ChatFormatting.BLUE, ChatFormatting.BOLD));
+                    "POWERED CATAPULT!", ChatFormatting.BLUE, ChatFormatting.BOLD));
         } else {
             player.sendSystemMessage(AbilityCommon.msg("Catapult!", ChatFormatting.GREEN));
         }
+    }
+
+    public static void tickCatapultLanding(ServerPlayer player, ServerLevel level) {
+        if (!player.getPersistentData().getBoolean(NBT_CATAPULT_ACTIVE))
+            return;
+        if (player.getPersistentData().getInt(NBT_ULT_TICKS) > 0)
+            return;
+        if (!player.onGround())
+            return;
+
+        player.getPersistentData().putBoolean(NBT_CATAPULT_ACTIVE, false);
+        Vec3 pos = player.position();
+
+        // Снижаем self-damage через сопротивление
+        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 100, 1, false, false));
+
+        level.explode(player, pos.x, pos.y, pos.z,
+                2.5f, true, ServerLevel.ExplosionInteraction.TNT);
+        level.sendParticles(ParticleTypes.EXPLOSION,
+                pos.x, pos.y + 0.2, pos.z, 8, 0.8, 0.2, 0.8, 0.03);
+
+        // Урон самому игроку
+        player.hurt(player.damageSources().explosion(player, player), 10.0f);
     }
 
     // ===================================================================
@@ -259,6 +325,7 @@ public final class CreeperAbility {
         boolean powered = player.getPersistentData().getBoolean(NBT_POWERED);
         player.getPersistentData().putInt(NBT_ULT_TICKS, 100);
         player.getPersistentData().putBoolean("occka_creeper_ult_powered", powered);
+        player.getPersistentData().putBoolean(NBT_CATAPULT_ACTIVE, false);
 
         // Замораживаем игрока (замедление 128)
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 115, 127, false, false));
@@ -270,7 +337,8 @@ public final class CreeperAbility {
 
     public static void tickUlt(ServerPlayer player, ServerLevel level) {
         int ticks = player.getPersistentData().getInt(NBT_ULT_TICKS);
-        if (ticks <= 0) return;
+        if (ticks <= 0)
+            return;
 
         ticks--;
         player.getPersistentData().putInt(NBT_ULT_TICKS, ticks);
@@ -280,7 +348,7 @@ public final class CreeperAbility {
 
         // Нарастающие частицы огня
         float progress = (100f - ticks) / 100f;
-        int particleCount = 3 + (int)(progress * 15);
+        int particleCount = 3 + (int) (progress * 15);
         double spread = 0.4 + progress * 1.8;
 
         for (int i = 0; i < particleCount; i++) {
@@ -299,7 +367,7 @@ public final class CreeperAbility {
         }
 
         // Мигающий звук (через частицы flash каждые 20-10-5 тиков по убыванию)
-        int flashInterval = Math.max(4, 20 - (int)(progress * 16));
+        int flashInterval = Math.max(4, 20 - (int) (progress * 16));
         if (ticks % flashInterval == 0 && ticks > 0) {
             level.sendParticles(new DustParticleOptions(
                     powered ? new Vector3f(0.3f, 0.5f, 1f) : new Vector3f(0.2f, 0.9f, 0.2f), 1.2f),
@@ -315,7 +383,7 @@ public final class CreeperAbility {
         Vec3 pos = player.position();
         double radius = powered ? 25.0 : 15.0;
         float centerDmg = powered ? 100f : 80f;
-        float edgeDmg   = powered ? 30f  : 20f;
+        float edgeDmg = powered ? 30f : 20f;
 
         // Взрыв блоков
         float blastStrength = powered ? 10.0f : 6.0f;
@@ -332,8 +400,9 @@ public final class CreeperAbility {
 
         for (LivingEntity entity : targets) {
             double dist = entity.position().distanceTo(pos);
-            if (dist > radius) continue;
-            float t = (float)(1.0 - dist / radius);
+            if (dist > radius)
+                continue;
+            float t = (float) (1.0 - dist / radius);
             float dmg = edgeDmg + (centerDmg - edgeDmg) * t;
             entity.hurt(player.damageSources().explosion(null, null), dmg);
             Vec3 kb = entity.position().subtract(pos).normalize().scale(2.5 + t * 2.5);

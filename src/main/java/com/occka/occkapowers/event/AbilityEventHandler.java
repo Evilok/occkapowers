@@ -21,6 +21,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Team;
+import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -28,6 +29,11 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraftforge.common.ForgeMod;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import java.util.UUID;
+
 import com.occka.occkapowers.event.GeoOrbitHandler;
 import java.util.List;
 import net.minecraft.world.level.block.Blocks;
@@ -35,6 +41,7 @@ import net.minecraftforge.event.entity.living.LivingFallEvent;
 
 @Mod.EventBusSubscriber(modid = OcckaPowers.MOD_ID)
 public class AbilityEventHandler {
+    private static final UUID FLASH_STEP_UUID = UUID.fromString("6f986f4c-b79b-4d34-a01d-522768df6f3a");
 
     private static MobEffectInstance fx(net.minecraft.world.effect.MobEffect eff, int dur, int amp) {
         return new MobEffectInstance(eff, dur, amp, false, false);
@@ -87,13 +94,12 @@ public class AbilityEventHandler {
             }
 
             if (type == PowerType.CREEPER) {
-                // Пассивка: снятие агро с мобов каждые 40 тиков
-                if (player.tickCount % 40 == 0) {
-                    CreeperAbility.tickPassive(player, level);
-                }
+                // Пассивка: снятие агро с мобов каждый тик в радиусе
+                CreeperAbility.tickPassive(player, level);
                 // Тик зарядки / истечения заряда
                 CreeperAbility.tickChargeDecay(player, level);
-                // Тик ульты
+                // Приземление после Catapult
+                CreeperAbility.tickCatapultLanding(player, level);
                 CreeperAbility.tickUlt(player, level);
             }
 
@@ -125,9 +131,12 @@ public class AbilityEventHandler {
             }
 
             if (type == PowerType.FLASH) {
+                applyFlashStepHeight(player, true);
                 if (data.isFlashUltActive()) {
                     FlashAbility.tickFlashUlt(player, level, data);
                 }
+            } else if (player.maxUpStep() > 0.6f) {
+                applyFlashStepHeight(player, false);
             }
 
             if (type == PowerType.SUPERFORCE) {
@@ -170,6 +179,22 @@ public class AbilityEventHandler {
                         new PacketSyncPowerData(data));
             }
         });
+    }
+
+    private static void applyFlashStepHeight(ServerPlayer player, boolean enabled) {
+        AttributeInstance stepAttr = player.getAttribute(ForgeMod.STEP_HEIGHT_ADDITION.get());
+        if (stepAttr == null)
+            return;
+        AttributeModifier existing = stepAttr.getModifier(FLASH_STEP_UUID);
+
+        if (enabled) {
+            if (existing == null) {
+                stepAttr.addPermanentModifier(new AttributeModifier(
+                        FLASH_STEP_UUID, "occka_flash_step_boost", 1.4, AttributeModifier.Operation.ADDITION));
+            }
+        } else if (existing != null) {
+            stepAttr.removeModifier(FLASH_STEP_UUID);
+        }
     }
 
     @SubscribeEvent
@@ -254,7 +279,7 @@ public class AbilityEventHandler {
                     if (attr != null && attr.getBaseValue() < 40.0)
                         attr.setBaseValue(40.0);
                 }
-                case LIGHT -> player.addEffect(fx(MobEffects.LUCK, 200, 4));
+                case FLOWER -> player.addEffect(fx(MobEffects.LUCK, 200, 4));
                 case VOID -> {
                     AttributeInstance attr = player.getAttribute(Attributes.MAX_HEALTH);
                     if (attr != null && attr.getBaseValue() != 16.0)

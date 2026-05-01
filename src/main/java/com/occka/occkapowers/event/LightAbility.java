@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.phys.AABB;
 import com.occka.occkapowers.ability.PlayerPowerData;
 import com.occka.occkapowers.ability.PowerType;
+import net.minecraft.world.entity.MobType;
 
 import java.util.List;
 
@@ -24,24 +25,20 @@ public final class LightAbility {
 
     // SHIFT (held): удобрение урожая + насыщение игроков рядом
     public static void activateShift(ServerPlayer player, ServerLevel level) {
-        BlockPos center = player.blockPosition();
-        for (int dx = -5; dx <= 5; dx++) {
-            for (int dz = -5; dz <= 5; dz++) {
-                BlockPos pos = center.offset(dx, 0, dz);
-                var state = level.getBlockState(pos);
-                if (state.getBlock() instanceof CropBlock) {
-                    boolean grew = BoneMealItem.applyBonemeal(
-                            new ItemStack(Items.BONE_MEAL), level, pos, player);
-                    if (grew)
-                        level.sendParticles(ParticleTypes.HAPPY_VILLAGER,
-                                pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5,
-                                3, 0.3, 0.3, 0.3, 0);
-                }
+        AABB box = player.getBoundingBox().inflate(5);
+        player.level().getEntitiesOfClass(Player.class, box, p -> true).forEach(p -> {
+            p.addEffect(AbilityCommon.fx(MobEffects.DAMAGE_RESISTANCE, 60, 0));
+            p.addEffect(AbilityCommon.fx(MobEffects.REGENERATION, 60, 0));
+        });
+
+        List<LivingEntity> enemies = level.getEntitiesOfClass(LivingEntity.class, box,
+                e -> e != player && !(e instanceof Player));
+        for (LivingEntity enemy : enemies) {
+            enemy.addEffect(AbilityCommon.fx(MobEffects.WEAKNESS, 60, 0));
+            if (enemy.getMobType() == MobType.UNDEAD) {
+                enemy.hurt(player.damageSources().magic(), 4.0f);
             }
         }
-        AABB box = player.getBoundingBox().inflate(5);
-        player.level().getEntitiesOfClass(Player.class, box, p -> true)
-                .forEach(p -> p.addEffect(AbilityCommon.fx(MobEffects.SATURATION, 25, 1)));
         level.sendParticles(ParticleTypes.END_ROD,
                 player.getX(), player.getY() + 1, player.getZ(),
                 15, 1.5, 1.5, 1.5, 0.05);
@@ -49,11 +46,12 @@ public final class LightAbility {
 
     // ABILITY: свечение + ускорение добычи всем в радиусе
     public static void activateAbility(ServerPlayer player, ServerLevel level) {
+        level.setWeatherParameters(0, 0, false, false);
         AABB box = player.getBoundingBox().inflate(15);
         player.level().getEntitiesOfClass(LivingEntity.class, box, e -> true).forEach(e -> {
-            e.addEffect(AbilityCommon.fx(MobEffects.GLOWING, 200, 0));
+            e.addEffect(AbilityCommon.fx(MobEffects.GLOWING, 400, 0));
             if (e instanceof Player)
-                e.addEffect(AbilityCommon.fx(MobEffects.DIG_SPEED, 200, 2));
+                e.addEffect(AbilityCommon.fx(MobEffects.DIG_SPEED, 400, 3));
         });
         level.sendParticles(ParticleTypes.END_ROD,
                 player.getX(), player.getY() + 1, player.getZ(),

@@ -60,7 +60,7 @@ public enum PowerType {
             case GEO -> 240;
             case CREEPER -> 300;
             case VOID -> 300;
-            case LIGHT -> 400;
+            case LIGHT -> 650;
             case ADEPT -> 500;
             case GRAVITY -> 340;
             case ECHO -> 600;
