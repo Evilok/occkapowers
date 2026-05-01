@@ -303,4 +303,5 @@ public final class BruteAbility {
                             bp.getY() + 0.5, bp.getZ() + 0.5, 3, 0.2, 0.2, 0.2, 0.1);
                 }
     }
+    //
 }
