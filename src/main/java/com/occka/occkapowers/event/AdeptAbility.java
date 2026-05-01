@@ -210,12 +210,10 @@ public class AdeptAbility {
                 panda.discard();
             } else {
                 panda.getPersistentData().putInt("occka_panda_lifetime", life);
-                // Телепортируем панду к игроку (чуть сбоку чтоб не застряли)
                 panda.teleportTo(
                         player.getX() + 0.6,
                         player.getY(),
                         player.getZ() + 0.6);
-                // Поворачиваем морду панды в ту же сторону что и игрок
                 panda.setYRot(player.getYRot());
                 panda.yHeadRot = player.getYRot();
             }

@@ -106,7 +106,6 @@ public final class FireAbility {
         if (!player.getPersistentData().getBoolean("occka_fire_form_active"))
             return;
 
-        // Гасим форму если игрок в воде или под дождём
         if (player.isInWater() || (player.level().isRainingAt(player.blockPosition())
                 && player.level().canSeeSky(player.blockPosition()))) {
             level.sendParticles(ParticleTypes.LARGE_SMOKE,

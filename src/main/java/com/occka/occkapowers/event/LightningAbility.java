@@ -122,7 +122,6 @@ public final class LightningAbility {
 
         int interval = 900 / max;
         if (count < max && ticks % interval == 0) {
-            // Ищем ближайшего врага
             LivingEntity target = null;
             double minDist = Double.MAX_VALUE;
             for (LivingEntity e : AbilityCommon.getNearbyEnemies(player, radius)) {

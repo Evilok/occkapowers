@@ -300,16 +300,12 @@ public final class FlowerAbility {
 
         Vec3 center = player.position();
 
-        // Ставим 2 блока листвы (нижний и верхний — на месте игрока)
         BlockPos lower = BlockPos.containing(center.x, center.y, center.z);
         BlockPos upper = lower.above();
 
-        // Убираем игрока на время (невидимость + сопротивление)
         player.addEffect(AbilityCommon.fx(MobEffects.INVISIBILITY, 220, 0));
         player.addEffect(AbilityCommon.fx(MobEffects.DAMAGE_RESISTANCE, 220, 4)); // Resistance V
 
-        // Ставим блоки листвы
-        // Сохраняем что было на этих позициях чтобы потом восстановить
         CompoundTag nbt = player.getPersistentData();
         nbt.putLong("occka_flower_ult_lower", lower.asLong());
         nbt.putLong("occka_flower_ult_upper", upper.asLong());
@@ -323,7 +319,6 @@ public final class FlowerAbility {
         level.setBlock(lower, leaf, 3);
         level.setBlock(upper, leaf, 3);
 
-        // Частицы появления
         for (int i = 0; i < 30; i++) {
             double a = RNG.nextDouble() * Math.PI * 2;
             double r = RNG.nextDouble() * 1.5;
