@@ -65,9 +65,10 @@ public final class SpiderAbility {
 
     public static void activateAbility(ServerPlayer player, ServerLevel level) {
         Entity target = findTarget(player, level, 30.0);
-        if (target == null)
+        if (target == null) {
+            player.sendSystemMessage(AbilityCommon.msg("Miss!", ChatFormatting.GRAY));
             return;
-
+        }
         // направление к игроку
         Vec3 dir = player.position().add(0, 1.0, 0)
                 .subtract(target.position());
@@ -120,11 +121,23 @@ public final class SpiderAbility {
         player.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SPEED, 100, 2));
 
         for (LivingEntity enemy : AbilityCommon.getNearbyEnemies(player, radius)) {
+            // СБРОС ВНИЗ
+            Vec3 cur = enemy.getDeltaMovement();
+
+            // жёсткий удар вниз
+            enemy.setDeltaMovement(
+                    cur.x * 0.3,
+                    -2.2, // сила падения (можно крутить)
+                    cur.z * 0.3);
+
+            enemy.hurtMarked = true;
+
+            // убираем полётные эффекты
+            enemy.removeEffect(MobEffects.LEVITATION);
+            enemy.removeEffect(MobEffects.SLOW_FALLING);
+            enemy.setNoGravity(false);
             enemy.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SLOWDOWN, 100, 127));
             enemy.addEffect(AbilityCommon.fx(MobEffects.JUMP, 100, 127));
-            enemy.removeEffect(MobEffects.LEVITATION);
-            enemy.setDeltaMovement(Vec3.ZERO);
-            enemy.hurtMarked = true;
 
             placeTimedWeb(level, enemy.blockPosition(), level.getGameTime() + 100, player);
             placeTimedWeb(level, enemy.blockPosition().north(), level.getGameTime() + 100, player);
@@ -288,28 +301,72 @@ public final class SpiderAbility {
     private static Entity findTarget(ServerPlayer player, ServerLevel level, double range) {
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getLookAngle().normalize();
-        Vec3 end = eye.add(look.scale(range));
-        AABB search = player.getBoundingBox().expandTowards(look.scale(range)).inflate(1.6);
-        EntityHitResult result = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(
-                player, eye, end, search, e -> e != player && e.isPickable(), range * range);
 
-        if (result == null) {
-            return null;
+        // Широкий AABB для первичного отбора кандидатов
+        AABB searchBox = player.getBoundingBox()
+                .expandTowards(look.scale(range))
+                .inflate(3.0); // увеличен с 1.6 до 3.0
+
+        // Собираем всех кандидатов
+        List<Entity> candidates = level.getEntities(
+                player,
+                searchBox,
+                e -> e != player && e.isPickable() && e.isAlive());
+
+        Entity closest = null;
+        double closestDist = Double.MAX_VALUE;
+
+        for (Entity entity : candidates) {
+            // Проверяем несколько точек хитбокса — глаза, центр, низ
+            // Это даёт "толстый" луч без явного цилиндра
+            Vec3[] checkPoints = {
+                    entity.getEyePosition(),
+                    entity.position().add(0, entity.getBbHeight() * 0.5, 0),
+                    entity.position().add(0, entity.getBbHeight() * 0.15, 0),
+            };
+
+            // Радиус попадания: фиксированный хитбокс + половина ширины сущности
+            // 1.4 — достаточно широко чтобы попадать не целясь идеально
+            double hitRadius = 1.4 + entity.getBbWidth() * 0.5;
+
+            for (Vec3 point : checkPoints) {
+                Vec3 toPoint = point.subtract(eye);
+                double dot = toPoint.dot(look);
+
+                // Точка должна быть впереди и в пределах дальности
+                if (dot < 0.5 || dot > range)
+                    continue;
+
+                // Ближайшая точка луча к checkPoint
+                Vec3 proj = eye.add(look.scale(dot));
+                double lateralDist = proj.distanceTo(point);
+
+                if (lateralDist < hitRadius && dot < closestDist) {
+                    closestDist = dot;
+                    closest = entity;
+                    break; // нашли попадание для этой сущности
+                }
+            }
         }
 
-        double blockHitDistance = range;
-        BlockHitResult blockHit = level
-                .clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-        if (blockHit.getType() == HitResult.Type.BLOCK) {
-            blockHitDistance = blockHit.getLocation().distanceToSqr(eye);
-        } else {
-            blockHitDistance = range * range;
+        // Проверяем что между игроком и целью нет блоков
+        if (closest != null) {
+            Vec3 end = eye.add(look.scale(closestDist));
+            BlockHitResult blockHit = level.clip(
+                    new ClipContext(eye, end,
+                            ClipContext.Block.COLLIDER,
+                            ClipContext.Fluid.NONE, player));
+            // Если блок ближе цели — цель за стеной, не считаем
+            if (blockHit.getType() == HitResult.Type.BLOCK) {
+                double blockDist = blockHit.getLocation().distanceToSqr(eye);
+                double entityDist = closestDist * closestDist;
+                if (blockDist < entityDist) {
+                    return null;
+                }
+            }
         }
 
-        if (result.getLocation().distanceToSqr(eye) > blockHitDistance) {
-            return null;
-        }
-        return result.getEntity();
+        return closest;
     }
 
     private static boolean isTouchingWall(ServerPlayer player, ServerLevel level) {

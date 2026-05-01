@@ -20,6 +20,7 @@ public enum PowerType {
     ADEPT("adept", ChatFormatting.DARK_GREEN),
     FLASH("flash", ChatFormatting.LIGHT_PURPLE),
     FLOWER("flower", ChatFormatting.GREEN),
+    VADER("vader", ChatFormatting.DARK_RED),
     SPIDER("spider", ChatFormatting.WHITE);
 
     private final String id;
@@ -53,10 +54,11 @@ public enum PowerType {
             case FLOWER -> 800;
             case ICE -> 440; // 22 сек
             case LIGHTNING -> 200;
+            case VADER -> 300; // 15 сек
             case LASER -> 382;
             case GEO -> 240;
             case VOID -> 300;
-            case LIGHT -> 200;
+            case LIGHT -> 400;
             case ADEPT -> 500;
             case GRAVITY -> 340;
             case ECHO -> 600;
@@ -74,9 +76,10 @@ public enum PowerType {
             case AIR -> "10x Feather";
             case WATER -> "1x Water Bucket";
             case ICE -> "1x Snowball";
-            case LIGHTNING -> "1x Iron Boots";
+            case LIGHTNING -> "1x Lightning Rod";
             case LASER -> "1x Bow";
             case GEO -> "64x Dirt";
+            case VADER -> "1x Skeleton Skull";
             case ADEPT -> "8x Sugar";
             case VOID -> "12x String";
             case LIGHT -> "16x Torch";
@@ -98,14 +101,15 @@ public enum PowerType {
             case WATER -> "30x Cooked Salmon";
             case ADEPT -> "16x Bamboo";
             case ICE -> "1x Iron Block";
-            case LIGHTNING -> "1x Lightning Rod";
-            case LASER -> "16x TNT Block";
+            case LIGHTNING -> "1x Lodestone";
+            case LASER -> "32x TNT Block";
             case GEO -> "2x Gold Block";
             case VOID -> "1x Ghast Tear";
             case LIGHT -> "32x Glowstone";
             case GRAVITY -> "1x Anvil";
             case ECHO -> "1x Night Vision Potion";
             case SUPERFORCE -> "1x Beacon";
+            case VADER -> "5x Netherite Ingot";
             case CHAOS -> "1x Dragon Egg";
             case FLOWER -> "1x Wither Rose";
             case FLASH -> "1x Speed Potion";

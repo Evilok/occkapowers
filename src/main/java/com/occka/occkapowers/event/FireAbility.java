@@ -106,14 +106,29 @@ public final class FireAbility {
         if (!player.getPersistentData().getBoolean("occka_fire_form_active"))
             return;
 
-        // Гасим форму если игрок в воде или под дождём
-        if (player.isInWater() || (player.level().isRainingAt(player.blockPosition())
-                && player.level().canSeeSky(player.blockPosition()))) {
+        boolean inWater = player.isInWater()
+                || player.isUnderWater()
+                || !player.level().getFluidState(player.blockPosition()).isEmpty()
+                || !player.level().getFluidState(player.blockPosition().below()).isEmpty();
+
+        // isRainingAt в 1.20.1 уже включает проверку неба, биома и типа осадков
+        boolean inRain = level.isRainingAt(player.blockPosition());
+
+        if (inWater || inRain) {
             level.sendParticles(ParticleTypes.LARGE_SMOKE,
                     player.getX(), player.getY() + 1, player.getZ(),
                     20, 0.5, 0.5, 0.5, 0.05);
-            player.sendSystemMessage(AbilityCommon.msg("Fire Form extinguished!", ChatFormatting.GRAY));
+            level.sendParticles(ParticleTypes.BUBBLE_POP,
+                    player.getX(), player.getY() + 1, player.getZ(),
+                    10, 0.3, 0.3, 0.3, 0.05);
+
+            player.sendSystemMessage(AbilityCommon.msg(
+                    inWater ? "Fire Form extinguished by water!"
+                            : "Fire Form extinguished by rain!",
+                    ChatFormatting.AQUA));
+
             disableFireForm(player, level);
+
             player.getCapability(com.occka.occkapowers.registry.ModCapabilities.PLAYER_POWER)
                     .ifPresent(data -> {
                         data.setAbilityMaxCdOverride(300);
@@ -132,8 +147,9 @@ public final class FireAbility {
             if (life == 1 && player.getPersistentData().hasUUID("occka_shift_fb")) {
                 java.util.UUID fbId = player.getPersistentData().getUUID("occka_shift_fb");
                 if (level.getEntity(fbId) instanceof LargeFireball fb) {
-                    level.sendParticles(ParticleTypes.LARGE_SMOKE, fb.getX(), fb.getY(), fb.getZ(), 10, 0.3, 0.3, 0.3,
-                            0.05);
+                    level.sendParticles(ParticleTypes.LARGE_SMOKE,
+                            fb.getX(), fb.getY(), fb.getZ(),
+                            10, 0.3, 0.3, 0.3, 0.05);
                     fb.discard();
                 }
                 player.getPersistentData().remove("occka_shift_fb");

@@ -14,9 +14,10 @@ public class UnlockHelper {
             case AIR -> consume(player, Items.FEATHER, 10);
             case WATER -> consume(player, Items.WATER_BUCKET, 1);
             case ICE -> consume(player, Items.SNOWBALL, 1);
-            case LIGHTNING -> consume(player, Items.IRON_BOOTS, 1);
+            case LIGHTNING -> consume(player, Items.LIGHTNING_ROD, 1);
             case LASER -> consume(player, Items.BOW, 1);
             case GEO -> consume(player, Items.DIRT, 64);
+            case VADER -> consume(player, Items.SKELETON_SKULL, 1);
             case VOID -> consume(player, Items.STRING, 12);
             case LIGHT -> consume(player, Items.TORCH, 16);
             case GRAVITY -> consume(player, Items.GRAVEL, 12);
@@ -36,13 +37,14 @@ public class UnlockHelper {
             case AIR -> consume(player, Items.DIAMOND, 10);
             case WATER -> consume(player, Items.COOKED_SALMON, 30);
             case ICE -> consume(player, Items.IRON_BLOCK, 1);
-            case LIGHTNING -> consume(player, Items.LIGHTNING_ROD, 1);
-            case LASER -> consume(player, Items.TNT, 16);
+            case LIGHTNING -> consume(player, Items.LODESTONE, 1);
+            case LASER -> consume(player, Items.TNT, 32);
             case GEO -> consume(player, Items.GOLD_BLOCK, 2);
             case ADEPT -> consume(player, Items.BAMBOO, 16);
             case VOID -> consume(player, Items.GHAST_TEAR, 1);
             case LIGHT -> consume(player, Items.GLOWSTONE, 32);
             case GRAVITY -> consume(player, Items.ANVIL, 1);
+            case VADER -> consume(player, Items.NETHERITE_INGOT, 5);
             case ECHO -> consumePotion(player);
             case CHAOS -> consume(player, Items.DRAGON_EGG, 1);
             case SUPERFORCE -> consume(player, Items.BEACON, 1);

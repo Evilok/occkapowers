@@ -149,6 +149,7 @@ public class PowerHudOverlay {
             case LIGHTNING -> new int[][] { { 0xFFFF00 }, { 0xFFCC00 }, { 0xFFFF88 } };
             case ADEPT -> new int[][] { { 0x22AA44 }, { 0x55DD66 }, { 0x88FFAA } };
             case LASER -> new int[][] { { 0xEE0000 }, { 0xFF4400 }, { 0xFF6600 } };
+            case VADER -> new int[][] { { 0x330000 }, { 0x880000 }, { 0xFF0000 } };
             case GEO -> new int[][] { { 0x886644 }, { 0x664422 }, { 0xAA8855 } };
             case VOID -> new int[][] { { 0x8800EE }, { 0xAA00CC }, { 0x440066 } };
             case LIGHT -> new int[][] { { 0xFFFF88 }, { 0xFFEE44 }, { 0xFFFFCC } };
@@ -171,6 +172,7 @@ public class PowerHudOverlay {
             case CHAOS -> 0x8800AA;
             case ADEPT -> 0x44EE77;
             case LIGHTNING -> 0xFFFF00;
+            case VADER -> 0xCC0000;
             case LASER -> 0xFF2200;
             case GEO -> 0xAA8844;
             case VOID -> 0x9900EE;

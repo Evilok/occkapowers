@@ -59,6 +59,7 @@ public class AbilityActivator {
             case AIR -> LightningAbility.activateShift(player, level);
             case WATER -> WaterAbility.activateShift(player, level);
             case ICE -> IceAbility.activateShift(player, level);
+            case VADER -> VaderAbility.activateShift(player, level);
             case LIGHTNING -> AirAbility.activateShift(player, level);
             case LASER -> LaserAbility.activateShift(player, level);
             case GEO -> GeoAbility.activateShift(player, level);
@@ -140,6 +141,7 @@ public class AbilityActivator {
             case ICE -> IceAbility.activateAbility(player, level);
             case LIGHTNING -> LightningAbility.activateAbility(player, level);
             case LASER -> LaserAbility.activateAbility(player, level);
+            case VADER -> VaderAbility.activateAbility(player, level);
             case GEO -> GeoAbility.activateAbility(player, level);
             case VOID -> VoidAbility.activateAbility(player, level);
             case FLOWER -> FlowerAbility.activateAbility(player, level);
@@ -206,6 +208,7 @@ public class AbilityActivator {
             case FIRE -> FireAbility.startUlt(player, level, data);
             case AIR -> AirAbility.activateUlt(player, level);
             case WATER -> WaterAbility.activateUlt(player, level);
+            case VADER -> VaderAbility.activateUlt(player, level);
             case ICE -> IceAbility.activateUlt(player, level);
             case LIGHTNING -> LightningAbility.activateUlt(player, level, 40);
             case LASER -> {

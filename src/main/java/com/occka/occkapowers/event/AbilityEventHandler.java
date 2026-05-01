@@ -90,13 +90,17 @@ public class AbilityEventHandler {
                 boolean fireForm = player.getPersistentData().getBoolean("occka_fire_form_active");
 
                 if (fireForm) {
-                    if (!player.onGround() && !player.isInWater()) {
 
+                    // ВАЖНО — добавь это
+                    FireAbility.tickFireForm(player, level);
+
+                    if (!player.onGround() && !player.isInWater()) {
                         if (!player.isFallFlying()) {
                             player.startFallFlying();
                         }
                         SuperforceAbility.applyElytraFlight(player, level);
                     }
+
                     if (player.tickCount % 3 == 0) {
                         level.sendParticles(ParticleTypes.FLAME,
                                 player.getX(), player.getY(), player.getZ(),
@@ -124,6 +128,16 @@ public class AbilityEventHandler {
             if (type == PowerType.SPIDER) {
                 SpiderAbility.tick(player, level);
                 player.fallDistance = 0.0f;
+            }
+
+            if (type == PowerType.AIR) {
+                AirAbility.tickTornado(player, level);
+            }
+
+            if (type == PowerType.VADER) {
+                VaderAbility.tickAura(player, level);
+                VaderAbility.tickGrip(player, level);
+                VaderAbility.tickUlt(player, level);
             }
 
             if (type == PowerType.FLOWER) {
