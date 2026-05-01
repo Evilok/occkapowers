@@ -94,6 +94,7 @@ public class OcckaCommand {
             for (ServerPlayer player : targets) {
                 player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
                     data.setPowerType(type);
+                    player.refreshDimensions();
 
                     if (unlocked) {
                         // Сразу открываем ability и ult
@@ -137,6 +138,7 @@ public class OcckaCommand {
             for (ServerPlayer player : EntityArgument.getPlayers(ctx, "target")) {
                 player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
                     data.setPowerType(PowerType.NONE);
+                    player.refreshDimensions();
                     NetworkHandler.CHANNEL.send(
                             PacketDistributor.PLAYER.with(() -> player),
                             new PacketSyncPowerData(player, data));

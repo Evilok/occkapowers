@@ -59,7 +59,7 @@ public class AbilityEventHandler {
 
         player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
             if (data.getPowerType() == PowerType.BRUTE) {
-                event.setNewSize(net.minecraft.world.entity.EntityDimensions.scalable(0.9f, 3.0f), true);
+                event.setNewSize(net.minecraft.world.entity.EntityDimensions.scalable(0.6f, 2.1f), true);
             }
         });
     }
@@ -494,6 +494,7 @@ public class AbilityEventHandler {
                 .ifPresent(oldData -> event.getEntity().getCapability(ModCapabilities.PLAYER_POWER)
                         .ifPresent(newData -> newData.deserializeNBT(oldData.serializeNBT())));
         event.getOriginal().invalidateCaps();
+        event.getEntity().refreshDimensions();
 
         // Сбрасываем огненную форму после смерти — mayfly не должен оставаться
         if (event.isWasDeath()) {
@@ -510,6 +511,7 @@ public class AbilityEventHandler {
             NetworkHandler.CHANNEL.send(
                     PacketDistributor.PLAYER.with(() -> player),
                     new PacketSyncPowerData(player, data));
+            player.refreshDimensions();
             if (data.getPowerType() != PowerType.NONE) {
                 applyNickColor(player, data.getPowerType());
             }
@@ -532,9 +534,12 @@ public class AbilityEventHandler {
     public static void onDimensionChange(PlayerEvent.PlayerChangedDimensionEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player))
             return;
-        player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> NetworkHandler.CHANNEL.send(
-                PacketDistributor.PLAYER.with(() -> player),
-                new PacketSyncPowerData(player, data)));
+        player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
+            player.refreshDimensions();
+            NetworkHandler.CHANNEL.send(
+                    PacketDistributor.PLAYER.with(() -> player),
+                    new PacketSyncPowerData(player, data));
+        });
     }
 
     private static void tickGravityUlt(ServerPlayer player, ServerLevel level) {
