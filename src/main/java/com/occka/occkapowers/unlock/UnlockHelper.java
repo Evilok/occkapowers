@@ -22,6 +22,7 @@ public class UnlockHelper {
             case LIGHT -> consume(player, Items.TORCH, 16);
             case CREEPER -> consume(player, Items.END_CRYSTAL, 1);
             case GRAVITY -> consume(player, Items.GRAVEL, 12);
+            case BRUTE -> consume(player, Items.NETHERITE_HELMET, 1);
             case ECHO -> consume(player, Items.LEATHER, 10);
             case SUPERFORCE -> consume(player, Items.IRON_BLOCK, 10);
             case CHAOS -> consume(player, Items.NETHER_STAR, 1);
@@ -50,6 +51,7 @@ public class UnlockHelper {
             case VADER -> consume(player, Items.NETHERITE_INGOT, 5);
             case ECHO -> consumePotion(player);
             case CHAOS -> consume(player, Items.DRAGON_EGG, 1);
+            case BRUTE -> consume(player, Items.ENCHANTED_GOLDEN_APPLE, 1);
             case SUPERFORCE -> consume(player, Items.BEACON, 1);
             case FLASH -> consumeSpeedPotion(player);
             case SPIDER -> consume(player, Items.COBWEB, 25);

@@ -68,6 +68,7 @@ public class AbilityActivator {
             case ICE -> IceAbility.activateShift(player, level);
             case VADER -> VaderAbility.activateShift(player, level);
             case LIGHTNING -> LightningAbility.activateShift(player, level);
+            case BRUTE -> BruteAbility.activateShift(player, level);
             case LASER -> LaserAbility.activateShift(player, level);
             case GEO -> GeoAbility.activateShift(player, level);
             case FLOWER -> FlowerAbility.activateShift(player, level);
@@ -107,10 +108,14 @@ public class AbilityActivator {
             return;
         }
 
-        if (type == PowerType.ECHO) {
+        if (type == PowerType.ECHO || type == PowerType.BRUTE) {
             if (!(player.level() instanceof ServerLevel level))
                 return;
-            EchoAbility.activateAbility(player, level, data);
+            if (type == PowerType.ECHO) {
+                EchoAbility.activateAbility(player, level, data);
+            } else {
+                BruteAbility.activateAbility(player, level);
+            }
             syncToClient(player, data);
             return;
         }
@@ -167,6 +172,7 @@ public class AbilityActivator {
             case CREEPER -> CreeperAbility.activateAbility(player, level);
             case GEO -> GeoAbility.activateAbility(player, level);
             case VOID -> VoidAbility.activateAbility(player, level);
+            case BRUTE -> BruteAbility.activateAbility(player, level);
             case FLOWER -> FlowerAbility.activateAbility(player, level);
             case LIGHT -> LightAbility.activateAbility(player, level);
             case GRAVITY -> GravityAbility.activateAbility(player, level);
@@ -232,6 +238,7 @@ public class AbilityActivator {
             case FIRE -> FireAbility.startUlt(player, level, data);
             case AIR -> AirAbility.activateUlt(player, level);
             case WATER -> WaterAbility.activateUlt(player, level);
+            case BRUTE -> BruteAbility.activateUlt(player, level);
             case CREEPER -> CreeperAbility.startUlt(player, level);
             case VADER -> VaderAbility.activateUlt(player, level);
             case ICE -> IceAbility.activateUlt(player, level);
