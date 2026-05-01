@@ -179,7 +179,7 @@ public class AbilityActivator {
         syncToClient(player, data);
     }
 
-    // ===== ULT =====
+  
     private static void activateUlt(ServerPlayer player, PlayerPowerData data, PowerType type) {
         if (!data.isUltUnlocked()) {
             if (UnlockHelper.tryConsumeUlt(player, type)) {

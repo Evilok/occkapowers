@@ -139,7 +139,7 @@ public class PowerHudOverlay {
             }
         }
     }
-
+//
     private int getSlotColor(int slot) {
         int[][] colors = switch (ClientPowerData.powerType) {
             case FIRE -> new int[][] { { 0xFF4400 }, { 0xFF7700 }, { 0xFF0000 } };
