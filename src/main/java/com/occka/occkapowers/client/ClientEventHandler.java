@@ -44,19 +44,22 @@ class ClientTickHandler {
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+        if (event.phase != TickEvent.Phase.END)
+            return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.screen != null) return;
+        if (mc.player == null || mc.screen != null)
+            return;
 
         // --- Shift ability ---
         if (KeyBindings.KEY_SHIFT_ABILITY.isDown()) {
             shiftHeldTicks++;
-            //int shiftPacketRate = ClientPowerData.powerType == PowerType.FLASH ? 2 : 20;
-            if (shiftHeldTicks == 1 || shiftHeldTicks % 20 == 0) {
+            int shiftPacketRate = "creeper".equalsIgnoreCase(ClientPowerData.powerType.getId()) ? 1 : 20;
+            if (shiftHeldTicks == 1 || shiftHeldTicks % shiftPacketRate == 0) {
                 NetworkHandler.CHANNEL.sendToServer(new PacketShiftHeld());
             }
         } else {
-            if (shiftHeldTicks > 0) shiftHeldTicks = 0;
+            if (shiftHeldTicks > 0)
+                shiftHeldTicks = 0;
         }
 
         // --- Ability (one-shot) ---

@@ -21,6 +21,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Team;
+import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -28,6 +29,11 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraftforge.common.ForgeMod;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import java.util.UUID;
+
 import com.occka.occkapowers.event.GeoOrbitHandler;
 import java.util.List;
 import net.minecraft.world.level.block.Blocks;
@@ -35,6 +41,7 @@ import net.minecraftforge.event.entity.living.LivingFallEvent;
 
 @Mod.EventBusSubscriber(modid = OcckaPowers.MOD_ID)
 public class AbilityEventHandler {
+    private static final UUID FLASH_STEP_UUID = UUID.fromString("6f986f4c-b79b-4d34-a01d-522768df6f3a");
 
     private static MobEffectInstance fx(net.minecraft.world.effect.MobEffect eff, int dur, int amp) {
         return new MobEffectInstance(eff, dur, amp, false, false);
@@ -86,17 +93,31 @@ public class AbilityEventHandler {
                 LightningAbility.tickUlt(player, level);
             }
 
+            if (type == PowerType.CREEPER) {
+                // Пассивка: снятие агро с мобов каждый тик в радиусе
+                CreeperAbility.tickPassive(player, level);
+                // Тик зарядки / истечения заряда
+                CreeperAbility.tickChargeDecay(player, level);
+                // Приземление после Catapult
+                CreeperAbility.tickCatapultLanding(player, level);
+                CreeperAbility.tickUlt(player, level);
+            }
+
             if (type == PowerType.FIRE) {
                 boolean fireForm = player.getPersistentData().getBoolean("occka_fire_form_active");
 
                 if (fireForm) {
-                    if (!player.onGround() && !player.isInWater()) {
 
+                    // ВАЖНО — добавь это
+                    FireAbility.tickFireForm(player, level);
+
+                    if (!player.onGround() && !player.isInWater()) {
                         if (!player.isFallFlying()) {
                             player.startFallFlying();
                         }
                         SuperforceAbility.applyElytraFlight(player, level);
                     }
+
                     if (player.tickCount % 3 == 0) {
                         level.sendParticles(ParticleTypes.FLAME,
                                 player.getX(), player.getY(), player.getZ(),
@@ -110,9 +131,12 @@ public class AbilityEventHandler {
             }
 
             if (type == PowerType.FLASH) {
+                applyFlashStepHeight(player, true);
                 if (data.isFlashUltActive()) {
                     FlashAbility.tickFlashUlt(player, level, data);
                 }
+            } else if (player.maxUpStep() > 0.6f) {
+                applyFlashStepHeight(player, false);
             }
 
             if (type == PowerType.SUPERFORCE) {
@@ -124,6 +148,16 @@ public class AbilityEventHandler {
             if (type == PowerType.SPIDER) {
                 SpiderAbility.tick(player, level);
                 player.fallDistance = 0.0f;
+            }
+
+            if (type == PowerType.AIR) {
+                AirAbility.tickTornado(player, level);
+            }
+
+            if (type == PowerType.VADER) {
+                VaderAbility.tickAura(player, level);
+                VaderAbility.tickGrip(player, level);
+                VaderAbility.tickUlt(player, level);
             }
 
             if (type == PowerType.FLOWER) {
@@ -145,6 +179,22 @@ public class AbilityEventHandler {
                         new PacketSyncPowerData(data));
             }
         });
+    }
+
+    private static void applyFlashStepHeight(ServerPlayer player, boolean enabled) {
+        AttributeInstance stepAttr = player.getAttribute(ForgeMod.STEP_HEIGHT_ADDITION.get());
+        if (stepAttr == null)
+            return;
+        AttributeModifier existing = stepAttr.getModifier(FLASH_STEP_UUID);
+
+        if (enabled) {
+            if (existing == null) {
+                stepAttr.addPermanentModifier(new AttributeModifier(
+                        FLASH_STEP_UUID, "occka_flash_step_boost", 1.4, AttributeModifier.Operation.ADDITION));
+            }
+        } else if (existing != null) {
+            stepAttr.removeModifier(FLASH_STEP_UUID);
+        }
     }
 
     @SubscribeEvent
@@ -229,12 +279,16 @@ public class AbilityEventHandler {
                     if (attr != null && attr.getBaseValue() < 40.0)
                         attr.setBaseValue(40.0);
                 }
-                case LIGHT -> player.addEffect(fx(MobEffects.LUCK, 200, 4));
+                case FLOWER -> player.addEffect(fx(MobEffects.LUCK, 200, 4));
                 case VOID -> {
                     AttributeInstance attr = player.getAttribute(Attributes.MAX_HEALTH);
                     if (attr != null && attr.getBaseValue() != 16.0)
                         attr.setBaseValue(16.0);
                 }
+                case CREEPER -> {
+
+                }
+
                 case GRAVITY -> player.addEffect(fx(MobEffects.JUMP, 200, 1));
                 case CHAOS -> {
                     net.minecraft.core.particles.SimpleParticleType[] types = {
@@ -273,6 +327,15 @@ public class AbilityEventHandler {
                     player.getX(), player.getY() + 2.1, player.getZ(), 3, 0.3, 0.1, 0.3, 0.01);
             case ICE -> level.sendParticles(ParticleTypes.SNOWFLAKE,
                     player.getX(), player.getY() + 0.5, player.getZ(), 3, 0.4, 0.4, 0.4, 0.01);
+            case CREEPER -> {
+                int charge = player.getPersistentData().getInt(CreeperAbility.NBT_CHARGE);
+                if (charge <= 0) {
+                    // Базовая аура без заряда — тихие зелёные частицы
+                    level.sendParticles(ParticleTypes.HAPPY_VILLAGER,
+                            player.getX(), player.getY() + 0.5, player.getZ(),
+                            1, 0.3, 0.3, 0.3, 0.01);
+                }
+            }
             case LIGHTNING -> level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
                     player.getX(), player.getY() + 1, player.getZ(), 2, 0.3, 0.5, 0.3, 0.1);
             case LASER -> level.sendParticles(ParticleTypes.CRIT,

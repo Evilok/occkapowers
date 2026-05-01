@@ -10,7 +10,10 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BoneMealItem;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -19,6 +22,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.LongTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -110,10 +114,29 @@ public final class FlowerAbility {
     public static void tickFlowerForm(ServerPlayer player, ServerLevel level) {
         if (!player.getPersistentData().getBoolean("occka_flower_form_active"))
             return;
+        BlockPos center = player.blockPosition();
+        for (int dx = -5; dx <= 5; dx++) {
+            for (int dz = -5; dz <= 5; dz++) {
+                BlockPos pos = center.offset(dx, 0, dz);
+                var state = level.getBlockState(pos);
+                if (state.getBlock() instanceof CropBlock) {
+                    boolean grew = BoneMealItem.applyBonemeal(
+                            new ItemStack(Items.BONE_MEAL), level, pos, player);
+                    if (grew)
+                        level.sendParticles(ParticleTypes.HAPPY_VILLAGER,
+                                pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5,
+                                3, 0.3, 0.3, 0.3, 0);
+                }
+            }
+        }
 
         // Поддерживаем эффекты пока форма активна
         player.addEffect(AbilityCommon.fx(MobEffects.NIGHT_VISION, 300, 0));
         player.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SPEED, 25, 1)); // Speed II
+        AABB box = player.getBoundingBox().inflate(5);
+        player.level().getEntitiesOfClass(Player.class, box, p -> true)
+                .forEach(p -> p.addEffect(AbilityCommon.fx(MobEffects.SATURATION, 25, 1)));
+
 
         // Спавним след из цветов каждые 8 тиков (не слишком часто)
         if (player.tickCount % 8 != 0)
@@ -372,8 +395,8 @@ public final class FlowerAbility {
             } catch (Exception ignored) {
             }
 
-            //level.sendParticles(ParticleTypes.COMPOSTER,
-            //        cx + 0.5, cy + 1, cz + 0.5, 5, 0.3, 0.3, 0.3, 0.05);
+            // level.sendParticles(ParticleTypes.COMPOSTER,
+            // cx + 0.5, cy + 1, cz + 0.5, 5, 0.3, 0.3, 0.3, 0.05);
         }
 
         // Конец ульты

@@ -38,7 +38,7 @@ public final class FlashAbility {
      * Called by Shift-hold packet to create Flash trail and maintain speed buff.
      */
     public static void tickHeldShift(ServerPlayer player, ServerLevel level) {
-        player.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SPEED, 45, 7));
+        player.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SPEED, 45, 9));
         player.addEffect(AbilityCommon.fx(MobEffects.JUMP, 45, 1));
 
         spawnRotatingAfterimage(player, level);
@@ -93,7 +93,7 @@ public final class FlashAbility {
             entity.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SLOWDOWN, 200, 3)); // не 254, а 3
             entity.addEffect(AbilityCommon.fx(MobEffects.DIG_SLOWDOWN, 200, 4));
         }
-        player.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SPEED, 200, 9));
+        player.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SPEED, 200, 11));
         player.addEffect(AbilityCommon.fx(MobEffects.REGENERATION, 200, 4));
         player.addEffect(AbilityCommon.fx(MobEffects.DAMAGE_RESISTANCE, 200, 2));
         data.setFlashUltActive(true);

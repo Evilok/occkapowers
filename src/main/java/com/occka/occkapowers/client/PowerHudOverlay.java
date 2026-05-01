@@ -1,28 +1,29 @@
 package com.occka.occkapowers.client;
- 
+
 import com.occka.occkapowers.ability.PowerType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
- 
+import com.occka.occkapowers.ability.PlayerPowerData;
+
 public class PowerHudOverlay {
- 
+
     public void renderHud(GuiGraphics graphics) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null)
             return;
         if (ClientPowerData.powerType == PowerType.NONE)
             return;
- 
+
         int sw = mc.getWindow().getGuiScaledWidth();
         int sh = mc.getWindow().getGuiScaledHeight();
         int barW = 52, gap = 6;
         int totalW = 3 * barW + 2 * gap;
         int bx = sw / 2 - totalW / 2;
         int by = sh - 65;
- 
+
         String label = "[ " + ClientPowerData.powerType.getId().toUpperCase() + " ]";
         graphics.drawCenteredString(mc.font, label, sw / 2, by - 11, getPowerArgb() | 0xFF000000);
- 
+
         // SHIFT
         boolean hasShiftCharges = ClientPowerData.shiftMaxCharges > 0;
         float shiftProgress = hasShiftCharges
@@ -36,14 +37,14 @@ public class PowerHudOverlay {
         int shiftCdTicks = hasShiftCharges
                 ? ClientPowerData.shiftChargeCd
                 : ClientPowerData.shiftCd;
- 
+
         renderBar(graphics, mc, bx, by, "SHIFT",
                 shiftProgress, shiftReady,
                 shiftCdTicks,
                 true, getSlotColor(0),
                 ClientPowerData.shiftCharges, ClientPowerData.shiftMaxCharges,
                 ClientPowerData.shiftChargeCd, ClientPowerData.shiftChargeCdMax);
- 
+
         // ABILITY
         boolean hasAbilityCharges = ClientPowerData.abilityMaxCharges > 0;
         float abilityProgress = hasAbilityCharges
@@ -57,14 +58,14 @@ public class PowerHudOverlay {
         int abilityCdTicks = hasAbilityCharges
                 ? ClientPowerData.abilityChargeCd
                 : ClientPowerData.abilityCd;
- 
+
         renderBar(graphics, mc, bx + barW + gap, by, "ABILITY",
                 abilityProgress, abilityReady,
                 abilityCdTicks,
                 ClientPowerData.abilityUnlocked, getSlotColor(1),
                 ClientPowerData.abilityCharges, ClientPowerData.abilityMaxCharges,
                 ClientPowerData.abilityChargeCd, ClientPowerData.abilityChargeCdMax);
- 
+
         // ULT
         boolean hasUltCharges = ClientPowerData.ultMaxCharges > 0;
         float ultProgress = hasUltCharges
@@ -78,7 +79,7 @@ public class PowerHudOverlay {
         int ultCdTicks = hasUltCharges
                 ? ClientPowerData.ultChargeCd
                 : ClientPowerData.ultCd;
- 
+
         renderBar(graphics, mc, bx + 2 * (barW + gap), by, "ULT",
                 ultProgress, ultReady,
                 ultCdTicks,
@@ -86,39 +87,39 @@ public class PowerHudOverlay {
                 ClientPowerData.ultCharges, ClientPowerData.ultMaxCharges,
                 ClientPowerData.ultChargeCd, ClientPowerData.ultChargeCdMax);
     }
- 
+
     private void renderBar(GuiGraphics g, Minecraft mc,
             int x, int y, String name,
             float progress, boolean ready, int cdTicks,
             boolean unlocked, int color,
             int charges, int maxCharges, int chargeCd, int chargeCdMax) {
         int bw = 52, bh = 6, barY = y + 9;
- 
+
         g.fill(x - 1, y - 1, x + bw + 1, y + 25, 0xAA000000);
- 
+
         if (!unlocked) {
             g.fill(x, barY, x + bw, barY + bh, 0xFF555555);
             g.drawCenteredString(mc.font, name, x + bw / 2, y, 0xFFAAAAAA);
             g.drawCenteredString(mc.font, "LOCKED", x + bw / 2, y + 16, 0xFFFF5555);
             return;
         }
- 
+
         int fillW = (int) (bw * Math.max(0, Math.min(1, progress)));
         int fillColor = (ready ? color : darken(color, 0.45f)) | 0xFF000000;
         g.fill(x, barY, x + fillW, barY + bh, fillColor);
- 
+
         // Border
         g.fill(x, barY, x + bw, barY + 1, 0x88FFFFFF);
         g.fill(x, barY + bh - 1, x + bw, barY + bh, 0x88FFFFFF);
         g.fill(x, barY, x + 1, barY + bh, 0x88FFFFFF);
         g.fill(x + bw - 1, barY, x + bw, barY + bh, 0x88FFFFFF);
- 
+
         int nameColor = ready ? 0xFFFFFFFF : 0xFFAAAAAA;
- 
+
         if (maxCharges > 0) {
             String displayName = charges > 0 ? name + " x" + charges : name;
             g.drawCenteredString(mc.font, displayName, x + bw / 2, y, nameColor);
- 
+
             if (charges >= maxCharges) {
                 g.drawCenteredString(mc.font, "READY", x + bw / 2, y + 16, 0xFF55FF55);
             } else if (charges > 0) {
@@ -138,7 +139,7 @@ public class PowerHudOverlay {
             }
         }
     }
- 
+
     private int getSlotColor(int slot) {
         int[][] colors = switch (ClientPowerData.powerType) {
             case FIRE -> new int[][] { { 0xFF4400 }, { 0xFF7700 }, { 0xFF0000 } };
@@ -147,8 +148,10 @@ public class PowerHudOverlay {
             case ICE -> new int[][] { { 0x88DDFF }, { 0x44AAFF }, { 0xCCFFFF } };
             case CHAOS -> new int[][] { { 0xAA0000 }, { 0xFF4400 }, { 0x8800AA } };
             case LIGHTNING -> new int[][] { { 0xFFFF00 }, { 0xFFCC00 }, { 0xFFFF88 } };
+            case CREEPER -> new int[][] { { 0x22BB22 }, { 0x44DD44 }, { 0x00FF66 } };
             case ADEPT -> new int[][] { { 0x22AA44 }, { 0x55DD66 }, { 0x88FFAA } };
             case LASER -> new int[][] { { 0xEE0000 }, { 0xFF4400 }, { 0xFF6600 } };
+            case VADER -> new int[][] { { 0x330000 }, { 0x880000 }, { 0xFF0000 } };
             case GEO -> new int[][] { { 0x886644 }, { 0x664422 }, { 0xAA8855 } };
             case VOID -> new int[][] { { 0x8800EE }, { 0xAA00CC }, { 0x440066 } };
             case LIGHT -> new int[][] { { 0xFFFF88 }, { 0xFFEE44 }, { 0xFFFFCC } };
@@ -160,7 +163,7 @@ public class PowerHudOverlay {
         };
         return colors[Math.min(slot, 2)][0];
     }
- 
+
     private int getPowerArgb() {
         return switch (ClientPowerData.powerType) {
             case FIRE -> 0xFF4400;
@@ -168,9 +171,11 @@ public class PowerHudOverlay {
             case WATER -> 0x0099FF;
             case ICE -> 0x88EEFF;
             case SUPERFORCE -> 0xFFAA00;
+            case CREEPER -> 0x33CC44;
             case CHAOS -> 0x8800AA;
             case ADEPT -> 0x44EE77;
             case LIGHTNING -> 0xFFFF00;
+            case VADER -> 0xCC0000;
             case LASER -> 0xFF2200;
             case GEO -> 0xAA8844;
             case VOID -> 0x9900EE;
@@ -181,7 +186,7 @@ public class PowerHudOverlay {
             default -> 0xFFFFFF;
         };
     }
- 
+
     private int darken(int color, float f) {
         int r = (int) (((color >> 16) & 0xFF) * f);
         int g = (int) (((color >> 8) & 0xFF) * f);
