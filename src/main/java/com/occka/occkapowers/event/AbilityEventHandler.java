@@ -86,6 +86,17 @@ public class AbilityEventHandler {
                 LightningAbility.tickUlt(player, level);
             }
 
+            if (type == PowerType.CREEPER) {
+                // Пассивка: снятие агро с мобов каждые 40 тиков
+                if (player.tickCount % 40 == 0) {
+                    CreeperAbility.tickPassive(player, level);
+                }
+                // Тик зарядки / истечения заряда
+                CreeperAbility.tickChargeDecay(player, level);
+                // Тик ульты
+                CreeperAbility.tickUlt(player, level);
+            }
+
             if (type == PowerType.FIRE) {
                 boolean fireForm = player.getPersistentData().getBoolean("occka_fire_form_active");
 
@@ -249,6 +260,10 @@ public class AbilityEventHandler {
                     if (attr != null && attr.getBaseValue() != 16.0)
                         attr.setBaseValue(16.0);
                 }
+                case CREEPER -> {
+
+                }
+
                 case GRAVITY -> player.addEffect(fx(MobEffects.JUMP, 200, 1));
                 case CHAOS -> {
                     net.minecraft.core.particles.SimpleParticleType[] types = {
@@ -287,6 +302,15 @@ public class AbilityEventHandler {
                     player.getX(), player.getY() + 2.1, player.getZ(), 3, 0.3, 0.1, 0.3, 0.01);
             case ICE -> level.sendParticles(ParticleTypes.SNOWFLAKE,
                     player.getX(), player.getY() + 0.5, player.getZ(), 3, 0.4, 0.4, 0.4, 0.01);
+            case CREEPER -> {
+                int charge = player.getPersistentData().getInt(CreeperAbility.NBT_CHARGE);
+                if (charge <= 0) {
+                    // Базовая аура без заряда — тихие зелёные частицы
+                    level.sendParticles(ParticleTypes.HAPPY_VILLAGER,
+                            player.getX(), player.getY() + 0.5, player.getZ(),
+                            1, 0.3, 0.3, 0.3, 0.01);
+                }
+            }
             case LIGHTNING -> level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
                     player.getX(), player.getY() + 1, player.getZ(), 2, 0.3, 0.5, 0.3, 0.1);
             case LASER -> level.sendParticles(ParticleTypes.CRIT,

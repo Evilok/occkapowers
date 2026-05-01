@@ -20,6 +20,7 @@ public class UnlockHelper {
             case VADER -> consume(player, Items.SKELETON_SKULL, 1);
             case VOID -> consume(player, Items.STRING, 12);
             case LIGHT -> consume(player, Items.TORCH, 16);
+            case CREEPER -> consume(player, Items.END_CRYSTAL, 1);
             case GRAVITY -> consume(player, Items.GRAVEL, 12);
             case ECHO -> consume(player, Items.LEATHER, 10);
             case SUPERFORCE -> consume(player, Items.IRON_BLOCK, 10);
@@ -38,6 +39,7 @@ public class UnlockHelper {
             case WATER -> consume(player, Items.COOKED_SALMON, 30);
             case ICE -> consume(player, Items.IRON_BLOCK, 1);
             case LIGHTNING -> consume(player, Items.LODESTONE, 1);
+            case CREEPER -> consume(player, Items.CREEPER_HEAD, 1);
             case LASER -> consume(player, Items.TNT, 32);
             case GEO -> consume(player, Items.GOLD_BLOCK, 2);
             case ADEPT -> consume(player, Items.BAMBOO, 16);

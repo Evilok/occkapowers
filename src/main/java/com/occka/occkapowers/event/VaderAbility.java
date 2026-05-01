@@ -285,7 +285,7 @@ public final class VaderAbility {
         drawWarningBeam(level, eye, target);
 
         player.sendSystemMessage(AbilityCommon.msg(
-                "DEATH STAR LASER CHARGING... 10s!", ChatFormatting.DARK_RED, ChatFormatting.BOLD));
+                "MAXIMUM PULSE CHARGING... 10s!", ChatFormatting.DARK_RED, ChatFormatting.BOLD));
     }
 
     // Тик ульты — расширяющийся круг предупреждения → удар
@@ -382,7 +382,7 @@ public final class VaderAbility {
         for (Player p : level.getEntitiesOfClass(Player.class,
                 new AABB(cx - 50, cy - 20, cz - 50, cx + 50, cy + 20, cz + 50), x -> true)) {
             ((ServerPlayer) p).sendSystemMessage(Component.literal(
-                    player.getName().getString() + "'s DEATH STAR LASER fired!")
+                    player.getName().getString() + "'s MAXIMUM PULSE fired!")
                     .withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD));
         }
     }
