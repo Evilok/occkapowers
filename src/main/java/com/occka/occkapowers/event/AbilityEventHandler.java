@@ -38,13 +38,28 @@ import com.occka.occkapowers.event.GeoOrbitHandler;
 import java.util.List;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.event.entity.living.LivingFallEvent;
+import net.minecraftforge.event.entity.EntityEvent;
 
 @Mod.EventBusSubscriber(modid = OcckaPowers.MOD_ID)
 public class AbilityEventHandler {
     private static final UUID FLASH_STEP_UUID = UUID.fromString("6f986f4c-b79b-4d34-a01d-522768df6f3a");
 
+
     private static MobEffectInstance fx(net.minecraft.world.effect.MobEffect eff, int dur, int amp) {
         return new MobEffectInstance(eff, dur, amp, false, false);
+    }
+
+    @SubscribeEvent
+    public static void onPlayerSize(EntityEvent.Size event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+
+        player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
+            if (data.getPowerType() == PowerType.BRUTE) {
+                event.setNewSize(net.minecraft.world.entity.EntityDimensions.scalable(0.9f, 3.0f), true);
+            }
+        });
     }
 
     @SubscribeEvent
@@ -171,6 +186,11 @@ public class AbilityEventHandler {
 
             if (type == PowerType.ADEPT && player.tickCount % 20 == 0) {
                 AdeptAbility.tick(player, level);
+            }
+
+            if (type == PowerType.BRUTE) {
+                BruteAbility.tickZone(player, level, data);
+                BruteAbility.tickUlt(player, level, data);
             }
 
             if (player.tickCount % 10 == 0) {

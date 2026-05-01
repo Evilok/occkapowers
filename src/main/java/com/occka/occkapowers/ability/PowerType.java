@@ -22,7 +22,8 @@ public enum PowerType {
     FLOWER("flower", ChatFormatting.GREEN),
     VADER("vader", ChatFormatting.DARK_RED),
     CREEPER("creeper", ChatFormatting.DARK_GREEN),
-    SPIDER("spider", ChatFormatting.WHITE);
+    SPIDER("spider", ChatFormatting.WHITE),
+    BRUTE("brute", ChatFormatting.DARK_RED);
 
     private final String id;
     private final ChatFormatting color;
@@ -63,6 +64,7 @@ public enum PowerType {
             case LIGHT -> 650;
             case ADEPT -> 500;
             case GRAVITY -> 340;
+            case BRUTE -> 800;
             case ECHO -> 600;
             case SUPERFORCE -> 200;
             case CHAOS -> 200;
@@ -81,6 +83,7 @@ public enum PowerType {
             case LIGHTNING -> "1x Lightning Rod";
             case CREEPER -> "1x End Crystal";
             case LASER -> "1x Bow";
+            case BRUTE -> "1x Netherite Helmet";
             case GEO -> "64x Dirt";
             case VADER -> "1x Skeleton Skull";
             case ADEPT -> "8x Sugar";
@@ -112,6 +115,7 @@ public enum PowerType {
             case LIGHT -> "32x Glowstone";
             case GRAVITY -> "1x Anvil";
             case ECHO -> "1x Night Vision Potion";
+            case BRUTE -> "1x Enchanted Golden Apple";
             case SUPERFORCE -> "1x Beacon";
             case VADER -> "5x Netherite Ingot";
             case CHAOS -> "1x Dragon Egg";
