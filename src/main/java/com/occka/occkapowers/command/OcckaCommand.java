@@ -6,6 +6,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.occka.occkapowers.ability.PowerType;
+import com.occka.occkapowers.ability.PlayerPowerSync;
 import com.occka.occkapowers.form.FormRegistry;
 import com.occka.occkapowers.form.PlayerFormData;
 import com.occka.occkapowers.network.NetworkHandler;
@@ -187,6 +188,7 @@ public class OcckaCommand {
                     NetworkHandler.CHANNEL.send(
                             PacketDistributor.PLAYER.with(() -> player),
                             new PacketSyncPowerData(player, data));
+                    PlayerPowerSync.syncToTrackingAndSelf(player, data);
 
                     player.sendSystemMessage(msg("You received class: ", ChatFormatting.GREEN)
                             .append(Component.literal(type.getId().toUpperCase())
@@ -224,6 +226,7 @@ public class OcckaCommand {
                     NetworkHandler.CHANNEL.send(
                             PacketDistributor.PLAYER.with(() -> player),
                             new PacketSyncPowerData(player, data));
+                    PlayerPowerSync.syncToTrackingAndSelf(player, data);
                     player.sendSystemMessage(msg("Your class was reset.", ChatFormatting.GRAY));
                 });
                 ctx.getSource().sendSuccess(

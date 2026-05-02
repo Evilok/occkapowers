@@ -2,11 +2,12 @@ package com.occka.occkapowers.client;
 
 import com.occka.occkapowers.OcckaPowers;
 import com.occka.occkapowers.ability.PowerType;
-import com.occka.occkapowers.registry.ModCapabilities;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderPlayerEvent;
+import net.minecraftforge.event.entity.EntityEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -41,13 +42,18 @@ public final class BruteRenderHandler {
         }
     }
 
+    @SubscribeEvent
+    public static void onPlayerSize(EntityEvent.Size event) {
+        if (event.getEntity() instanceof AbstractClientPlayer player && isBrute(player)) {
+            event.setNewSize(EntityDimensions.scalable(0.6f, 2.1f), true);
+        }
+    }
+
     private static boolean isBrute(AbstractClientPlayer player) {
         if (player == Minecraft.getInstance().player) {
             return ClientPowerData.powerType == PowerType.BRUTE;
         }
 
-        return player.getCapability(ModCapabilities.PLAYER_POWER)
-                .map(data -> data.getPowerType() == PowerType.BRUTE)
-                .orElse(false);
+        return ClientPlayerPowerData.get(player.getUUID()) == PowerType.BRUTE;
     }
 }

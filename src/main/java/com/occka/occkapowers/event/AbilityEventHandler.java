@@ -2,6 +2,7 @@ package com.occka.occkapowers.event;
 
 import com.occka.occkapowers.OcckaPowers;
 import com.occka.occkapowers.ability.PlayerPowerData;
+import com.occka.occkapowers.ability.PlayerPowerSync;
 import com.occka.occkapowers.ability.PowerType;
 import com.occka.occkapowers.network.NetworkHandler;
 import com.occka.occkapowers.network.PacketSyncPowerData;
@@ -548,6 +549,8 @@ public class AbilityEventHandler {
             NetworkHandler.CHANNEL.send(
                     PacketDistributor.PLAYER.with(() -> player),
                     new PacketSyncPowerData(player, data));
+            PlayerPowerSync.syncToTrackingAndSelf(player, data);
+            PlayerPowerSync.syncVisiblePowersTo(player);
             player.refreshDimensions();
             if (data.getPowerType() != PowerType.NONE) {
                 applyNickColor(player, data.getPowerType());
@@ -578,7 +581,17 @@ public class AbilityEventHandler {
             NetworkHandler.CHANNEL.send(
                     PacketDistributor.PLAYER.with(() -> player),
                     new PacketSyncPowerData(player, data));
+            PlayerPowerSync.syncToTrackingAndSelf(player, data);
+            PlayerPowerSync.syncVisiblePowersTo(player);
         });
+    }
+
+    @SubscribeEvent
+    public static void onStartTracking(PlayerEvent.StartTracking event) {
+        if (event.getEntity() instanceof ServerPlayer receiver
+                && event.getTarget() instanceof ServerPlayer tracked) {
+            PlayerPowerSync.syncTrackedPlayerTo(receiver, tracked);
+        }
     }
 
     private static void tickGravityUlt(ServerPlayer player, ServerLevel level) {
