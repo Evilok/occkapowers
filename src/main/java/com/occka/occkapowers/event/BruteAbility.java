@@ -75,14 +75,14 @@ public final class BruteAbility {
         int ticks = player.getPersistentData().getInt(NBT_SLAM_TICKS) + 1;
         player.getPersistentData().putInt(NBT_SLAM_TICKS, ticks);
 
-        double dx = player.getPersistentData().getDouble(NBT_SLAM_DIR_X);
-        double dz = player.getPersistentData().getDouble(NBT_SLAM_DIR_Z);
-        Vec3 dir = horizontalDirection(new Vec3(dx, 0, dz), player.getYRot());
+        //double dx = player.getPersistentData().getDouble(NBT_SLAM_DIR_X);
+        //double dz = player.getPersistentData().getDouble(NBT_SLAM_DIR_Z);
+        //Vec3 dir = horizontalDirection(new Vec3(dx, 0, dz), player.getYRot());
         Vec3 velocity = player.getDeltaMovement();
-        double horizontalSpeed = 0.75 + Math.min(0.4, ticks * 0.02);
+        //double horizontalSpeed = 0.75 + Math.min(0.4, ticks * 0.02);
         double downwardSpeed = ticks < 4 ? velocity.y - 0.08 : Math.max(velocity.y - 0.38, -2.4);
 
-        player.setDeltaMovement(dir.x * horizontalSpeed, downwardSpeed, dir.z * horizontalSpeed);
+        player.setDeltaMovement(0, downwardSpeed, 0);
         player.hurtMarked = true;
         player.resetFallDistance();
         player.fallDistance = 0.0f;
