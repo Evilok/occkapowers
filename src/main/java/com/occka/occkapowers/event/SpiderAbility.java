@@ -36,7 +36,7 @@ public final class SpiderAbility {
     }
 
     public static void activateShift(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
-        if (data.getAbilityCooldown() > 0)
+        if (data.getShiftCooldown() > 0)
             return;
         Vec3 eye = player.getEyePosition();
         Vec3 end = eye.add(player.getLookAngle().normalize().scale(30.0));
