@@ -10,6 +10,9 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public class PacketSyncPowerData {
+    private static final String NBT_SOUL_CHARGE = "occka_reaper_soul_charge";
+    private static final int SOUL_MAX = 100;
+
     private final String powerType;
     private final int shiftCd, abilityCd, ultCd, shiftMaxCd, abilityMaxCd, ultMaxCd;
     private final boolean abilityUnlocked, ultUnlocked, fireUltActive;
@@ -17,18 +20,22 @@ public class PacketSyncPowerData {
     private final int ultCharges, ultMaxCharges, ultChargeCd, ultChargeCdMax;
     private final int shiftCharges, shiftMaxCharges, shiftChargeCd, shiftChargeCdMax;
     private final int madness;
+    private final int soulCharge;
 
     public PacketSyncPowerData(PlayerPowerData data) {
-        this(data, 0);
+        this(data, 0, 0);
     }
 
     public PacketSyncPowerData(ServerPlayer player, PlayerPowerData data) {
         this(data, data.getPowerType() == PowerType.MERC
                 ? player.getPersistentData().getInt("occka_merc_madness")
-                : 0);
+                : 0,
+                data.getPowerType() == PowerType.SOUL_REAPER
+                        ? player.getPersistentData().getInt(NBT_SOUL_CHARGE)
+                        : 0);
     }
 
-    private PacketSyncPowerData(PlayerPowerData data, int madness) {
+    private PacketSyncPowerData(PlayerPowerData data, int madness, int soulCharge) {
         this.powerType = data.getPowerType().getId();
         this.shiftCd = data.getShiftCooldown();
         this.abilityCd = data.getAbilityCooldown();
@@ -54,6 +61,7 @@ public class PacketSyncPowerData {
         this.shiftChargeCd = data.getShiftChargeCd();
         this.shiftChargeCdMax = data.getShiftChargeCdMax();
         this.madness = Math.max(0, Math.min(100, madness));
+        this.soulCharge = Math.max(0, Math.min(SOUL_MAX, soulCharge));
     }
 
     private PacketSyncPowerData(String pt, int sc, int ac, int uc, int sm, int am, int um,
@@ -61,7 +69,7 @@ public class PacketSyncPowerData {
             int abilityCharges, int abilityMaxCharges, int abilityChargeCd, int abilityChargeCdMax,
             int ultCharges, int ultMaxCharges, int ultChargeCd, int ultChargeCdMax,
             int shiftCharges, int shiftMaxCharges, int shiftChargeCd, int shiftChargeCdMax,
-            int madness) {
+            int madness, int soulCharge) {
         powerType = pt;
         shiftCd = sc; abilityCd = ac; ultCd = uc;
         shiftMaxCd = sm; abilityMaxCd = am; ultMaxCd = um;
@@ -79,6 +87,7 @@ public class PacketSyncPowerData {
         this.shiftChargeCd = shiftChargeCd;
         this.shiftChargeCdMax = shiftChargeCdMax;
         this.madness = madness;
+        this.soulCharge = soulCharge;
     }
 
     public static void encode(PacketSyncPowerData msg, FriendlyByteBuf buf) {
@@ -105,6 +114,7 @@ public class PacketSyncPowerData {
         buf.writeInt(msg.shiftChargeCd);
         buf.writeInt(msg.shiftChargeCdMax);
         buf.writeInt(msg.madness);
+        buf.writeInt(msg.soulCharge);
     }
 
     public static PacketSyncPowerData decode(FriendlyByteBuf buf) {
@@ -115,7 +125,7 @@ public class PacketSyncPowerData {
                 buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(),
                 buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(),
                 buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(),
-                buf.readInt());
+                buf.readInt(), buf.readInt());
     }
 
     public static void handle(PacketSyncPowerData msg, Supplier<NetworkEvent.Context> ctx) {
@@ -127,7 +137,7 @@ public class PacketSyncPowerData {
                 msg.abilityCharges, msg.abilityMaxCharges, msg.abilityChargeCd, msg.abilityChargeCdMax,
                 msg.ultCharges, msg.ultMaxCharges, msg.ultChargeCd, msg.ultChargeCdMax,
                 msg.shiftCharges, msg.shiftMaxCharges, msg.shiftChargeCd, msg.shiftChargeCdMax,
-                msg.madness));
+                msg.madness, msg.soulCharge));
         ctx.get().setPacketHandled(true);
     }
 }

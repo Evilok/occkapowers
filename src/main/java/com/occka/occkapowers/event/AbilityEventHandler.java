@@ -178,6 +178,12 @@ public class AbilityEventHandler {
                 MercAbility.tickDebtPayment(player, level, data);
             }
 
+            if (type == PowerType.SOUL_REAPER) {
+                SoulReaperAbility.tickPassive(player, level);
+                SoulReaperAbility.tickForm(player, level);
+                SoulReaperAbility.tickDrain(player, level);
+            }
+
             if (type == PowerType.AIR) {
                 AirAbility.tickTornado(player, level);
             }
@@ -416,6 +422,8 @@ public class AbilityEventHandler {
                             player.getX(), player.getY() + 1, player.getZ(), 2, 0.3, 0.4, 0.3, 0.03);
                 }
             }
+            case SOUL_REAPER -> level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,
+                    player.getX(), player.getY() + 1, player.getZ(), 2, 0.3, 0.4, 0.3, 0.02);
             default -> {
             }
         }
@@ -433,6 +441,9 @@ public class AbilityEventHandler {
 
         if (event.getSource().getEntity() instanceof ServerPlayer attacker) {
             attacker.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
+                if (data.getPowerType() == PowerType.SOUL_REAPER) {
+                    SoulReaperAbility.onPlayerHitEntity(attacker);
+                }
                 if (data.getPowerType() == PowerType.MERC) {
                     boolean isMelee = event.getSource().getDirectEntity() == attacker;
                     event.setAmount(MercAbility.onDamageEvent(attacker, data, event.getAmount(), false, isMelee));
@@ -502,6 +513,7 @@ public class AbilityEventHandler {
         if (event.isWasDeath()) {
             FireAbility.clearFireForm(event.getEntity());
             FlowerAbility.clearFlowerForm(event.getEntity());
+            SoulReaperAbility.clearForm(event.getEntity());
         }
     }
 
@@ -525,6 +537,7 @@ public class AbilityEventHandler {
         if (event.getEntity() instanceof ServerPlayer player) {
             // Сбрасываем огненную форму при выходе
             FireAbility.clearFireForm(player);
+            SoulReaperAbility.clearForm(player);
 
             if (player.level() instanceof ServerLevel level) {
                 GeoOrbitHandler.clearPlayer(player.getUUID(), level);

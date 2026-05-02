@@ -89,6 +89,9 @@ public class PowerHudOverlay {
         if (ClientPowerData.powerType == PowerType.MERC) {
             renderMercMadnessOrb(graphics, mc, Math.min(sw - 17, bx + totalW + 24), by + 12);
         }
+        if (ClientPowerData.powerType == PowerType.SOUL_REAPER) {
+            renderSoulChargeOrb(graphics, mc, Math.min(sw - 17, bx + totalW + 24), by + 12);
+        }
     }
 
     private void renderBar(GuiGraphics g, Minecraft mc,
@@ -164,6 +167,7 @@ public class PowerHudOverlay {
             case ECHO -> new int[][] { { 0x44EE88 }, { 0x22CC66 }, { 0x88FFAA } };
             case FLOWER -> new int[][] { { 0xddff88 }, { 0xa2ff88 }, { 0xa2ff88 } };
             case MERC -> new int[][] { { 0x771010 }, { 0xCC1010 }, { 0xFF2020 } };
+            case SOUL_REAPER -> new int[][] { { 0x223344 }, { 0x336666 }, { 0x66CCCC } };
             default -> new int[][] { { 0xAAAAAA }, { 0xAAAAAA }, { 0xAAAAAA } };
         };
         return colors[Math.min(slot, 2)][0];
@@ -190,6 +194,7 @@ public class PowerHudOverlay {
             case FLOWER -> 0xdeffd5;
             case ECHO -> 0x44EE88;
             case MERC -> 0xCC1010;
+            case SOUL_REAPER -> 0x66CCCC;
             default -> 0xFFFFFF;
         };
     }
@@ -232,6 +237,46 @@ public class PowerHudOverlay {
 
         g.fill(cx - 5, cy - 7, cx - 1, cy - 3, 0x55FFFFFF);
         g.drawCenteredString(mc.font, String.valueOf(madness), cx, cy - 4, 0xFFFFFFFF);
+    }
+
+    private void renderSoulChargeOrb(GuiGraphics g, Minecraft mc, int cx, int cy) {
+        int r = 12;
+        int soul = Math.max(0, Math.min(100, ClientPowerData.soulCharge));
+        float fill = soul / 100f;
+        int fillTop = cy + r - (int) (2 * r * fill);
+
+        g.drawCenteredString(mc.font, "SOUL", cx, cy - r - 9, 0xFF9FB9C5);
+
+        for (int dy = -r; dy <= r; dy++) {
+            int y = cy + dy;
+            int half = (int) Math.sqrt(r * r - dy * dy);
+            g.fill(cx - half, y, cx + half + 1, y + 1, 0xAA081015);
+
+            if (y >= fillTop) {
+                float row = (float) (y - fillTop) / Math.max(1, cy + r - fillTop);
+                int red = 0x45 + (int) (0x22 * row);
+                int green = 0x68 + (int) (0x34 * row);
+                int blue = 0x75 + (int) (0x48 * row);
+                int color = 0xDD000000 | (red << 16) | (green << 8) | blue;
+                g.fill(cx - half + 2, y, cx + half - 1, y + 1, color);
+            }
+        }
+
+        for (int dy = -r; dy <= r; dy++) {
+            int y = cy + dy;
+            int half = (int) Math.sqrt(r * r - dy * dy);
+            g.fill(cx - half, y, cx - half + 2, y + 1, 0xCC1B2C34);
+            g.fill(cx + half - 1, y, cx + half + 1, y + 1, 0xCC9EC7D2);
+        }
+
+        for (int dx = -r; dx <= r; dx++) {
+            int half = (int) Math.sqrt(r * r - dx * dx);
+            g.fill(cx + dx, cy - half, cx + dx + 1, cy - half + 2, 0xCCAED3DC);
+            g.fill(cx + dx, cy + half - 1, cx + dx + 1, cy + half + 1, 0xCC15262D);
+        }
+
+        g.fill(cx - 5, cy - 7, cx - 1, cy - 3, 0x66D9F4FF);
+        g.drawCenteredString(mc.font, String.valueOf(soul), cx, cy - 4, 0xFFE6F8FF);
     }
 
     private int darken(int color, float f) {

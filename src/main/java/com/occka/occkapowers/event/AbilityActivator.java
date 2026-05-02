@@ -82,6 +82,7 @@ public class AbilityActivator {
             case SUPERFORCE -> SuperforceAbility.activateShift(player, level);
             case ADEPT -> AdeptAbility.activateShift(player, level);
             case MERC -> MercAbility.activateShift(player, level);
+            case SOUL_REAPER -> SoulReaperAbility.activateShift(player, level);
             default -> {}
         }
 
@@ -153,6 +154,19 @@ public class AbilityActivator {
 
         if (!(player.level() instanceof ServerLevel level))
             return;
+
+        if (type == PowerType.SOUL_REAPER) {
+            if (!SoulReaperAbility.isFormActive(player)) {
+                player.sendSystemMessage(AbilityCommon.msg(
+                        "Activate Hellfire Form first! [R]", ChatFormatting.DARK_GRAY));
+                return;
+            }
+            if (SoulReaperAbility.activateAbility(player, level)) {
+                data.setAbilityCooldown(type.getAbilityCooldown());
+            }
+            syncToClient(player, data);
+            return;
+        }
 
         switch (type) {
             case FIRE -> {
@@ -233,6 +247,19 @@ public class AbilityActivator {
 
         if (!(player.level() instanceof ServerLevel level))
             return;
+
+        if (type == PowerType.SOUL_REAPER) {
+            if (!SoulReaperAbility.isFormActive(player)) {
+                player.sendSystemMessage(AbilityCommon.msg(
+                        "Activate Hellfire Form first! [R]", ChatFormatting.DARK_GRAY));
+                return;
+            }
+            if (SoulReaperAbility.activateUlt(player, level)) {
+                data.setUltCooldown(type.getUltCooldown());
+            }
+            syncToClient(player, data);
+            return;
+        }
 
         switch (type) {
             case FIRE -> FireAbility.startUlt(player, level, data);

@@ -24,6 +24,7 @@ public enum PowerType {
     CREEPER("creeper", ChatFormatting.DARK_GREEN),
     SPIDER("spider", ChatFormatting.WHITE),
     MERC("merc", ChatFormatting.DARK_RED),
+    SOUL_REAPER("soul_reaper", ChatFormatting.DARK_GRAY),
     BRUTE("brute", ChatFormatting.DARK_RED);
 
     private final String id;
@@ -72,6 +73,7 @@ public enum PowerType {
             case FLASH -> 160;
             case SPIDER -> 160;
             case MERC -> 120;
+            case SOUL_REAPER -> 260;
             default -> 0;
         };
     }
@@ -99,6 +101,7 @@ public enum PowerType {
             case FLASH -> "1x Rabbit Foot";
             case SPIDER -> "32x String";
             case MERC -> "2x Iron Sword";
+            case SOUL_REAPER -> "1x Wither Skeleton Skull";
             default -> "?";
         };
     }
@@ -126,6 +129,7 @@ public enum PowerType {
             case FLASH -> "1x Speed Potion";
             case SPIDER -> "25x Cobweb";
             case MERC -> "1x Netherite Sword";
+            case SOUL_REAPER -> "1x Soul Lantern";
             default -> "?";
         };
     }
@@ -158,6 +162,7 @@ public enum PowerType {
             case CHAOS -> 200;
             case SUPERFORCE -> 150; //7.5
             case MERC -> 80;
+            case SOUL_REAPER -> 0;
             default -> 0;
         };
     }
@@ -173,6 +178,7 @@ public enum PowerType {
     public int getUltCooldown() {
         return switch (this) {
             case SUPERFORCE -> 650;
+            case SOUL_REAPER -> 900;
             default -> 2400; // 120 сек для всех
         };
     }

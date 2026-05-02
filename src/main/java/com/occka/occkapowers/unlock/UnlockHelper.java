@@ -30,6 +30,7 @@ public class UnlockHelper {
             case SPIDER -> consume(player, Items.STRING, 32);
             case FLOWER -> consume(player, Items.BONE_MEAL, 16);
             case MERC -> consume(player, Items.IRON_SWORD, 2);
+            case SOUL_REAPER -> consume(player, Items.WITHER_SKELETON_SKULL, 1);
             default -> false;
         };
     }
@@ -57,6 +58,7 @@ public class UnlockHelper {
             case SPIDER -> consume(player, Items.COBWEB, 25);
             case FLOWER -> consume(player, Items.WITHER_ROSE, 1);
             case MERC -> consume(player, Items.NETHERITE_SWORD, 1);
+            case SOUL_REAPER -> consume(player, Items.SOUL_LANTERN, 1);
             default -> false;
         };
     }
