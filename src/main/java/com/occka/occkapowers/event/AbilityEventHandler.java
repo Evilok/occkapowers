@@ -46,7 +46,6 @@ import net.minecraftforge.event.entity.EntityEvent;
 public class AbilityEventHandler {
     private static final UUID FLASH_STEP_UUID = UUID.fromString("6f986f4c-b79b-4d34-a01d-522768df6f3a");
 
-
     private static MobEffectInstance fx(net.minecraft.world.effect.MobEffect eff, int dur, int amp) {
         return new MobEffectInstance(eff, dur, amp, false, false);
     }
@@ -91,7 +90,6 @@ public class AbilityEventHandler {
                 data.clearFireUltJustEnded();
                 AbilityActivator.endFireUlt(player, data);
             }
-
 
             // 5. Ice snowstorm тикер
             tickIceSnowstorm(player, level);
@@ -338,6 +336,10 @@ public class AbilityEventHandler {
                 }
                 case CREEPER -> {
 
+                }
+                case DAGATH -> {
+                    player.addEffect(new MobEffectInstance(MobEffects.HUNGER, 200, 0, false, false));
+                    player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 200, 0, false, false));
                 }
                 case MERC -> player.addEffect(fx(MobEffects.REGENERATION, 120, 0));
 

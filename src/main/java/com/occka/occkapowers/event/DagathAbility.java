@@ -54,9 +54,9 @@ public final class DagathAbility {
 
     private static final int NORMAL_PIG_COUNT = 3;
     private static final int BOAR_PIG_COUNT = 6;
-    private static final double HOMING_RANGE = 20.0;
-    private static final double HOMING_SPEED = 2.1;
-    private static final double HOMING_DETONATE_RANGE = 1.6;
+    private static final double HOMING_RANGE = 25.0;
+    private static final double HOMING_SPEED = 1.3;
+    private static final double HOMING_DETONATE_RANGE = 2;
     private static final float HOMING_DAMAGE = 12.0f;
 
     public static int getAbilityCooldown(ServerPlayer player) {
@@ -100,7 +100,7 @@ public final class DagathAbility {
         pig.getPersistentData().putBoolean(NBT_RIDE_PIG, true);
         pig.getPersistentData().putUUID(NBT_OWNER, player.getUUID());
         if (pig.getAttribute(Attributes.MOVEMENT_SPEED) != null) {
-            pig.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(7.0);
+            pig.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(2);
         }
         level.addFreshEntity(pig);
 
@@ -125,6 +125,9 @@ public final class DagathAbility {
         if (tag.getInt(NBT_BOAR_TICKS) > 0) {
             return;
         }
+        player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 100, 4, false, false));
+        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 350, 1, false, false));
+        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 350, 2, false, false));
 
         String previousForm = PlayerFormData.getForm(player);
         tag.putBoolean(NBT_HAD_PREV_FORM, !previousForm.isEmpty());
@@ -135,8 +138,7 @@ public final class DagathAbility {
         tag.putInt(NBT_BOAR_TICKS, 300);
         setMaxHealth(player, 60.0);
         player.setHealth(60.0f);
-        player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 100, 4, false, false));
-        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 100, 1, false, false));
+
         data.setShiftCooldown(0);
         data.setAbilityCooldown(0);
         player.sendSystemMessage(AbilityCommon.msg("BOAR FORM! 15s", ChatFormatting.DARK_GREEN, ChatFormatting.BOLD));
@@ -152,9 +154,6 @@ public final class DagathAbility {
     }
 
     private static void applyPassives(ServerPlayer player, ServerLevel level) {
-        player.addEffect(new MobEffectInstance(MobEffects.HUNGER, 40, 0, false, false));
-        player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 40, 0, false, false));
-
         BlockState under = level.getBlockState(player.blockPosition().below());
         if (under.is(Blocks.SAND) || under.is(Blocks.RED_SAND) || under.is(Blocks.SOUL_SAND)
                 || under.is(Blocks.DIRT) || under.is(Blocks.GRASS_BLOCK) || under.is(Blocks.COARSE_DIRT)
