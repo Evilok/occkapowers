@@ -100,7 +100,7 @@ public final class DagathAbility {
         pig.getPersistentData().putBoolean(NBT_RIDE_PIG, true);
         pig.getPersistentData().putUUID(NBT_OWNER, player.getUUID());
         if (pig.getAttribute(Attributes.MOVEMENT_SPEED) != null) {
-            pig.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(2);
+            pig.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(1.8);
         }
         level.addFreshEntity(pig);
 
@@ -110,13 +110,14 @@ public final class DagathAbility {
     }
 
     public static boolean activateAbility(ServerPlayer player, ServerLevel level) {
-        LivingEntity target = findTarget(player, level, HOMING_RANGE);
-        if (target == null) {
+        List<LivingEntity> targets = findTargets(player, level, HOMING_RANGE);
+        if (targets.isEmpty()) {
             player.sendSystemMessage(AbilityCommon.msg("No target for homing pigs.", ChatFormatting.GRAY));
             return false;
         }
 
-        spawnHomingPigs(player, level, target, isBoarForm(player) ? BOAR_PIG_COUNT : NORMAL_PIG_COUNT);
+        int count = isBoarForm(player) ? BOAR_PIG_COUNT : NORMAL_PIG_COUNT;
+        spawnHomingPigsMultiTarget(player, level, targets, count);
         return true;
     }
 
@@ -214,12 +215,39 @@ public final class DagathAbility {
                 12, 0.5, 0.2, 0.5, 0.08);
     }
 
-    private static void spawnHomingPigs(ServerPlayer player, ServerLevel level, LivingEntity target, int count) {
+    // private static void spawnHomingPigs(ServerPlayer player, ServerLevel level,
+    // LivingEntity target, int count) {
+    // for (int i = 0; i < count; i++) {
+    // Pig pig = EntityType.PIG.create(level);
+    // if (pig == null) {
+    // continue;
+    // }
+    //
+    // double angle = (Math.PI * 2.0 * i) / count;
+    // Vec3 offset = new Vec3(Math.cos(angle) * 1.2, 1.0, Math.sin(angle) * 1.2);
+    // pig.moveTo(player.getX() + offset.x, player.getY() + offset.y, player.getZ()
+    // + offset.z,
+    // player.getYRot(), 0.0f);
+    // pig.setNoAi(true);
+    // pig.setNoGravity(true);
+    // pig.setInvulnerable(true);
+    // pig.getPersistentData().putBoolean(NBT_HOMING_PIG, true);
+    // pig.getPersistentData().putUUID(NBT_OWNER, player.getUUID());
+    // pig.getPersistentData().putUUID(NBT_TARGET, target.getUUID());
+    // pig.getPersistentData().putInt(NBT_LIFE, 80);
+    // level.addFreshEntity(pig);
+    // }
+    // }
+
+    private static void spawnHomingPigsMultiTarget(ServerPlayer player, ServerLevel level,
+            List<LivingEntity> targets, int count) {
         for (int i = 0; i < count; i++) {
+            // round-robin по целям
+            LivingEntity target = targets.get(i % targets.size());
+
             Pig pig = EntityType.PIG.create(level);
-            if (pig == null) {
+            if (pig == null)
                 continue;
-            }
 
             double angle = (Math.PI * 2.0 * i) / count;
             Vec3 offset = new Vec3(Math.cos(angle) * 1.2, 1.0, Math.sin(angle) * 1.2);
@@ -273,13 +301,31 @@ public final class DagathAbility {
         pig.discard();
     }
 
-    private static LivingEntity findTarget(ServerPlayer player, ServerLevel level, double range) {
-        return level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(range),
-                e -> e != player && e.isAlive() && !(e instanceof Pig p && isDagathPig(p))
-                        && !(e instanceof Player p && p.isAlliedTo(player)))
-                .stream()
-                .min(Comparator.comparingDouble(e -> e.distanceToSqr(player)))
-                .orElse(null);
+    // Возвращает список: сначала игроки, потом мобы, отсортированы по дистанции
+    private static List<LivingEntity> findTargets(ServerPlayer player, ServerLevel level, double range) {
+        List<LivingEntity> all = level.getEntitiesOfClass(LivingEntity.class,
+                player.getBoundingBox().inflate(range),
+                e -> e != player && e.isAlive()
+                        && !(e instanceof Pig p && isDagathPig(p))
+                        && !(e instanceof Player p && p.isAlliedTo(player))
+                        && hasLineOfSight(level, player.getEyePosition(), e));
+
+        all.sort(Comparator
+                .<LivingEntity, Integer>comparing(e -> e instanceof Player ? 0 : 1)
+                .thenComparingDouble(e -> e.distanceToSqr(player)));
+
+        return all;
+    }
+
+    private static boolean hasLineOfSight(ServerLevel level, Vec3 from, LivingEntity to) {
+        net.minecraft.world.phys.BlockHitResult hit = level.clip(
+                new net.minecraft.world.level.ClipContext(
+                        from,
+                        to.getEyePosition(),
+                        net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                        net.minecraft.world.level.ClipContext.Fluid.NONE,
+                        to));
+        return hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS;
     }
 
     private static void clearRidePig(ServerPlayer player) {

@@ -339,7 +339,6 @@ public class AbilityEventHandler {
                 }
                 case DAGATH -> {
                     player.addEffect(new MobEffectInstance(MobEffects.HUNGER, 200, 0, false, false));
-                    player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 200, 0, false, false));
                 }
                 case MERC -> player.addEffect(fx(MobEffects.REGENERATION, 120, 0));
 
