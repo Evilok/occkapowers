@@ -129,7 +129,7 @@ public enum PowerType {
             case FLASH -> "1x Speed Potion";
             case SPIDER -> "25x Cobweb";
             case MERC -> "1x Netherite Sword";
-            case DAGATH -> "1x Ravager Spawn Egg";
+            case DAGATH -> "1x Totem of Undying";
             default -> "?";
         };
     }

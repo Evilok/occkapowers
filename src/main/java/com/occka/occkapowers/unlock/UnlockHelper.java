@@ -58,7 +58,7 @@ public class UnlockHelper {
             case SPIDER -> consume(player, Items.COBWEB, 25);
             case FLOWER -> consume(player, Items.WITHER_ROSE, 1);
             case MERC -> consume(player, Items.NETHERITE_SWORD, 1);
-            case DAGATH -> consume(player, Items.RAVAGER_SPAWN_EGG, 1);
+            case DAGATH -> consume(player, Items.TOTEM_OF_UNDYING, 1);
             default -> false;
         };
     }

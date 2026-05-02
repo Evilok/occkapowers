@@ -226,7 +226,7 @@ public final class BruteAbility {
         Vec3 dir = horizontalDirection(new Vec3(dx, 0, dz), player.getYRot());
         breakBlocksInFront(player, level, dir);
 
-        double yBoost = player.horizontalCollision ? 0.12 : 0.0;
+        double yBoost = player.horizontalCollision ? 0.05 : -0.08;
         player.setDeltaMovement(dir.x * 1.55, yBoost, dir.z * 1.55);
         player.hurtMarked = true;
         player.resetFallDistance();
