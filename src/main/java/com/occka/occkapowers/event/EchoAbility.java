@@ -136,7 +136,7 @@ public final class EchoAbility {
                 ? p.getName().getString()
                 : target.getType().getDescription().getString();
         player.sendSystemMessage(AbilityCommon.msg(
-                "Mark set on: " + targetName + " | Press [F] again to swap!", ChatFormatting.GREEN));
+                "Mark set on: " + targetName + " | Press again to swap!", ChatFormatting.GREEN));
     }
 
     private static void executeMarkSwap(ServerPlayer player, ServerLevel level, PlayerPowerData data) {

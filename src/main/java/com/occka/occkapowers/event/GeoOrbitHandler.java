@@ -81,34 +81,30 @@ public class GeoOrbitHandler {
 
         if (data.orbitingPigs.isEmpty()) {
             player.sendSystemMessage(
-                Component.literal("GEO: Ошибка призыва камней!").withStyle(ChatFormatting.RED));
+                Component.literal("GEO: Error rock summon!").withStyle(ChatFormatting.RED));
             return;
         }
 
         ORBIT_MAP.put(pid, data);
         player.sendSystemMessage(
-                Component.literal("GEO: Нажми ульту ещё раз для выстрела.")
+                Component.literal("GEO: Press ulti again to shot.")
                         .withStyle(ChatFormatting.GREEN));
     }
 
     public static void tick(ServerLevel level) {
-        // 1. Ракеты
         tickMissiles(level);
 
-        // 2. Орбиты
         Iterator<Map.Entry<UUID, OrbitData>> orbitIterator = ORBIT_MAP.entrySet().iterator();
         while (orbitIterator.hasNext()) {
             Map.Entry<UUID, OrbitData> entry = orbitIterator.next();
             OrbitData data = entry.getValue();
 
-            // Проверяем что тикаем правильный уровень для этой орбиты
             String thisLevelKey = level.dimension().location().toString();
             if (!thisLevelKey.equals(data.levelKey)) continue;
 
             ServerPlayer player = level.getServer().getPlayerList().getPlayer(data.playerUUID);
 
             if (player == null || !player.isAlive()) {
-                // Чистим свиней перед удалением
                 data.orbitingPigs.forEach(id -> {
                     Entity e = level.getEntity(id);
                     if (e != null) e.discard();
@@ -135,7 +131,6 @@ public class GeoOrbitHandler {
                     double tz = player.getZ() + OrbitData.ORBIT_RADIUS * Math.sin(angle);
                     stone.teleportTo(tx, ty, tz);
                 } else if (ent == null) {
-                    // Свинья исчезла (убита игроком и т.п.) — убираем из списка
                     data.orbitingPigs.remove(i);
                     data.angles.remove(i);
                     i--;
@@ -156,7 +151,6 @@ public class GeoOrbitHandler {
 
         Entity ent = level.getEntity(pigUUID);
         if (!(ent instanceof ArmorStand stone)) {
-            // Свинья не нашлась — пробуем следующую на следующем тике
             return;
         }
 
@@ -175,7 +169,6 @@ public class GeoOrbitHandler {
         stone.getPersistentData().putDouble("startY", stone.getY());
         stone.getPersistentData().putDouble("startZ", stone.getZ());
 
-        // Сохраняем в каком уровне летит ракета
         MISSILE_LEVEL_MAP.put(pigUUID, level.dimension().location().toString());
 
         level.sendParticles(ParticleTypes.LARGE_SMOKE,
@@ -187,16 +180,11 @@ public class GeoOrbitHandler {
         return data != null && !data.orbitingPigs.isEmpty();
     }
 
-    /**
-     * Запускает одну орбитальную свинью при нажатии ульты.
-     *
-     * @return true если после запуска орбита полностью закончилась (можно ставить КД)
-     */
     public static boolean launchFromUltPress(ServerPlayer player, ServerLevel level) {
         OrbitData data = ORBIT_MAP.get(player.getUUID());
         if (data == null || data.orbitingPigs.isEmpty()) {
             player.sendSystemMessage(
-                    Component.literal("GEO: Нет камней. Нажми ульту для призыва.")
+                    Component.literal("GEO: No more missiles, active your ulti again.")
                             .withStyle(ChatFormatting.YELLOW));
             return false;
         }
@@ -206,13 +194,13 @@ public class GeoOrbitHandler {
         if (data.orbitingPigs.isEmpty()) {
             ORBIT_MAP.remove(player.getUUID());
             player.sendSystemMessage(
-                    Component.literal("GEO: Все камни выпущены. Ульта ушла в КД.")
+                    Component.literal("GEO: All missiles used. Ulti is on CD.")
                             .withStyle(ChatFormatting.GOLD));
             return true;
         }
 
         player.sendSystemMessage(
-                Component.literal("GEO: Камень запущен! Осталось: " + data.orbitingPigs.size())
+                Component.literal("GEO: Missile is launched! Left: " + data.orbitingPigs.size())
                         .withStyle(ChatFormatting.AQUA));
         return false;
     }

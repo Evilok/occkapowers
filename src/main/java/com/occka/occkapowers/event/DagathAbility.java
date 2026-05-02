@@ -215,30 +215,6 @@ public final class DagathAbility {
                 12, 0.5, 0.2, 0.5, 0.08);
     }
 
-    // private static void spawnHomingPigs(ServerPlayer player, ServerLevel level,
-    // LivingEntity target, int count) {
-    // for (int i = 0; i < count; i++) {
-    // Pig pig = EntityType.PIG.create(level);
-    // if (pig == null) {
-    // continue;
-    // }
-    //
-    // double angle = (Math.PI * 2.0 * i) / count;
-    // Vec3 offset = new Vec3(Math.cos(angle) * 1.2, 1.0, Math.sin(angle) * 1.2);
-    // pig.moveTo(player.getX() + offset.x, player.getY() + offset.y, player.getZ()
-    // + offset.z,
-    // player.getYRot(), 0.0f);
-    // pig.setNoAi(true);
-    // pig.setNoGravity(true);
-    // pig.setInvulnerable(true);
-    // pig.getPersistentData().putBoolean(NBT_HOMING_PIG, true);
-    // pig.getPersistentData().putUUID(NBT_OWNER, player.getUUID());
-    // pig.getPersistentData().putUUID(NBT_TARGET, target.getUUID());
-    // pig.getPersistentData().putInt(NBT_LIFE, 80);
-    // level.addFreshEntity(pig);
-    // }
-    // }
-
     private static void spawnHomingPigsMultiTarget(ServerPlayer player, ServerLevel level,
             List<LivingEntity> targets, int count) {
         for (int i = 0; i < count; i++) {

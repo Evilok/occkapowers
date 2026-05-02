@@ -7,6 +7,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.occka.occkapowers.ability.PowerType;
 import com.occka.occkapowers.ability.PlayerPowerSync;
+import com.occka.occkapowers.event.AbilityEventHandler;
 import com.occka.occkapowers.form.FormRegistry;
 import com.occka.occkapowers.form.PlayerFormData;
 import com.occka.occkapowers.network.NetworkHandler;
@@ -177,6 +178,7 @@ public class OcckaCommand {
 
             for (ServerPlayer player : targets) {
                 player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
+                    AbilityEventHandler.cleanupPowerState(player, data);
                     data.setPowerType(type);
                     player.refreshDimensions();
 
@@ -199,7 +201,7 @@ public class OcckaCommand {
                                 "[All abilities UNLOCKED by admin]", ChatFormatting.GOLD));
                     } else {
                         player.sendSystemMessage(msg(
-                                "[R] Shift  [F] Ability  [G] Ult | Unlock ability/ult by pressing the key!",
+                                "Unlock ability/ult by pressing the key!",
                                 ChatFormatting.GRAY));
                     }
                 });
@@ -221,6 +223,7 @@ public class OcckaCommand {
         try {
             for (ServerPlayer player : EntityArgument.getPlayers(ctx, "target")) {
                 player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
+                    AbilityEventHandler.cleanupPowerState(player, data);
                     data.setPowerType(PowerType.NONE);
                     player.refreshDimensions();
                     NetworkHandler.CHANNEL.send(

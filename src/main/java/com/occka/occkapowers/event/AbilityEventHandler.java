@@ -4,6 +4,7 @@ import com.occka.occkapowers.OcckaPowers;
 import com.occka.occkapowers.ability.PlayerPowerData;
 import com.occka.occkapowers.ability.PlayerPowerSync;
 import com.occka.occkapowers.ability.PowerType;
+import com.occka.occkapowers.form.PlayerFormData;
 import com.occka.occkapowers.network.NetworkHandler;
 import com.occka.occkapowers.network.PacketSyncPowerData;
 import com.occka.occkapowers.registry.ModCapabilities;
@@ -11,12 +12,16 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import com.occka.occkapowers.event.IceAbility;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -210,6 +215,7 @@ public class AbilityEventHandler {
 
             if (type == PowerType.BRUTE) {
                 setMaxHealthBase(player, 60.0);
+                BruteAbility.tickShiftSlam(player, level);
                 BruteAbility.tickZone(player, level, data);
                 BruteAbility.tickUlt(player, level, data);
             }
@@ -249,6 +255,74 @@ public class AbilityEventHandler {
             if (player.getHealth() > maxHealth) {
                 player.setHealth((float) maxHealth);
             }
+        }
+    }
+
+    public static void cleanupPowerState(ServerPlayer player, PlayerPowerData data) {
+        if (data.isFireUltActive()) {
+            FireAbility.endUlt(player, data);
+        }
+
+        FireAbility.clearFireForm(player);
+        FlowerAbility.clearFlowerForm(player);
+        SoulReaperAbility.clearForm(player);
+        DagathAbility.clear(player);
+        applyFlashStepHeight(player, false);
+        resetNickColor(player);
+        setMaxHealthBase(player, 20.0);
+
+        player.removeEffect(MobEffects.FIRE_RESISTANCE);
+        player.removeEffect(MobEffects.SLOW_FALLING);
+        player.removeEffect(MobEffects.WATER_BREATHING);
+        player.removeEffect(MobEffects.DOLPHINS_GRACE);
+        player.removeEffect(MobEffects.LUCK);
+        player.removeEffect(MobEffects.HUNGER);
+        player.removeEffect(MobEffects.REGENERATION);
+        player.removeEffect(MobEffects.JUMP);
+        player.removeEffect(MobEffects.MOVEMENT_SPEED);
+        player.removeEffect(MobEffects.NIGHT_VISION);
+        player.removeEffect(MobEffects.INVISIBILITY);
+        player.removeEffect(MobEffects.DAMAGE_RESISTANCE);
+        player.removeEffect(MobEffects.DAMAGE_BOOST);
+        player.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
+        player.clearFire();
+        player.fallDistance = 0.0f;
+
+        if (!player.isCreative() && !player.isSpectator()) {
+            player.getAbilities().mayfly = false;
+            player.getAbilities().flying = false;
+            player.onUpdateAbilities();
+        }
+
+        CompoundTag nbt = player.getPersistentData();
+        if (nbt.contains("occka_reaper_old_helmet")
+                && player.getItemBySlot(EquipmentSlot.HEAD).is(Items.WITHER_SKELETON_SKULL)) {
+            ItemStack oldHelmet = ItemStack.EMPTY;
+            try {
+                var oldItem = net.minecraft.core.registries.BuiltInRegistries.ITEM
+                        .get(new net.minecraft.resources.ResourceLocation(nbt.getString("occka_reaper_old_helmet")));
+                if (oldItem != Items.AIR) {
+                    oldHelmet = new ItemStack(oldItem);
+                }
+            } catch (Exception ignored) {
+            }
+            player.setItemSlot(EquipmentSlot.HEAD, oldHelmet);
+        }
+
+        for (String key : new java.util.ArrayList<>(nbt.getAllKeys())) {
+            if (key.startsWith("occka_") && !PlayerFormData.NBT_KEY.equals(key)) {
+                nbt.remove(key);
+            }
+        }
+
+        if (player.level() instanceof ServerLevel level) {
+            GeoOrbitHandler.clearPlayer(player.getUUID(), level);
+            String fireballTag = "ult_fireball_" + player.getUUID();
+            level.getAllEntities().forEach(entity -> {
+                if (entity.getTags().contains(fireballTag)) {
+                    entity.discard();
+                }
+            });
         }
     }
 
@@ -508,6 +582,14 @@ public class AbilityEventHandler {
     }
 
     // === СОБЫТИЯ ЖИЗНЕННОГО ЦИКЛА ===
+
+    private static void resetNickColor(ServerPlayer player) {
+        var scoreboard = player.getServer().getScoreboard();
+        PlayerTeam currentTeam = scoreboard.getPlayersTeam(player.getScoreboardName());
+        if (currentTeam != null && currentTeam.getName().startsWith("occka_")) {
+            scoreboard.removePlayerFromTeam(player.getScoreboardName(), currentTeam);
+        }
+    }
 
     @SubscribeEvent
     public static void onLivingFall(LivingFallEvent event) {

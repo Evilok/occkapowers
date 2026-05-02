@@ -24,7 +24,7 @@ public class NetworkHandler {
                 CHANNEL.registerMessage(id++, PacketFireUltShoot.class, PacketFireUltShoot::encode,
                                 PacketFireUltShoot::decode,
                                 PacketFireUltShoot::handle);
-                // Laser ult channel: sent every tick while [G] held, and once on release
+                // Laser ult channel: sent every tick while held, and once on release
                 CHANNEL.registerMessage(id++, PacketLaserUltChannel.class, PacketLaserUltChannel::encode,
                                 PacketLaserUltChannel::decode, PacketLaserUltChannel::handle);
                 CHANNEL.registerMessage(id++, PacketSyncAdeptPandaForm.class, PacketSyncAdeptPandaForm::encode,

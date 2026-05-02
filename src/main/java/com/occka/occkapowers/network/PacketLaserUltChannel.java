@@ -7,7 +7,7 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 /**
- * Sent from client to server while laser ult [G] is held (every tick)
+ * Sent from client to server while laser ult is held (every tick)
  * and once when released (held = false).
  */
 public class PacketLaserUltChannel {

@@ -95,7 +95,7 @@ public class AdeptAbility {
                     5, 0.2, 0.2, 0.2, 0.05);
         }
 
-        player.sendSystemMessage(Component.literal("Свита попугаев! (" + count + " шт, 20 сек)")
+        player.sendSystemMessage(Component.literal("Bird mafia! (" + count + " x, 20 sec)")
                 .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
     }
 
@@ -117,7 +117,7 @@ public class AdeptAbility {
                 player.getX(), player.getY() + 1, player.getZ(),
                 30, 1, 1, 1, 0.1);
 
-        player.sendSystemMessage(Component.literal("ПАНДА ФОРМА! 15 секунд...")
+        player.sendSystemMessage(Component.literal("PANDA FORM! 15 sexov...")
                 .withStyle(ChatFormatting.DARK_GREEN, ChatFormatting.BOLD));
     }
 
@@ -159,7 +159,7 @@ public class AdeptAbility {
             player.getPersistentData().putInt(NBT_PANDA_FORM_TICKS, 0);
             player.removeEffect(MobEffects.DAMAGE_RESISTANCE);
             syncPandaForm(player, false);
-            player.sendSystemMessage(Component.literal("Панда форма завершена.")
+            player.sendSystemMessage(Component.literal("Panda form finished.")
                     .withStyle(ChatFormatting.GREEN));
             level.sendParticles(ParticleTypes.POOF,
                     player.getX(), player.getY() + 1, player.getZ(),

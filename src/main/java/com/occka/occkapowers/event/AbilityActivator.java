@@ -175,7 +175,7 @@ public class AbilityActivator {
         if (type == PowerType.SOUL_REAPER) {
             if (!SoulReaperAbility.isFormActive(player)) {
                 player.sendSystemMessage(AbilityCommon.msg(
-                        "Activate Hellfire Form first! [R]", ChatFormatting.DARK_GRAY));
+                        "Activate Hellfire Form first!", ChatFormatting.DARK_GRAY));
                 return;
             }
             if (SoulReaperAbility.activateAbility(player, level)) {
@@ -275,7 +275,7 @@ public class AbilityActivator {
         if (type == PowerType.SOUL_REAPER) {
             if (!SoulReaperAbility.isFormActive(player)) {
                 player.sendSystemMessage(AbilityCommon.msg(
-                        "Activate Hellfire Form first! [R]", ChatFormatting.DARK_GRAY));
+                        "Activate Hellfire Form first!", ChatFormatting.DARK_GRAY));
                 return;
             }
             if (SoulReaperAbility.activateUlt(player, level)) {

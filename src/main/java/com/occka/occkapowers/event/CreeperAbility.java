@@ -131,8 +131,7 @@ public final class CreeperAbility {
     }
 
     // ===================================================================
-    // CHARGE EFFECTS
-    // ===================================================================
+    
     private static void applyChargeEffects(ServerPlayer player, int charge, boolean isCharging) {
         int dur = isCharging ? 5 : 30;
         int regenDur = 25;

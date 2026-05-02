@@ -80,7 +80,7 @@ public final class FireAbility {
                 5, 0.3, 0.3, 0.3, 0.02);
 
         player.sendSystemMessage(AbilityCommon.msg(
-                "Fire Form: ON — Press [R] again to deactivate",
+                "Fire Form: ON — Press again to deactivate",
                 ChatFormatting.RED, ChatFormatting.BOLD));
     }
 

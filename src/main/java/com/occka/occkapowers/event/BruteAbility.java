@@ -30,21 +30,103 @@ public final class BruteAbility {
     private static final String NBT_BULLDOZE_TICK = "occka_brute_bulldoze_ticks";
     private static final String NBT_CHARGE_TICK = "occka_brute_charge_ticks";
     private static final String NBT_CHARGING = "occka_brute_charging";
+    private static final String NBT_SLAM_ACTIVE = "occka_brute_slam_active";
+    private static final String NBT_SLAM_TICKS = "occka_brute_slam_ticks";
+    private static final String NBT_SLAM_START_X = "occka_brute_slam_start_x";
+    private static final String NBT_SLAM_START_Y = "occka_brute_slam_start_y";
+    private static final String NBT_SLAM_START_Z = "occka_brute_slam_start_z";
+    private static final String NBT_SLAM_DIR_X = "occka_brute_slam_dir_x";
+    private static final String NBT_SLAM_DIR_Z = "occka_brute_slam_dir_z";
 
     private static final double ZONE_HALF = 3.0;
 
-    public static void activateShift(ServerPlayer player, ServerLevel level) { /* same */
+    public static void activateShift(ServerPlayer player, ServerLevel level) {
+        if (player.getPersistentData().getBoolean(NBT_SLAM_ACTIVE)) {
+            return;
+        }
+
+        Vec3 dir = horizontalDirection(player.getLookAngle(), player.getYRot());
+        player.getPersistentData().putBoolean(NBT_SLAM_ACTIVE, true);
+        player.getPersistentData().putInt(NBT_SLAM_TICKS, 0);
+        player.getPersistentData().putDouble(NBT_SLAM_START_X, player.getX());
+        player.getPersistentData().putDouble(NBT_SLAM_START_Y, player.getY());
+        player.getPersistentData().putDouble(NBT_SLAM_START_Z, player.getZ());
+        player.getPersistentData().putDouble(NBT_SLAM_DIR_X, dir.x);
+        player.getPersistentData().putDouble(NBT_SLAM_DIR_Z, dir.z);
+
+        player.setDeltaMovement(dir.x * 0.7, 0.38, dir.z * 0.7);
+        player.hurtMarked = true;
+        player.resetFallDistance();
+
+        level.sendParticles(ParticleTypes.CLOUD,
+                player.getX(), player.getY(), player.getZ(),
+                12, 0.35, 0.05, 0.35, 0.04);
+        level.sendParticles(ParticleTypes.EXPLOSION,
+                player.getX(), player.getY(), player.getZ(),
+                2, 0.2, 0.05, 0.2, 0.02);
+        player.sendSystemMessage(AbilityCommon.msg("GROUND SLAM!", ChatFormatting.DARK_RED, ChatFormatting.BOLD));
+    }
+
+    public static void tickShiftSlam(ServerPlayer player, ServerLevel level) {
+        if (!player.getPersistentData().getBoolean(NBT_SLAM_ACTIVE)) {
+            return;
+        }
+
+        int ticks = player.getPersistentData().getInt(NBT_SLAM_TICKS) + 1;
+        player.getPersistentData().putInt(NBT_SLAM_TICKS, ticks);
+
+        double dx = player.getPersistentData().getDouble(NBT_SLAM_DIR_X);
+        double dz = player.getPersistentData().getDouble(NBT_SLAM_DIR_Z);
+        Vec3 dir = horizontalDirection(new Vec3(dx, 0, dz), player.getYRot());
+        Vec3 velocity = player.getDeltaMovement();
+        double horizontalSpeed = 0.75 + Math.min(0.4, ticks * 0.02);
+        double downwardSpeed = ticks < 4 ? velocity.y - 0.08 : Math.max(velocity.y - 0.38, -2.4);
+
+        player.setDeltaMovement(dir.x * horizontalSpeed, downwardSpeed, dir.z * horizontalSpeed);
+        player.hurtMarked = true;
+        player.resetFallDistance();
+        player.fallDistance = 0.0f;
+
+        if (ticks % 2 == 0) {
+            level.sendParticles(new DustParticleOptions(new Vector3f(0.85f, 0.12f, 0.08f), 0.9f),
+                    player.getX(), player.getY() + 0.5, player.getZ(),
+                    3, 0.25, 0.25, 0.25, 0.04);
+        }
+
+        if (player.onGround() && ticks > 4) {
+            finishShiftSlam(player, level);
+            return;
+        }
+
+        if (ticks > 45) {
+            finishShiftSlam(player, level);
+        }
+    }
+
+    private static void finishShiftSlam(ServerPlayer player, ServerLevel level) {
+        player.getPersistentData().putBoolean(NBT_SLAM_ACTIVE, false);
+
+        Vec3 start = new Vec3(
+                player.getPersistentData().getDouble(NBT_SLAM_START_X),
+                player.getPersistentData().getDouble(NBT_SLAM_START_Y),
+                player.getPersistentData().getDouble(NBT_SLAM_START_Z));
         Vec3 pos = player.position();
-        breakNearbyBlocks(player, level, pos, 2);
-        double radius = 4.0;
+        double traveled = start.distanceTo(pos);
+        double bonus = Mth.clamp(traveled / 9.0, 0.0, 2.0);
+        int breakRadius = 2 + Mth.floor(bonus);
+        double radius = 4.0 + bonus * 1.8;
+        float maxDamage = (float) (10.0 + bonus * 8.0);
+        float minDamage = (float) (5.0 + bonus * 3.0);
+
+        breakNearbyBlocks(player, level, pos, breakRadius);
         AABB box = new AABB(pos.x - radius, pos.y - 1, pos.z - radius, pos.x + radius, pos.y + 3, pos.z + radius);
         List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, box, e -> e != player && e.isAlive());
         for (LivingEntity entity : targets) {
             double dist = Math.max(0.01, entity.distanceTo(player));
-            float damage = (float) (10.0 - (10.0 - 5.0) * (dist / radius));
-            damage = Math.max(5.0f, Math.min(10.0f, damage));
+            float damage = (float) (maxDamage - (maxDamage - minDamage) * (dist / radius));
+            damage = Math.max(minDamage, Math.min(maxDamage, damage));
             Vec3 kb = entity.position().subtract(pos).normalize();
-            entity.setDeltaMovement(kb.x * 1.8, 0.7, kb.z * 1.8);
+            entity.setDeltaMovement(kb.x * (1.8 + bonus * 0.35), 0.7 + bonus * 0.15, kb.z * (1.8 + bonus * 0.35));
             entity.hurtMarked = true;
             entity.hurt(player.damageSources().playerAttack(player), damage);
         }
@@ -61,9 +143,10 @@ public final class BruteAbility {
                 }
             }
         }
-        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, pos.x, pos.y, pos.z, 2, 0.3, 0, 0.3, 0.04);
-        level.sendParticles(ParticleTypes.EXPLOSION, pos.x, pos.y, pos.z, 6, 1.5, 0.1, 1.5, 0.05);
-        player.sendSystemMessage(AbilityCommon.msg("GROUND SLAM!", ChatFormatting.DARK_RED, ChatFormatting.BOLD));
+        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, pos.x, pos.y, pos.z,
+                2 + Mth.floor(bonus), 0.3 + bonus * 0.3, 0, 0.3 + bonus * 0.3, 0.04);
+        level.sendParticles(ParticleTypes.EXPLOSION, pos.x, pos.y, pos.z,
+                6 + Mth.floor(bonus * 4.0), 1.5 + bonus * 0.5, 0.1, 1.5 + bonus * 0.5, 0.05);
     }
 
     public static void activateAbility(ServerPlayer player, ServerLevel level) {
