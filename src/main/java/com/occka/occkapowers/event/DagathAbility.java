@@ -128,7 +128,7 @@ public final class DagathAbility {
         }
         player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 100, 4, false, false));
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 350, 1, false, false));
-        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 350, 1, false, false));
+        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 350, 0, false, false));
 
         String previousForm = PlayerFormData.getForm(player);
         tag.putBoolean(NBT_HAD_PREV_FORM, !previousForm.isEmpty());

@@ -291,8 +291,8 @@ public final class SoulReaperAbility {
         }
 
         if (ticks % 4 == 0) {
-            target.hurt(player.damageSources().magic(), 1.0f);
-            player.heal(1.0f);
+            target.hurt(player.damageSources().magic(), 1.2f);
+            player.heal(1.2f);
             addSoulCharge(player, 3);
         }
 
@@ -394,7 +394,7 @@ public final class SoulReaperAbility {
         double speed = Math.min(2.8, 0.6 + target.distanceTo(player) * 0.15);
         target.setDeltaMovement(dir.x * speed, Math.max(dir.y * speed, 0.3), dir.z * speed);
         target.hurtMarked = true;
-        target.hurt(player.damageSources().magic(), 15.0f);
+        target.hurt(player.damageSources().magic(), 10.0f);
         target.setSecondsOnFire(4);
         target.addEffect(AbilityCommon.fx(MobEffects.WITHER, 60, 0));
 

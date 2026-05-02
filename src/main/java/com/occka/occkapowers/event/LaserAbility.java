@@ -23,7 +23,7 @@ public final class LaserAbility {
     private LaserAbility() {}
 
     public static final double ULT_LASER_LENGTH = 40.0;
-    public static final int ULT_LASER_MAX_TICKS = 140;
+    public static final int ULT_LASER_MAX_TICKS = 100;
 
     private static final DustParticleOptions LASER_DUST_CORE =
             new DustParticleOptions(new Vector3f(1.0f, 0.05f, 0.0f), 0.6f);
@@ -98,7 +98,7 @@ public final class LaserAbility {
         }
 
         player.sendSystemMessage(AbilityCommon.msg(
-                "CYCLOPS LASER! Hold [G] to sustain. 7s max.",
+                "CYCLOPS LASER! Hold to sustain. 5s max.",
                 ChatFormatting.RED, ChatFormatting.BOLD));
     }
 

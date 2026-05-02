@@ -165,6 +165,7 @@ public class PowerHudOverlay {
             case GEO -> new int[][] { { 0x886644 }, { 0x664422 }, { 0xAA8855 } };
             case VOID -> new int[][] { { 0x8800EE }, { 0xAA00CC }, { 0x440066 } };
             case LIGHT -> new int[][] { { 0xFFFF88 }, { 0xFFEE44 }, { 0xFFFFCC } };
+            case FLASH -> new int[][] { { 0xd9b40f }, { 0xd9710f }, { 0xd9450f } };
             case SUPERFORCE -> new int[][] { { 0xFFAA00 }, { 0xFF8800 }, { 0xFFCC44 } };
             case GRAVITY -> new int[][] { { 0x444466 }, { 0x333355 }, { 0x666688 } };
             case ECHO -> new int[][] { { 0x44EE88 }, { 0x22CC66 }, { 0x88FFAA } };
@@ -194,6 +195,7 @@ public class PowerHudOverlay {
             case BRUTE -> 0xB23822;
             case VOID -> 0x9900EE;
             case LIGHT -> 0xFFEE44;
+            case FLASH -> 0xf7fc56;
             case GRAVITY -> 0x5555AA;
             case FLOWER -> 0xdeffd5;
             case ECHO -> 0x44EE88;

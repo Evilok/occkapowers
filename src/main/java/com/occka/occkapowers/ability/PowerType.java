@@ -18,7 +18,7 @@ public enum PowerType {
     ECHO("echo", ChatFormatting.GREEN),
     SUPERFORCE("superforce", ChatFormatting.GOLD),
     ADEPT("adept", ChatFormatting.DARK_GREEN),
-    FLASH("flash", ChatFormatting.LIGHT_PURPLE),
+    FLASH("flash", ChatFormatting.YELLOW),
     FLOWER("flower", ChatFormatting.GREEN),
     VADER("vader", ChatFormatting.DARK_RED),
     CREEPER("creeper", ChatFormatting.DARK_GREEN),

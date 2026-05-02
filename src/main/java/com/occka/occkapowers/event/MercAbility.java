@@ -254,7 +254,7 @@ public final class MercAbility {
         player.hurtMarked = true;
 
         // Урон 8
-        target.hurt(player.damageSources().playerAttack(player), 8.0f);
+        target.hurt(player.damageSources().playerAttack(player), 6.3f);
         addMadness(player, 10);
 
         // Expose тег
@@ -284,7 +284,7 @@ public final class MercAbility {
                 target.getX(), target.getY() + 1, target.getZ(), 10, 0.3, 0.3, 0.3, 0.1);
 
         player.sendSystemMessage(AbilityCommon.msg(
-                getMadness(player) >= 40 ? "[Unhinged] Expose! Press [F] again!" : "Expose! Press [F] again!",
+                getMadness(player) >= 40 ? "[Unhinged] Expose! Press again!" : "Expose! Press again!",
                 ChatFormatting.DARK_RED));
     }
 
@@ -317,7 +317,7 @@ public final class MercAbility {
 
         if (hpRatio < 0.30f) {
             // FINISH: прямой урон 18 + knockback вверх
-            target.hurt(player.damageSources().playerAttack(player), 18.0f);
+            target.hurt(player.damageSources().playerAttack(player), 10.5f);
             target.setDeltaMovement(target.getDeltaMovement().x, 2.0, target.getDeltaMovement().z);
             target.hurtMarked = true;
             addMadness(player, 15);

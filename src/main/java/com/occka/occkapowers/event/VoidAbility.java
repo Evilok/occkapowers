@@ -50,7 +50,7 @@ public final class VoidAbility {
     // ULT: бафф себе + withering + weakness врагам
     public static void activateUlt(ServerPlayer player, ServerLevel level) {
         double radius = 20;
-        player.addEffect(AbilityCommon.fx(MobEffects.DAMAGE_BOOST, 600, 2));
+        player.addEffect(AbilityCommon.fx(MobEffects.DAMAGE_BOOST, 600, 0));
         player.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SPEED, 600, 3));
 
         for (LivingEntity entity : AbilityCommon.getNearbyEnemies(player, radius)) {

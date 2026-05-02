@@ -110,7 +110,7 @@ public class AbilityEventHandler {
                 LightningAbility.tickUlt(player, level);
             }
 
-            WaterAbility.tickRainUlt(player, level, type == PowerType.WATER && data.isUltUnlocked());
+            WaterAbility.tickRainUlt(player, level, type == PowerType.WATER);
 
             if (type == PowerType.CREEPER) {
                 // Пассивка: снятие агро с мобов каждый тик в радиусе
@@ -126,6 +126,7 @@ public class AbilityEventHandler {
                 boolean fireForm = player.getPersistentData().getBoolean("occka_fire_form_active");
 
                 if (fireForm) {
+                    player.setRemainingFireTicks(40);
 
                     // ВАЖНО — добавь это
                     FireAbility.tickFireForm(player, level);

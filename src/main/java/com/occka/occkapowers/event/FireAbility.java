@@ -141,7 +141,6 @@ public final class FireAbility {
             }
 
             player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 15, 0, false, false));
-            player.setRemainingFireTicks(40);
 
             int life = player.getPersistentData().getInt("occka_shift_fb_life");
             if (life > 0) {
