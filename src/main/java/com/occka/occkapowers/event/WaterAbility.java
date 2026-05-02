@@ -12,6 +12,10 @@ import net.minecraft.world.entity.LivingEntity;
 import com.occka.occkapowers.event.AbilityCommon;
 
 public final class WaterAbility {
+    private static final String NBT_RAIN_ABSORPTION = "occka_water_rain_absorption";
+    private static final float MAX_RAIN_ABSORPTION = 40.0F;
+    private static final float RAIN_GAIN_PER_TICK = MAX_RAIN_ABSORPTION / (7.0F * 20.0F);
+    private static final float RAIN_LOSS_PER_TICK = MAX_RAIN_ABSORPTION / (15.0F * 20.0F);
 
     private WaterAbility() {
     }
@@ -76,7 +80,6 @@ public final class WaterAbility {
     }
 
     public static void activateUlt(ServerPlayer player, ServerLevel level) {
-        player.addEffect(AbilityCommon.fx(MobEffects.ABSORPTION, 1200, 17));
         level.setWeatherParameters(0, 6000, true, false);
         for (int i = 0; i < 60; i++) {
             level.sendParticles(ParticleTypes.DRIPPING_WATER,
@@ -86,5 +89,47 @@ public final class WaterAbility {
                     1, 0, -0.3, 0, 0.5);
         }
         player.sendSystemMessage(AbilityCommon.msg("Tide of Power!", ChatFormatting.AQUA));
+    }
+
+    public static void tickRainUlt(ServerPlayer player, ServerLevel level, boolean enabled) {
+        float current = player.getPersistentData().getFloat(NBT_RAIN_ABSORPTION);
+        boolean gaining = enabled && level.getLevelData().isRaining();
+        float next = gaining
+                ? Math.min(MAX_RAIN_ABSORPTION, current + RAIN_GAIN_PER_TICK)
+                : Math.max(0.0F, current - RAIN_LOSS_PER_TICK);
+
+        if (Math.abs(next - current) > 0.001) {
+            applyRainAbsorption(player, current, next);
+        } else if (next <= 0.0) {
+            clearRainAbsorption(player, current);
+        }
+
+        if (gaining && player.tickCount % 20 == 0) {
+            level.sendParticles(ParticleTypes.DRIPPING_WATER,
+                    player.getX(), player.getY() + 2.0, player.getZ(),
+                    4, 0.35, 0.2, 0.35, 0.02);
+        }
+
+        if (gaining) {
+            player.addEffect(AbilityCommon.fx(MobEffects.REGENERATION, 40, 0));
+        } else {
+            player.removeEffect(MobEffects.REGENERATION);
+        }
+    }
+
+    private static void applyRainAbsorption(ServerPlayer player, float current, float next) {
+        float delta = next - current;
+        player.getPersistentData().putFloat(NBT_RAIN_ABSORPTION, next);
+        player.setAbsorptionAmount(Math.max(0.0F, player.getAbsorptionAmount() + delta));
+    }
+
+    private static void clearRainAbsorption(ServerPlayer player, float current) {
+        if (current > 0.0F) {
+            player.setAbsorptionAmount(Math.max(0.0F, player.getAbsorptionAmount() - current));
+        }
+        player.getPersistentData().remove(NBT_RAIN_ABSORPTION);
+        if (player.getAbsorptionAmount() <= 0.001F) {
+            player.removeEffect(MobEffects.ABSORPTION);
+        }
     }
 }

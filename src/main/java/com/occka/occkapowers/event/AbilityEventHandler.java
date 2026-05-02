@@ -110,6 +110,8 @@ public class AbilityEventHandler {
                 LightningAbility.tickUlt(player, level);
             }
 
+            WaterAbility.tickRainUlt(player, level, type == PowerType.WATER && data.isUltUnlocked());
+
             if (type == PowerType.CREEPER) {
                 // Пассивка: снятие агро с мобов каждый тик в радиусе
                 CreeperAbility.tickPassive(player, level);
