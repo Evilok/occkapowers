@@ -24,7 +24,8 @@ public enum PowerType {
     CREEPER("creeper", ChatFormatting.DARK_GREEN),
     SPIDER("spider", ChatFormatting.WHITE),
     MERC("merc", ChatFormatting.DARK_RED),
-    BRUTE("brute", ChatFormatting.DARK_RED);
+    BRUTE("brute", ChatFormatting.DARK_RED),
+    DAGATH("dagath", ChatFormatting.DARK_GREEN);
 
     private final String id;
     private final ChatFormatting color;
@@ -72,6 +73,7 @@ public enum PowerType {
             case FLASH -> 160;
             case SPIDER -> 160;
             case MERC -> 120;
+            case DAGATH -> 400;
             default -> 0;
         };
     }
@@ -99,6 +101,7 @@ public enum PowerType {
             case FLASH -> "1x Rabbit Foot";
             case SPIDER -> "32x String";
             case MERC -> "2x Iron Sword";
+            case DAGATH -> "1x Saddle";
             default -> "?";
         };
     }
@@ -126,6 +129,7 @@ public enum PowerType {
             case FLASH -> "1x Speed Potion";
             case SPIDER -> "25x Cobweb";
             case MERC -> "1x Netherite Sword";
+            case DAGATH -> "1x Ravager Spawn Egg";
             default -> "?";
         };
     }
@@ -158,6 +162,8 @@ public enum PowerType {
             case CHAOS -> 200;
             case SUPERFORCE -> 150; //7.5
             case MERC -> 80;
+            case BRUTE -> 160;
+            case DAGATH -> 200;
             default -> 0;
         };
     }
@@ -167,12 +173,16 @@ public enum PowerType {
             return player.getPersistentData()
                     .getBoolean("occka_fire_form_active") ? 100 : 400;
         }
+        if (this == DAGATH) {
+            return player.getPersistentData().getInt("occka_dagath_boar_ticks") > 0 ? 60 : 200;
+        }
         return getShiftCooldown(); // все остальные делегируют в старый
     }
 
     public int getUltCooldown() {
         return switch (this) {
             case SUPERFORCE -> 650;
+            case DAGATH -> 4800;
             default -> 2400; // 120 сек для всех
         };
     }

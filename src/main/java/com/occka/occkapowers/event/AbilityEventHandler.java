@@ -92,6 +92,7 @@ public class AbilityEventHandler {
                 AbilityActivator.endFireUlt(player, data);
             }
 
+
             // 5. Ice snowstorm тикер
             tickIceSnowstorm(player, level);
 
@@ -109,6 +110,8 @@ public class AbilityEventHandler {
             if (type == PowerType.LIGHTNING) {
                 LightningAbility.tickUlt(player, level);
             }
+
+            WaterAbility.tickRainUlt(player, level, type == PowerType.WATER && data.isUltUnlocked());
 
             if (type == PowerType.CREEPER) {
                 // Пассивка: снятие агро с мобов каждый тик в радиусе
@@ -200,8 +203,13 @@ public class AbilityEventHandler {
             }
 
             if (type == PowerType.BRUTE) {
+                setMaxHealthBase(player, 60.0);
                 BruteAbility.tickZone(player, level, data);
                 BruteAbility.tickUlt(player, level, data);
+            }
+
+            if (type == PowerType.DAGATH) {
+                DagathAbility.tick(player, level, data);
             }
 
             if (player.tickCount % 10 == 0) {
@@ -228,12 +236,23 @@ public class AbilityEventHandler {
         }
     }
 
+    private static void setMaxHealthBase(ServerPlayer player, double maxHealth) {
+        AttributeInstance hp = player.getAttribute(Attributes.MAX_HEALTH);
+        if (hp != null && hp.getBaseValue() != maxHealth) {
+            hp.setBaseValue(maxHealth);
+            if (player.getHealth() > maxHealth) {
+                player.setHealth((float) maxHealth);
+            }
+        }
+    }
+
     @SubscribeEvent
     public static void onLevelTick(TickEvent.LevelTickEvent event) {
         if (event.phase == TickEvent.Phase.END && event.level instanceof ServerLevel level) {
             GeoOrbitHandler.tick(level);
             FlashAbility.tickAfterimages(level);
             MercAbility.tickAfterimages(level);
+            DagathAbility.tickHomingPigs(level);
         }
     }
 
@@ -414,6 +433,8 @@ public class AbilityEventHandler {
                             player.getX(), player.getY() + 1, player.getZ(), 2, 0.3, 0.4, 0.3, 0.03);
                 }
             }
+            case DAGATH -> level.sendParticles(ParticleTypes.HAPPY_VILLAGER,
+                    player.getX(), player.getY() + 0.8, player.getZ(), 2, 0.4, 0.3, 0.4, 0.01);
             default -> {
             }
         }
@@ -500,6 +521,9 @@ public class AbilityEventHandler {
         if (event.isWasDeath()) {
             FireAbility.clearFireForm(event.getEntity());
             FlowerAbility.clearFlowerForm(event.getEntity());
+            if (event.getEntity() instanceof ServerPlayer player) {
+                DagathAbility.clear(player);
+            }
         }
     }
 
@@ -523,6 +547,7 @@ public class AbilityEventHandler {
         if (event.getEntity() instanceof ServerPlayer player) {
             // Сбрасываем огненную форму при выходе
             FireAbility.clearFireForm(player);
+            DagathAbility.clear(player);
 
             if (player.level() instanceof ServerLevel level) {
                 GeoOrbitHandler.clearPlayer(player.getUUID(), level);

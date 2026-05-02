@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
 public class PowerHudOverlay {
+    private float displayedCreeperCharge = 0.0f;
 
     public void renderHud(GuiGraphics graphics) {
         Minecraft mc = Minecraft.getInstance();
@@ -88,6 +89,8 @@ public class PowerHudOverlay {
 
         if (ClientPowerData.powerType == PowerType.MERC) {
             renderMercMadnessOrb(graphics, mc, Math.min(sw - 17, bx + totalW + 24), by + 12);
+        } else if (ClientPowerData.powerType == PowerType.CREEPER) {
+            renderCreeperChargeOrb(graphics, mc, Math.min(sw - 17, bx + totalW + 24), by + 12);
         }
     }
 
@@ -164,6 +167,7 @@ public class PowerHudOverlay {
             case ECHO -> new int[][] { { 0x44EE88 }, { 0x22CC66 }, { 0x88FFAA } };
             case FLOWER -> new int[][] { { 0xddff88 }, { 0xa2ff88 }, { 0xa2ff88 } };
             case MERC -> new int[][] { { 0x771010 }, { 0xCC1010 }, { 0xFF2020 } };
+            case DAGATH -> new int[][] { { 0x4E7A28 }, { 0x7A5A2A }, { 0x8E3F1F } };
             default -> new int[][] { { 0xAAAAAA }, { 0xAAAAAA }, { 0xAAAAAA } };
         };
         return colors[Math.min(slot, 2)][0];
@@ -190,6 +194,7 @@ public class PowerHudOverlay {
             case FLOWER -> 0xdeffd5;
             case ECHO -> 0x44EE88;
             case MERC -> 0xCC1010;
+            case DAGATH -> 0x7A9A35;
             default -> 0xFFFFFF;
         };
     }
@@ -232,6 +237,60 @@ public class PowerHudOverlay {
 
         g.fill(cx - 5, cy - 7, cx - 1, cy - 3, 0x55FFFFFF);
         g.drawCenteredString(mc.font, String.valueOf(madness), cx, cy - 4, 0xFFFFFFFF);
+    }
+
+    private void renderCreeperChargeOrb(GuiGraphics g, Minecraft mc, int cx, int cy) {
+        int r = 12;
+        displayedCreeperCharge += (ClientPowerData.creeperCharge - displayedCreeperCharge) * 0.25f;
+        int charge = Math.max(0, Math.min(100, Math.round(displayedCreeperCharge)));
+        float fill = charge / 100f;
+        int fillTop = cy + r - (int) (2 * r * fill);
+
+        g.drawCenteredString(mc.font, "CHG", cx, cy - r - 9, 0xFF77FFAA);
+
+        for (int dy = -r; dy <= r; dy++) {
+            int y = cy + dy;
+            int half = (int) Math.sqrt(r * r - dy * dy);
+            g.fill(cx - half, y, cx + half + 1, y + 1, 0xAA061408);
+
+            if (y >= fillTop) {
+                float row = (float) (y - fillTop) / Math.max(1, cy + r - fillTop);
+                int color = lerpColor(0x33DD44, 0x3399FF, Math.min(1.0f, fill * 0.85f + row * 0.15f));
+                g.fill(cx - half + 2, y, cx + half - 1, y + 1, 0xDD000000 | color);
+            }
+        }
+
+        int border = lerpColor(0x55FF66, 0x55AAFF, fill);
+        int darkBorder = lerpColor(0x0B5A12, 0x0A2F7A, fill);
+        for (int dy = -r; dy <= r; dy++) {
+            int y = cy + dy;
+            int half = (int) Math.sqrt(r * r - dy * dy);
+            g.fill(cx - half, y, cx - half + 2, y + 1, 0xCC000000 | darkBorder);
+            g.fill(cx + half - 1, y, cx + half + 1, y + 1, 0xCC000000 | border);
+        }
+
+        for (int dx = -r; dx <= r; dx++) {
+            int half = (int) Math.sqrt(r * r - dx * dx);
+            g.fill(cx + dx, cy - half, cx + dx + 1, cy - half + 2, 0xCC000000 | border);
+            g.fill(cx + dx, cy + half - 1, cx + dx + 1, cy + half + 1, 0xCC000000 | darkBorder);
+        }
+
+        g.fill(cx - 5, cy - 7, cx - 1, cy - 3, 0x55FFFFFF);
+        g.drawCenteredString(mc.font, charge + "%", cx, cy - 4, 0xFFFFFFFF);
+    }
+
+    private int lerpColor(int from, int to, float t) {
+        t = Math.max(0.0f, Math.min(1.0f, t));
+        int fr = (from >> 16) & 0xFF;
+        int fg = (from >> 8) & 0xFF;
+        int fb = from & 0xFF;
+        int tr = (to >> 16) & 0xFF;
+        int tg = (to >> 8) & 0xFF;
+        int tb = to & 0xFF;
+        int r = (int) (fr + (tr - fr) * t);
+        int g = (int) (fg + (tg - fg) * t);
+        int b = (int) (fb + (tb - fb) * t);
+        return (r << 16) | (g << 8) | b;
     }
 
     private int darken(int color, float f) {

@@ -30,8 +30,6 @@ public final class CreeperAbility {
     public static final String NBT_LAST_TICK = "occka_creeper_last_tick";
     public static final String NBT_ULT_TICKS = "occka_creeper_ult_ticks";
     public static final String NBT_POWERED = "occka_creeper_powered";
-    public static final String NBT_LAST_STAGE_MSG = "occka_creeper_last_stage_msg";
-    public static final String NBT_LAST_PCT_MSG = "occka_creeper_last_pct_msg";
     public static final String NBT_CATAPULT_ACTIVE = "occka_creeper_catapult_active";
 
     // ===================================================================
@@ -72,7 +70,6 @@ public final class CreeperAbility {
 
         // Эффекты по уровню заряда
         applyChargeEffects(player, charge, true);
-        sendChargeProgressMessage(player, charge);
 
         // Аура
         spawnChargeAura(player, level, charge);
@@ -87,8 +84,6 @@ public final class CreeperAbility {
             // Сохраняем заряд на 400 тиков (20 сек)
             player.getPersistentData().putLong(NBT_CHARGE_EXPIRE, level.getGameTime() + 400);
         }
-        player.getPersistentData().putInt(NBT_LAST_PCT_MSG, -1);
-        player.getPersistentData().putInt(NBT_LAST_STAGE_MSG, -1);
     }
 
     // ===================================================================
@@ -181,40 +176,6 @@ public final class CreeperAbility {
                     player.getX(), player.getY() + 1, player.getZ(),
                     4, 1.2, 1.2, 1.2, 0.08);
         }
-    }
-
-    private static int getChargeStage(int charge) {
-        if (charge >= CHARGE_TICKS_MAX)
-            return 4;
-        if (charge >= CHARGE_TICKS_LEVEL3)
-            return 3;
-        if (charge >= CHARGE_TICKS_LEVEL2)
-            return 2;
-        if (charge >= CHARGE_TICKS_LEVEL1)
-            return 1;
-        return 0;
-    }
-
-    private static void sendChargeProgressMessage(ServerPlayer player, int charge) {
-        int stage = getChargeStage(charge);
-        int percent = (int) Math.floor(getChargeProgress(charge) * 100.0f);
-        int percentStep = (percent / 10) * 10;
-
-        int lastStage = player.getPersistentData().getInt(NBT_LAST_STAGE_MSG);
-        int lastPercentStep = player.getPersistentData().getInt(NBT_LAST_PCT_MSG);
-
-        boolean stageChanged = stage != lastStage;
-        boolean pctChanged = percentStep != lastPercentStep;
-        if (!stageChanged && !pctChanged)
-            return;
-
-        player.getPersistentData().putInt(NBT_LAST_STAGE_MSG, stage);
-        player.getPersistentData().putInt(NBT_LAST_PCT_MSG, percentStep);
-
-        ChatFormatting color = stage >= 4 ? ChatFormatting.BLUE : ChatFormatting.GREEN;
-        player.sendSystemMessage(AbilityCommon.msg(
-                "Charge: " + percent + "% (Stage " + stage + "/4)",
-                color));
     }
 
     /**

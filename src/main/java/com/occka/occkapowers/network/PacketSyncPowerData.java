@@ -3,6 +3,7 @@ package com.occka.occkapowers.network;
 import com.occka.occkapowers.ability.PlayerPowerData;
 import com.occka.occkapowers.ability.PowerType;
 import com.occka.occkapowers.client.ClientPowerData;
+import com.occka.occkapowers.event.CreeperAbility;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
@@ -16,19 +17,23 @@ public class PacketSyncPowerData {
     private final int abilityCharges, abilityMaxCharges, abilityChargeCd, abilityChargeCdMax;
     private final int ultCharges, ultMaxCharges, ultChargeCd, ultChargeCdMax;
     private final int shiftCharges, shiftMaxCharges, shiftChargeCd, shiftChargeCdMax;
-    private final int madness;
+    private final int madness, creeperCharge;
 
     public PacketSyncPowerData(PlayerPowerData data) {
-        this(data, 0);
+        this(data, 0, 0);
     }
 
     public PacketSyncPowerData(ServerPlayer player, PlayerPowerData data) {
         this(data, data.getPowerType() == PowerType.MERC
                 ? player.getPersistentData().getInt("occka_merc_madness")
-                : 0);
+                : 0,
+                data.getPowerType() == PowerType.CREEPER
+                        ? Math.round(player.getPersistentData().getInt(CreeperAbility.NBT_CHARGE)
+                                * 100.0f / CreeperAbility.CHARGE_TICKS_MAX)
+                        : 0);
     }
 
-    private PacketSyncPowerData(PlayerPowerData data, int madness) {
+    private PacketSyncPowerData(PlayerPowerData data, int madness, int creeperCharge) {
         this.powerType = data.getPowerType().getId();
         this.shiftCd = data.getShiftCooldown();
         this.abilityCd = data.getAbilityCooldown();
@@ -54,6 +59,7 @@ public class PacketSyncPowerData {
         this.shiftChargeCd = data.getShiftChargeCd();
         this.shiftChargeCdMax = data.getShiftChargeCdMax();
         this.madness = Math.max(0, Math.min(100, madness));
+        this.creeperCharge = Math.max(0, Math.min(100, creeperCharge));
     }
 
     private PacketSyncPowerData(String pt, int sc, int ac, int uc, int sm, int am, int um,
@@ -61,7 +67,7 @@ public class PacketSyncPowerData {
             int abilityCharges, int abilityMaxCharges, int abilityChargeCd, int abilityChargeCdMax,
             int ultCharges, int ultMaxCharges, int ultChargeCd, int ultChargeCdMax,
             int shiftCharges, int shiftMaxCharges, int shiftChargeCd, int shiftChargeCdMax,
-            int madness) {
+            int madness, int creeperCharge) {
         powerType = pt;
         shiftCd = sc; abilityCd = ac; ultCd = uc;
         shiftMaxCd = sm; abilityMaxCd = am; ultMaxCd = um;
@@ -79,6 +85,7 @@ public class PacketSyncPowerData {
         this.shiftChargeCd = shiftChargeCd;
         this.shiftChargeCdMax = shiftChargeCdMax;
         this.madness = madness;
+        this.creeperCharge = creeperCharge;
     }
 
     public static void encode(PacketSyncPowerData msg, FriendlyByteBuf buf) {
@@ -105,6 +112,7 @@ public class PacketSyncPowerData {
         buf.writeInt(msg.shiftChargeCd);
         buf.writeInt(msg.shiftChargeCdMax);
         buf.writeInt(msg.madness);
+        buf.writeInt(msg.creeperCharge);
     }
 
     public static PacketSyncPowerData decode(FriendlyByteBuf buf) {
@@ -115,7 +123,7 @@ public class PacketSyncPowerData {
                 buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(),
                 buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(),
                 buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(),
-                buf.readInt());
+                buf.readInt(), buf.readInt());
     }
 
     public static void handle(PacketSyncPowerData msg, Supplier<NetworkEvent.Context> ctx) {
@@ -127,7 +135,7 @@ public class PacketSyncPowerData {
                 msg.abilityCharges, msg.abilityMaxCharges, msg.abilityChargeCd, msg.abilityChargeCdMax,
                 msg.ultCharges, msg.ultMaxCharges, msg.ultChargeCd, msg.ultChargeCdMax,
                 msg.shiftCharges, msg.shiftMaxCharges, msg.shiftChargeCd, msg.shiftChargeCdMax,
-                msg.madness));
+                msg.madness, msg.creeperCharge));
         ctx.get().setPacketHandled(true);
     }
 }
