@@ -126,7 +126,7 @@ public final class BruteAbility {
             float damage = (float) (maxDamage - (maxDamage - minDamage) * (dist / radius));
             damage = Math.max(minDamage, Math.min(maxDamage, damage));
             Vec3 kb = entity.position().subtract(pos).normalize();
-            entity.setDeltaMovement(kb.x * (1.8 + bonus * 0.35), 0.7 + bonus * 0.15, kb.z * (1.8 + bonus * 0.35));
+            entity.setDeltaMovement(0, 0.7 + bonus * 0.15, 0);
             entity.hurtMarked = true;
             entity.hurt(player.damageSources().playerAttack(player), damage);
         }

@@ -78,7 +78,7 @@ public class AbilityActivator {
             case ECHO -> EchoAbility.activateShift(player, level, data);
             case CHAOS -> ChaosAbility.activateShift(player, level, data);
             case FLASH -> FlashAbility.activateShift(player, level);
-            case SPIDER -> SpiderAbility.activateShift(player, level);
+            case SPIDER -> SpiderAbility.activateShift(player, level, data);
             case SUPERFORCE -> SuperforceAbility.activateShift(player, level);
             case ADEPT -> AdeptAbility.activateShift(player, level);
             case MERC -> MercAbility.activateShift(player, level);

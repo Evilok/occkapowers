@@ -169,6 +169,7 @@ public enum PowerType {
             case SOUL_REAPER -> 22;
             case BRUTE -> 160;
             case DAGATH -> 200;
+            case SPIDER -> 10;
             default -> 0;
         };
     }

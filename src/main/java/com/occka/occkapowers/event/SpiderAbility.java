@@ -21,6 +21,9 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
+
+import com.occka.occkapowers.ability.PlayerPowerData;
+
 import net.minecraftforge.event.entity.living.LivingFallEvent;
 
 import java.util.ArrayList;
@@ -32,7 +35,9 @@ public final class SpiderAbility {
     private SpiderAbility() {
     }
 
-    public static void activateShift(ServerPlayer player, ServerLevel level) {
+    public static void activateShift(ServerPlayer player, ServerLevel level, PlayerPowerData data) {
+        if (data.getAbilityCooldown() > 0)
+            return;
         Vec3 eye = player.getEyePosition();
         Vec3 end = eye.add(player.getLookAngle().normalize().scale(30.0));
         BlockHitResult hit = level
