@@ -166,7 +166,7 @@ public enum PowerType {
             case CHAOS -> 200;
             case SUPERFORCE -> 150; //7.5
             case MERC -> 80;
-            case SOUL_REAPER -> 0;
+            case SOUL_REAPER -> 22;
             case BRUTE -> 160;
             case DAGATH -> 200;
             default -> 0;
