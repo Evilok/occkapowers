@@ -94,6 +94,7 @@ public class OcckaCommand {
             for (ServerPlayer player : targets) {
                 player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
                     data.setPowerType(type);
+                    player.refreshDimensions();
 
                     if (unlocked) {
                         // Сразу открываем ability и ult
@@ -103,7 +104,7 @@ public class OcckaCommand {
 
                     NetworkHandler.CHANNEL.send(
                             PacketDistributor.PLAYER.with(() -> player),
-                            new PacketSyncPowerData(data));
+                            new PacketSyncPowerData(player, data));
 
                     player.sendSystemMessage(msg("You received class: ", ChatFormatting.GREEN)
                             .append(Component.literal(type.getId().toUpperCase())
@@ -137,9 +138,10 @@ public class OcckaCommand {
             for (ServerPlayer player : EntityArgument.getPlayers(ctx, "target")) {
                 player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
                     data.setPowerType(PowerType.NONE);
+                    player.refreshDimensions();
                     NetworkHandler.CHANNEL.send(
                             PacketDistributor.PLAYER.with(() -> player),
-                            new PacketSyncPowerData(data));
+                            new PacketSyncPowerData(player, data));
                     player.sendSystemMessage(msg("Your class was reset.", ChatFormatting.GRAY));
                 });
                 ctx.getSource().sendSuccess(
@@ -185,7 +187,7 @@ public class OcckaCommand {
                     }
                     NetworkHandler.CHANNEL.send(
                             PacketDistributor.PLAYER.with(() -> player),
-                            new PacketSyncPowerData(data));
+                            new PacketSyncPowerData(player, data));
                 });
                 ctx.getSource().sendSuccess(
                         () -> msg("Unlocked " + type + " for " + player.getName().getString(),

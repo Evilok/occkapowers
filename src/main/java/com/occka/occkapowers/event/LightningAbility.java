@@ -20,27 +20,14 @@ public final class LightningAbility {
     }
 
     public static void activateShift(ServerPlayer player, ServerLevel level) {
-
-        // Storm glide (лёгкий полёт на "грозовой тучке")
-        player.addEffect(AbilityCommon.fx(MobEffects.SLOW_FALLING, 40, 0));
-        player.addEffect(AbilityCommon.fx(MobEffects.JUMP, 40, 1));
-
-        Vec3 vel = player.getDeltaMovement();
-
-        // лёгкое удержание в воздухе + скольжение вперёд
-        Vec3 look = player.getLookAngle();
-        Vec3 newVel = new Vec3(
-                look.x * 0.6,
-                Math.max(vel.y, 0.15),
-                look.z * 0.6);
-
-        player.setDeltaMovement(newVel);
-        player.hurtMarked = true;
-
-        for (int i = 0; i < 6; i++) {
+        player.addEffect(AbilityCommon.fx(MobEffects.LEVITATION, 25, 3));
+        player.addEffect(AbilityCommon.fx(MobEffects.SLOW_FALLING, 25, 0));
+        for (int i = 0; i < 12; i++) {
             level.sendParticles(ParticleTypes.CLOUD,
-                    player.getX(), player.getY() - 0.2, player.getZ(),
-                    1, 0.3, 0.1, 0.3, 0.02);
+                    player.getX() + (Math.random() - 0.5) * 0.5,
+                    player.getY() - 0.5,
+                    player.getZ() + (Math.random() - 0.5) * 0.5,
+                    5, 0.5, 0.1, 0.5, 0.01);
         }
     }
 
@@ -122,7 +109,6 @@ public final class LightningAbility {
 
         int interval = 900 / max;
         if (count < max && ticks % interval == 0) {
-            // Ищем ближайшего врага
             LivingEntity target = null;
             double minDist = Double.MAX_VALUE;
             for (LivingEntity e : AbilityCommon.getNearbyEnemies(player, radius)) {

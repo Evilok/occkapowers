@@ -106,53 +106,56 @@ public final class FireAbility {
         if (!player.getPersistentData().getBoolean("occka_fire_form_active"))
             return;
 
-        boolean inWater = player.isInWater()
-                || player.isUnderWater()
-                || !player.level().getFluidState(player.blockPosition()).isEmpty()
-                || !player.level().getFluidState(player.blockPosition().below()).isEmpty();
+        if (player.isInWater() || (player.level().isRainingAt(player.blockPosition())
+                && player.level().canSeeSky(player.blockPosition()))) {
+            boolean inWater = player.isInWater()
+                    || player.isUnderWater()
+                    || !player.level().getFluidState(player.blockPosition()).isEmpty()
+                    || !player.level().getFluidState(player.blockPosition().below()).isEmpty();
 
-        // isRainingAt в 1.20.1 уже включает проверку неба, биома и типа осадков
-        boolean inRain = level.isRainingAt(player.blockPosition());
+            // isRainingAt в 1.20.1 уже включает проверку неба, биома и типа осадков
+            boolean inRain = level.isRainingAt(player.blockPosition());
 
-        if (inWater || inRain) {
-            level.sendParticles(ParticleTypes.LARGE_SMOKE,
-                    player.getX(), player.getY() + 1, player.getZ(),
-                    20, 0.5, 0.5, 0.5, 0.05);
-            level.sendParticles(ParticleTypes.BUBBLE_POP,
-                    player.getX(), player.getY() + 1, player.getZ(),
-                    10, 0.3, 0.3, 0.3, 0.05);
+            if (inWater || inRain) {
+                level.sendParticles(ParticleTypes.LARGE_SMOKE,
+                        player.getX(), player.getY() + 1, player.getZ(),
+                        20, 0.5, 0.5, 0.5, 0.05);
+                level.sendParticles(ParticleTypes.BUBBLE_POP,
+                        player.getX(), player.getY() + 1, player.getZ(),
+                        10, 0.3, 0.3, 0.3, 0.05);
 
-            player.sendSystemMessage(AbilityCommon.msg(
-                    inWater ? "Fire Form extinguished by water!"
-                            : "Fire Form extinguished by rain!",
-                    ChatFormatting.AQUA));
+                player.sendSystemMessage(AbilityCommon.msg(
+                        inWater ? "Fire Form extinguished by water!"
+                                : "Fire Form extinguished by rain!",
+                        ChatFormatting.AQUA));
 
-            disableFireForm(player, level);
+                disableFireForm(player, level);
 
-            player.getCapability(com.occka.occkapowers.registry.ModCapabilities.PLAYER_POWER)
-                    .ifPresent(data -> {
-                        data.setAbilityMaxCdOverride(300);
-                        data.setAbilityCooldown(300);
-                        AbilityActivator.syncToClient(player, data);
-                    });
-            return;
-        }
+                player.getCapability(com.occka.occkapowers.registry.ModCapabilities.PLAYER_POWER)
+                        .ifPresent(data -> {
+                            data.setAbilityMaxCdOverride(300);
+                            data.setAbilityCooldown(300);
+                            AbilityActivator.syncToClient(player, data);
+                        });
+                return;
+            }
 
-        player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 15, 0, false, false));
-        player.setRemainingFireTicks(40);
+            player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 15, 0, false, false));
+            player.setRemainingFireTicks(40);
 
-        int life = player.getPersistentData().getInt("occka_shift_fb_life");
-        if (life > 0) {
-            player.getPersistentData().putInt("occka_shift_fb_life", life - 1);
-            if (life == 1 && player.getPersistentData().hasUUID("occka_shift_fb")) {
-                java.util.UUID fbId = player.getPersistentData().getUUID("occka_shift_fb");
-                if (level.getEntity(fbId) instanceof LargeFireball fb) {
-                    level.sendParticles(ParticleTypes.LARGE_SMOKE,
-                            fb.getX(), fb.getY(), fb.getZ(),
-                            10, 0.3, 0.3, 0.3, 0.05);
-                    fb.discard();
+            int life = player.getPersistentData().getInt("occka_shift_fb_life");
+            if (life > 0) {
+                player.getPersistentData().putInt("occka_shift_fb_life", life - 1);
+                if (life == 1 && player.getPersistentData().hasUUID("occka_shift_fb")) {
+                    java.util.UUID fbId = player.getPersistentData().getUUID("occka_shift_fb");
+                    if (level.getEntity(fbId) instanceof LargeFireball fb) {
+                        level.sendParticles(ParticleTypes.LARGE_SMOKE,
+                                fb.getX(), fb.getY(), fb.getZ(),
+                                10, 0.3, 0.3, 0.3, 0.05);
+                        fb.discard();
+                    }
+                    player.getPersistentData().remove("occka_shift_fb");
                 }
-                player.getPersistentData().remove("occka_shift_fb");
             }
         }
     }
