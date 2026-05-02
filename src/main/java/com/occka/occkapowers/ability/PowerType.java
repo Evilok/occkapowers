@@ -59,7 +59,7 @@ public enum PowerType {
             case FLOWER -> 800;
             case ICE -> 440; // 22 сек
             case LIGHTNING -> 200;
-            case VADER -> 300; // 15 сек
+            case VADER -> 400; // 15 сек
             case LASER -> 382;
             case GEO -> 240;
             case CREEPER -> 300;
