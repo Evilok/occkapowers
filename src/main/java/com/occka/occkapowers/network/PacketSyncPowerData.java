@@ -3,6 +3,7 @@ package com.occka.occkapowers.network;
 import com.occka.occkapowers.ability.PlayerPowerData;
 import com.occka.occkapowers.ability.PowerType;
 import com.occka.occkapowers.client.ClientPowerData;
+import com.occka.occkapowers.event.CreeperAbility;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
@@ -19,8 +20,12 @@ public class PacketSyncPowerData {
     private final int abilityCharges, abilityMaxCharges, abilityChargeCd, abilityChargeCdMax;
     private final int ultCharges, ultMaxCharges, ultChargeCd, ultChargeCdMax;
     private final int shiftCharges, shiftMaxCharges, shiftChargeCd, shiftChargeCdMax;
+<<<<<<< HEAD
     private final int madness;
     private final int soulCharge;
+=======
+    private final int madness, creeperCharge;
+>>>>>>> origin/occka
 
     public PacketSyncPowerData(PlayerPowerData data) {
         this(data, 0, 0);
@@ -30,12 +35,22 @@ public class PacketSyncPowerData {
         this(data, data.getPowerType() == PowerType.MERC
                 ? player.getPersistentData().getInt("occka_merc_madness")
                 : 0,
+<<<<<<< HEAD
                 data.getPowerType() == PowerType.SOUL_REAPER
                         ? player.getPersistentData().getInt(NBT_SOUL_CHARGE)
                         : 0);
     }
 
     private PacketSyncPowerData(PlayerPowerData data, int madness, int soulCharge) {
+=======
+                data.getPowerType() == PowerType.CREEPER
+                        ? Math.round(player.getPersistentData().getInt(CreeperAbility.NBT_CHARGE)
+                                * 100.0f / CreeperAbility.CHARGE_TICKS_MAX)
+                        : 0);
+    }
+
+    private PacketSyncPowerData(PlayerPowerData data, int madness, int creeperCharge) {
+>>>>>>> origin/occka
         this.powerType = data.getPowerType().getId();
         this.shiftCd = data.getShiftCooldown();
         this.abilityCd = data.getAbilityCooldown();
@@ -61,7 +76,11 @@ public class PacketSyncPowerData {
         this.shiftChargeCd = data.getShiftChargeCd();
         this.shiftChargeCdMax = data.getShiftChargeCdMax();
         this.madness = Math.max(0, Math.min(100, madness));
+<<<<<<< HEAD
         this.soulCharge = Math.max(0, Math.min(SOUL_MAX, soulCharge));
+=======
+        this.creeperCharge = Math.max(0, Math.min(100, creeperCharge));
+>>>>>>> origin/occka
     }
 
     private PacketSyncPowerData(String pt, int sc, int ac, int uc, int sm, int am, int um,
@@ -69,7 +88,11 @@ public class PacketSyncPowerData {
             int abilityCharges, int abilityMaxCharges, int abilityChargeCd, int abilityChargeCdMax,
             int ultCharges, int ultMaxCharges, int ultChargeCd, int ultChargeCdMax,
             int shiftCharges, int shiftMaxCharges, int shiftChargeCd, int shiftChargeCdMax,
+<<<<<<< HEAD
             int madness, int soulCharge) {
+=======
+            int madness, int creeperCharge) {
+>>>>>>> origin/occka
         powerType = pt;
         shiftCd = sc; abilityCd = ac; ultCd = uc;
         shiftMaxCd = sm; abilityMaxCd = am; ultMaxCd = um;
@@ -87,7 +110,11 @@ public class PacketSyncPowerData {
         this.shiftChargeCd = shiftChargeCd;
         this.shiftChargeCdMax = shiftChargeCdMax;
         this.madness = madness;
+<<<<<<< HEAD
         this.soulCharge = soulCharge;
+=======
+        this.creeperCharge = creeperCharge;
+>>>>>>> origin/occka
     }
 
     public static void encode(PacketSyncPowerData msg, FriendlyByteBuf buf) {
@@ -114,7 +141,11 @@ public class PacketSyncPowerData {
         buf.writeInt(msg.shiftChargeCd);
         buf.writeInt(msg.shiftChargeCdMax);
         buf.writeInt(msg.madness);
+<<<<<<< HEAD
         buf.writeInt(msg.soulCharge);
+=======
+        buf.writeInt(msg.creeperCharge);
+>>>>>>> origin/occka
     }
 
     public static PacketSyncPowerData decode(FriendlyByteBuf buf) {
@@ -137,7 +168,11 @@ public class PacketSyncPowerData {
                 msg.abilityCharges, msg.abilityMaxCharges, msg.abilityChargeCd, msg.abilityChargeCdMax,
                 msg.ultCharges, msg.ultMaxCharges, msg.ultChargeCd, msg.ultChargeCdMax,
                 msg.shiftCharges, msg.shiftMaxCharges, msg.shiftChargeCd, msg.shiftChargeCdMax,
+<<<<<<< HEAD
                 msg.madness, msg.soulCharge));
+=======
+                msg.madness, msg.creeperCharge));
+>>>>>>> origin/occka
         ctx.get().setPacketHandled(true);
     }
 }

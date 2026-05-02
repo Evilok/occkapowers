@@ -16,6 +16,7 @@ public class ClientPowerData {
     // Class-specific resources
     public static int madness = 0;
     public static int soulCharge = 0;
+    public static int creeperCharge = 0;
 
     // Charges
     public static int shiftCharges = 0, shiftMaxCharges = 0, shiftChargeCd = 0, shiftChargeCdMax = 1;
@@ -28,7 +29,7 @@ public class ClientPowerData {
             int abilityCharges, int abilityMaxCharges, int abilityChargeCd, int abilityChargeCdMax,
             int ultCharges, int ultMaxCharges, int ultChargeCd, int ultChargeCdMax,
             int shiftCharges, int shiftMaxCharges, int shiftChargeCd, int shiftChargeCdMax,
-            int madness, int soulCharge) {
+            int madness, int soulCharge, int creeperCharge) {
         powerType = type;
         shiftCd = sc;
         abilityCd = ac;
@@ -53,6 +54,7 @@ public class ClientPowerData {
         ClientPowerData.shiftChargeCdMax = Math.max(1, shiftChargeCdMax);
         ClientPowerData.madness = Math.max(0, Math.min(100, madness));
         ClientPowerData.soulCharge = Math.max(0, Math.min(100, soulCharge));
+        ClientPowerData.creeperCharge = Math.max(0, Math.min(100, creeperCharge));
     }
 
     public static float shiftProgress() {

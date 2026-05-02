@@ -35,7 +35,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraftforge.common.ForgeMod;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import java.util.UUID;
-
+//
 import com.occka.occkapowers.event.GeoOrbitHandler;
 import java.util.List;
 import net.minecraft.world.level.block.Blocks;
@@ -45,7 +45,6 @@ import net.minecraftforge.event.entity.EntityEvent;
 @Mod.EventBusSubscriber(modid = OcckaPowers.MOD_ID)
 public class AbilityEventHandler {
     private static final UUID FLASH_STEP_UUID = UUID.fromString("6f986f4c-b79b-4d34-a01d-522768df6f3a");
-
 
     private static MobEffectInstance fx(net.minecraft.world.effect.MobEffect eff, int dur, int amp) {
         return new MobEffectInstance(eff, dur, amp, false, false);
@@ -208,8 +207,13 @@ public class AbilityEventHandler {
             }
 
             if (type == PowerType.BRUTE) {
+                setMaxHealthBase(player, 60.0);
                 BruteAbility.tickZone(player, level, data);
                 BruteAbility.tickUlt(player, level, data);
+            }
+
+            if (type == PowerType.DAGATH) {
+                DagathAbility.tick(player, level, data);
             }
 
             if (player.tickCount % 10 == 0) {
@@ -236,12 +240,23 @@ public class AbilityEventHandler {
         }
     }
 
+    private static void setMaxHealthBase(ServerPlayer player, double maxHealth) {
+        AttributeInstance hp = player.getAttribute(Attributes.MAX_HEALTH);
+        if (hp != null && hp.getBaseValue() != maxHealth) {
+            hp.setBaseValue(maxHealth);
+            if (player.getHealth() > maxHealth) {
+                player.setHealth((float) maxHealth);
+            }
+        }
+    }
+
     @SubscribeEvent
     public static void onLevelTick(TickEvent.LevelTickEvent event) {
         if (event.phase == TickEvent.Phase.END && event.level instanceof ServerLevel level) {
             GeoOrbitHandler.tick(level);
             FlashAbility.tickAfterimages(level);
             MercAbility.tickAfterimages(level);
+            DagathAbility.tickHomingPigs(level);
         }
     }
 
@@ -327,6 +342,9 @@ public class AbilityEventHandler {
                 }
                 case CREEPER -> {
 
+                }
+                case DAGATH -> {
+                    player.addEffect(new MobEffectInstance(MobEffects.HUNGER, 200, 0, false, false));
                 }
                 case MERC -> player.addEffect(fx(MobEffects.REGENERATION, 120, 0));
 
@@ -424,6 +442,8 @@ public class AbilityEventHandler {
             }
             case SOUL_REAPER -> level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,
                     player.getX(), player.getY() + 1, player.getZ(), 2, 0.3, 0.4, 0.3, 0.02);
+            case DAGATH -> level.sendParticles(ParticleTypes.HAPPY_VILLAGER,
+                    player.getX(), player.getY() + 0.8, player.getZ(), 2, 0.4, 0.3, 0.4, 0.01);
             default -> {
             }
         }
@@ -514,6 +534,9 @@ public class AbilityEventHandler {
             FireAbility.clearFireForm(event.getEntity());
             FlowerAbility.clearFlowerForm(event.getEntity());
             SoulReaperAbility.clearForm(event.getEntity());
+            if (event.getEntity() instanceof ServerPlayer player) {
+                DagathAbility.clear(player);
+            }
         }
     }
 
@@ -538,6 +561,7 @@ public class AbilityEventHandler {
             // Сбрасываем огненную форму при выходе
             FireAbility.clearFireForm(player);
             SoulReaperAbility.clearForm(player);
+            DagathAbility.clear(player);
 
             if (player.level() instanceof ServerLevel level) {
                 GeoOrbitHandler.clearPlayer(player.getUUID(), level);

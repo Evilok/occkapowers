@@ -31,10 +31,11 @@ public class UnlockHelper {
             case FLOWER -> consume(player, Items.BONE_MEAL, 16);
             case MERC -> consume(player, Items.IRON_SWORD, 2);
             case SOUL_REAPER -> consume(player, Items.WITHER_SKELETON_SKULL, 1);
+            case DAGATH -> consume(player, Items.SADDLE, 1);
             default -> false;
         };
     }
-
+//
     public static boolean tryConsumeUlt(Player player, PowerType type) {
         return switch (type) {
             case FIRE -> consume(player, Items.BLAZE_ROD, 15);
@@ -59,6 +60,7 @@ public class UnlockHelper {
             case FLOWER -> consume(player, Items.WITHER_ROSE, 1);
             case MERC -> consume(player, Items.NETHERITE_SWORD, 1);
             case SOUL_REAPER -> consume(player, Items.SOUL_LANTERN, 1);
+            case DAGATH -> consume(player, Items.TOTEM_OF_UNDYING, 1);
             default -> false;
         };
     }

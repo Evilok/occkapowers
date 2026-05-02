@@ -83,6 +83,7 @@ public class AbilityActivator {
             case ADEPT -> AdeptAbility.activateShift(player, level);
             case MERC -> MercAbility.activateShift(player, level);
             case SOUL_REAPER -> SoulReaperAbility.activateShift(player, level);
+            case DAGATH -> DagathAbility.activateShift(player, level);
             default -> {}
         }
 
@@ -133,6 +134,22 @@ public class AbilityActivator {
             }
             MercAbility.activateAbility(player, level, data);
             syncToClient(player, data);
+            return;
+        }
+
+        if (type == PowerType.DAGATH) {
+            if (!(player.level() instanceof ServerLevel level))
+                return;
+            if (data.getAbilityCooldown() > 0) {
+                player.sendSystemMessage(AbilityCommon.msg(
+                        "Ability on cooldown: " + String.format("%.1f", data.getAbilityCooldown() / 20f) + "s",
+                        ChatFormatting.YELLOW));
+                return;
+            }
+            if (DagathAbility.activateAbility(player, level)) {
+                data.setAbilityCooldown(DagathAbility.getAbilityCooldown(player));
+                syncToClient(player, data);
+            }
             return;
         }
 
@@ -201,6 +218,13 @@ public class AbilityActivator {
             case SUPERFORCE -> SuperforceAbility.activateAbility(player, level);
             case ADEPT -> AdeptAbility.activateAbility(player, level);
             case MERC -> MercAbility.activateAbility(player, level, data);
+            case DAGATH -> {
+                if (DagathAbility.activateAbility(player, level)) {
+                    data.setAbilityCooldown(DagathAbility.getAbilityCooldown(player));
+                }
+                syncToClient(player, data);
+                return;
+            }
             default -> {
             }
         }
@@ -213,7 +237,7 @@ public class AbilityActivator {
         syncToClient(player, data);
     }
 
-    // ===== ULT =====
+  
     private static void activateUlt(ServerPlayer player, PlayerPowerData data, PowerType type) {
         if (!data.isUltUnlocked()) {
             if (UnlockHelper.tryConsumeUlt(player, type)) {
@@ -300,6 +324,11 @@ public class AbilityActivator {
             case MERC -> {
                 MercAbility.activateUlt(player, level, data);
                 data.setUltCooldown(type.getUltCooldown());
+                syncToClient(player, data);
+                return;
+            }
+            case DAGATH -> {
+                DagathAbility.activateUlt(player, level, data);
                 syncToClient(player, data);
                 return;
             }

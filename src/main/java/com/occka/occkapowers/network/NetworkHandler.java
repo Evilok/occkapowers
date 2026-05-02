@@ -6,7 +6,7 @@ import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
-        private static final String PROTOCOL_VERSION = "3";
+        private static final String PROTOCOL_VERSION = "4";
         public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
                         new ResourceLocation(OcckaPowers.MOD_ID, "main"),
                         () -> PROTOCOL_VERSION,
@@ -29,5 +29,8 @@ public class NetworkHandler {
                                 PacketLaserUltChannel::decode, PacketLaserUltChannel::handle);
                 CHANNEL.registerMessage(id++, PacketSyncAdeptPandaForm.class, PacketSyncAdeptPandaForm::encode,
                                 PacketSyncAdeptPandaForm::decode, PacketSyncAdeptPandaForm::handle);
+                // Admin form (mob skin override)
+                CHANNEL.registerMessage(id++, PacketSyncPlayerForm.class, PacketSyncPlayerForm::encode,
+                                PacketSyncPlayerForm::decode, PacketSyncPlayerForm::handle);
         }
 }

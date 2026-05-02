@@ -6,7 +6,10 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.occka.occkapowers.ability.PowerType;
+import com.occka.occkapowers.form.FormRegistry;
+import com.occka.occkapowers.form.PlayerFormData;
 import com.occka.occkapowers.network.NetworkHandler;
+import com.occka.occkapowers.network.PacketSyncPlayerForm;
 import com.occka.occkapowers.network.PacketSyncPowerData;
 import com.occka.occkapowers.registry.ModCapabilities;
 import net.minecraft.ChatFormatting;
@@ -27,8 +30,15 @@ public class OcckaCommand {
     private static final List<String> POWER_IDS = Arrays.stream(PowerType.values())
             .filter(p -> p != PowerType.NONE).map(PowerType::getId).toList();
 
+    private static final List<String> FORM_IDS = List.copyOf(FormRegistry.FORMS.keySet());
+
     private static final SuggestionProvider<CommandSourceStack> SUGGEST_POWERS = (ctx, builder) -> {
         POWER_IDS.forEach(builder::suggest);
+        return builder.buildFuture();
+    };
+
+    private static final SuggestionProvider<CommandSourceStack> SUGGEST_FORMS = (ctx, builder) -> {
+        FORM_IDS.forEach(builder::suggest);
         return builder.buildFuture();
     };
 
@@ -53,9 +63,7 @@ public class OcckaCommand {
                         .then(Commands.argument("target", EntityArgument.players())
                                 .then(Commands.argument("power", StringArgumentType.word())
                                         .suggests(SUGGEST_POWERS)
-                                        // Без аргумента unlocked — стандартное поведение (закрыто)
                                         .executes(ctx -> givePower(ctx, false))
-                                        // С аргументом unlocked
                                         .then(Commands.argument("unlocked", BoolArgumentType.bool())
                                                 .executes(ctx -> givePower(ctx,
                                                         BoolArgumentType.getBool(ctx, "unlocked")))))))
@@ -72,12 +80,87 @@ public class OcckaCommand {
                         .then(Commands.argument("target", EntityArgument.players())
                                 .then(Commands.argument("type", StringArgumentType.word())
                                         .suggests(SUGGEST_UNLOCK_TYPE)
-                                        .executes(OcckaCommand::unlockAbility)))));
+                                        .executes(OcckaCommand::unlockAbility))))
+
+                // /occkapowers form give <target> <mob>
+                // /occkapowers form remove <target>
+                .then(Commands.literal("form")
+                        .then(Commands.literal("give")
+                                .then(Commands.argument("target", EntityArgument.players())
+                                        .then(Commands.argument("mob", StringArgumentType.word())
+                                                .suggests(SUGGEST_FORMS)
+                                                .executes(OcckaCommand::giveForm))))
+                        .then(Commands.literal("remove")
+                                .then(Commands.argument("target", EntityArgument.players())
+                                        .executes(OcckaCommand::removeForm)))));
     }
 
-    /**
-     * @param unlocked true = открыть ability и ult сразу (для тестирования)
-     */
+    // ==================== form give ====================
+
+    private static int giveForm(CommandContext<CommandSourceStack> ctx) {
+        try {
+            Collection<ServerPlayer> targets = EntityArgument.getPlayers(ctx, "target");
+            String mob = StringArgumentType.getString(ctx, "mob").toLowerCase();
+
+            if (!FormRegistry.isValid(mob)) {
+                ctx.getSource().sendFailure(msg(
+                        "Unknown mob: " + mob + ". Available: " + String.join(", ", FORM_IDS),
+                        ChatFormatting.RED));
+                return 0;
+            }
+
+            for (ServerPlayer player : targets) {
+                // Save to NBT (persists through death / relog)
+                PlayerFormData.setForm(player, mob);
+
+                // Sync to all clients that can see this player
+                NetworkHandler.CHANNEL.send(
+                        PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player),
+                        new PacketSyncPlayerForm(player.getUUID(), mob));
+
+                player.sendSystemMessage(msg(
+                        "Your form has been changed to: " + mob, ChatFormatting.GREEN));
+
+                ctx.getSource().sendSuccess(() -> msg(
+                        "Set form " + mob + " for " + player.getName().getString(),
+                        ChatFormatting.GREEN), true);
+            }
+            return targets.size();
+        } catch (Exception e) {
+            ctx.getSource().sendFailure(msg("Error: " + e.getMessage(), ChatFormatting.RED));
+            return 0;
+        }
+    }
+
+    // ==================== form remove ====================
+
+    private static int removeForm(CommandContext<CommandSourceStack> ctx) {
+        try {
+            Collection<ServerPlayer> targets = EntityArgument.getPlayers(ctx, "target");
+
+            for (ServerPlayer player : targets) {
+                PlayerFormData.clearForm(player);
+
+                // Empty string = clear on client
+                NetworkHandler.CHANNEL.send(
+                        PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player),
+                        new PacketSyncPlayerForm(player.getUUID(), ""));
+
+                player.sendSystemMessage(msg("Your form has been reset.", ChatFormatting.GRAY));
+
+                ctx.getSource().sendSuccess(() -> msg(
+                        "Removed form from " + player.getName().getString(),
+                        ChatFormatting.GREEN), true);
+            }
+            return targets.size();
+        } catch (Exception e) {
+            ctx.getSource().sendFailure(msg("Error: " + e.getMessage(), ChatFormatting.RED));
+            return 0;
+        }
+    }
+
+    // ==================== existing commands (unchanged) ====================
+
     private static int givePower(CommandContext<CommandSourceStack> ctx, boolean unlocked) {
         try {
             Collection<ServerPlayer> targets = EntityArgument.getPlayers(ctx, "target");
@@ -97,7 +180,6 @@ public class OcckaCommand {
                     player.refreshDimensions();
 
                     if (unlocked) {
-                        // Сразу открываем ability и ult
                         data.setAbilityUnlocked(true);
                         data.setUltUnlocked(true);
                     }
@@ -157,12 +239,14 @@ public class OcckaCommand {
         try {
             ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
             target.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
+                String form = PlayerFormData.getForm(target);
                 ctx.getSource().sendSuccess(() -> msg(target.getName().getString(), ChatFormatting.YELLOW)
                         .append(msg(" Class: ", ChatFormatting.GRAY))
                         .append(Component.literal(data.getPowerType().getId().toUpperCase())
                                 .withStyle(data.getPowerType().getColor()))
                         .append(msg(" | Ability: " + (data.isAbilityUnlocked() ? "UNLOCKED" : "LOCKED")
-                                + " | Ult: " + (data.isUltUnlocked() ? "UNLOCKED" : "LOCKED"),
+                                + " | Ult: " + (data.isUltUnlocked() ? "UNLOCKED" : "LOCKED")
+                                + (form.isEmpty() ? "" : " | Form: " + form),
                                 ChatFormatting.GRAY)),
                         false);
             });

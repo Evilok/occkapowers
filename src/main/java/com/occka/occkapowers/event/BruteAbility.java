@@ -7,6 +7,7 @@ import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.Blocks;
@@ -159,7 +160,7 @@ public final class BruteAbility {
         player.getPersistentData().putInt(NBT_BULLDOZE_TICK, 0);
         player.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SLOWDOWN, 70, 127));
         player.addEffect(AbilityCommon.fx(MobEffects.WEAKNESS, 70, 10));
-        Vec3 look = player.getLookAngle();
+        Vec3 look = horizontalDirection(player.getLookAngle(), player.getYRot());
         player.getPersistentData().putDouble("occka_brute_run_dx", look.x);
         player.getPersistentData().putDouble("occka_brute_run_dz", look.z);
         level.sendParticles(ParticleTypes.LARGE_SMOKE, player.getX(), player.getY() + 1, player.getZ(), 10, 0.4, 0.4,
@@ -198,9 +199,9 @@ public final class BruteAbility {
 
                 double dx = player.getPersistentData().getDouble("occka_brute_run_dx");
                 double dz = player.getPersistentData().getDouble("occka_brute_run_dz");
-                Vec3 dir = new Vec3(dx, 0, dz).normalize();
+                Vec3 dir = horizontalDirection(new Vec3(dx, 0, dz), player.getYRot());
                 breakBlocksInFront(player, level, dir);
-                player.setDeltaMovement(dir.x * 1.6, 0.15, dir.z * 1.6);
+                player.setDeltaMovement(dir.x * 1.6, 0.05, dir.z * 1.6);
                 player.hurtMarked = true;
 
                 level.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
@@ -208,7 +209,7 @@ public final class BruteAbility {
                 level.sendParticles(ParticleTypes.FLASH,
                         player.getX(), player.getY() + 1, player.getZ(), 1, 0, 0, 0, 0);
 
-                player.sendSystemMessage(AbilityCommon.msg("BULLDOZER! 8s!", ChatFormatting.RED, ChatFormatting.BOLD));
+                player.sendSystemMessage(AbilityCommon.msg("BULLDOZER! 4s!", ChatFormatting.RED, ChatFormatting.BOLD));
             }
             return;
         }
@@ -222,10 +223,11 @@ public final class BruteAbility {
         player.getPersistentData().putInt(NBT_BULLDOZE_TICK, --runTicks);
         double dx = player.getPersistentData().getDouble("occka_brute_run_dx");
         double dz = player.getPersistentData().getDouble("occka_brute_run_dz");
-        Vec3 dir = new Vec3(dx, 0, dz).normalize();
-        double currentVY = player.getDeltaMovement().y;
+        Vec3 dir = horizontalDirection(new Vec3(dx, 0, dz), player.getYRot());
         breakBlocksInFront(player, level, dir);
-        player.setDeltaMovement(dir.x * 1.45, Math.max(currentVY, -0.35), dir.z * 1.45);
+
+        double yBoost = player.horizontalCollision ? 0.05 : -0.08;
+        player.setDeltaMovement(dir.x * 1.55, yBoost, dir.z * 1.55);
         player.hurtMarked = true;
         player.resetFallDistance();
         Vec3 front = player.position().add(dir.scale(1.5));
@@ -250,6 +252,9 @@ public final class BruteAbility {
     private static void endBulldozer(ServerPlayer player, ServerLevel level,
             com.occka.occkapowers.ability.PlayerPowerData data) {
         player.getPersistentData().putBoolean(NBT_BULLDOZE, false);
+        player.getPersistentData().putBoolean(NBT_CHARGING, false);
+        player.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
+        player.removeEffect(MobEffects.WEAKNESS);
         player.setDeltaMovement(player.getDeltaMovement().x * 0.2, player.getDeltaMovement().y,
                 player.getDeltaMovement().z * 0.2);
         player.hurtMarked = true;
@@ -260,18 +265,33 @@ public final class BruteAbility {
         player.sendSystemMessage(AbilityCommon.msg("Bulldozer stopped.", ChatFormatting.GRAY));
     }
 
+    private static Vec3 horizontalDirection(Vec3 dir, float fallbackYaw) {
+        Vec3 horizontal = new Vec3(dir.x, 0, dir.z);
+        if (horizontal.lengthSqr() > 1.0E-4) {
+            return horizontal.normalize();
+        }
+
+        double yaw = Math.toRadians(fallbackYaw);
+        return new Vec3(-Math.sin(yaw), 0, Math.cos(yaw)).normalize();
+    }
+
     private static void breakBlocksInFront(ServerPlayer player, ServerLevel level, Vec3 dir) {
         Vec3 perp = new Vec3(-dir.z, 0, dir.x).normalize();
-        for (double forward = 0.15; forward <= 1.8; forward += 0.35) {
-            for (int side = -1; side <= 1; side++) {
-                for (int up = 0; up <= 2; up++) {
+        int baseY = Mth.floor(player.getY());
+
+        for (double forward = 0.35; forward <= 2.7; forward += 0.35) {
+            for (double side = -1.05; side <= 1.05; side += 1.05) {
+                for (int dy = 0; dy <= 3; dy++) {
                     Vec3 checkPos = player.position()
                             .add(dir.scale(forward))
-                            .add(perp.scale(side * 0.95))
-                            .add(0, up, 0);
-                    BlockPos bp = BlockPos.containing(checkPos);
+                            .add(perp.scale(side));
+                    BlockPos bp = BlockPos.containing(checkPos.x, baseY + dy, checkPos.z);
                     BlockState state = level.getBlockState(bp);
-                    if (state.isAir() || state.is(Blocks.BEDROCK) || state.is(Blocks.BARRIER)
+                    if (state.isAir()) {
+                        continue;
+                    }
+
+                    if (state.is(Blocks.BEDROCK) || state.is(Blocks.BARRIER)
                             || state.getDestroySpeed(level, bp) < 0) {
                         continue;
                     }
