@@ -57,7 +57,7 @@ public final class DagathAbility {
     private static final double HOMING_RANGE = 25.0;
     private static final double HOMING_SPEED = 1.3;
     private static final double HOMING_DETONATE_RANGE = 2;
-    private static final float HOMING_DAMAGE = 12.0f;
+    private static final float HOMING_DAMAGE = 8.0f;
 
     public static int getAbilityCooldown(ServerPlayer player) {
         return isBoarForm(player) ? 120 : 400;
@@ -100,7 +100,7 @@ public final class DagathAbility {
         pig.getPersistentData().putBoolean(NBT_RIDE_PIG, true);
         pig.getPersistentData().putUUID(NBT_OWNER, player.getUUID());
         if (pig.getAttribute(Attributes.MOVEMENT_SPEED) != null) {
-            pig.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(1.8);
+            pig.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(1.2);
         }
         level.addFreshEntity(pig);
 

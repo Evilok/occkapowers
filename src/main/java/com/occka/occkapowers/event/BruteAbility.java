@@ -31,7 +31,7 @@ public final class BruteAbility {
     private static final String NBT_CHARGE_TICK = "occka_brute_charge_ticks";
     private static final String NBT_CHARGING = "occka_brute_charging";
 
-    private static final double ZONE_HALF = 2.0;
+    private static final double ZONE_HALF = 3.0;
 
     public static void activateShift(ServerPlayer player, ServerLevel level) { /* same */
         Vec3 pos = player.position();
