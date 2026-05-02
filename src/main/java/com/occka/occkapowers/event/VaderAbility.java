@@ -195,7 +195,7 @@ public final class VaderAbility {
 
         // Урон от удушения каждые 15 тиков (~0.75 сек)
         if (ticks % 15 == 0) {
-            target.hurt(player.damageSources().magic(), 2.5f);
+            target.hurt(player.damageSources().magic(), 1.5f);
             level.sendParticles(ParticleTypes.DAMAGE_INDICATOR,
                     target.getX(), target.getY() + 1, target.getZ(),
                     5, 0.2, 0.2, 0.2, 0.1);
