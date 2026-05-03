@@ -426,6 +426,12 @@ public class AbilityEventHandler {
                 case DAGATH -> {
                     player.addEffect(new MobEffectInstance(MobEffects.HUNGER, 200, 0, false, false));
                 }
+
+                case SUPERFORCE -> {
+                    player.addEffect(fx(MobEffects.DAMAGE_RESISTANCE, 200, 1));
+                    player.addEffect(fx(MobEffects.DAMAGE_BOOST, 200, 0));
+                }
+
                 case MERC -> player.addEffect(fx(MobEffects.REGENERATION, 120, 0));
 
                 case GRAVITY -> player.addEffect(fx(MobEffects.JUMP, 200, 1));
