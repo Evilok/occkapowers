@@ -80,7 +80,8 @@ public final class VaderAbility {
             for (LivingEntity entity : nearby) {
                 entity.addEffect(AbilityCommon.fx(MobEffects.WEAKNESS, 25, 0));
                 entity.addEffect(AbilityCommon.fx(MobEffects.DIG_SLOWDOWN, 25, 2));
-                entity.addEffect(AbilityCommon.fx(MobEffects.CONFUSION, 25, 0));
+                entity.addEffect(AbilityCommon.fx(MobEffects.CONFUSION, 100, 0));
+                entity.addEffect(AbilityCommon.fx(MobEffects.DARKNESS, 25, 0));
             }
 
             // Частицы ауры каждую секунду
