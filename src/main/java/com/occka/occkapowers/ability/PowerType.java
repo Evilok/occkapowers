@@ -54,7 +54,7 @@ public enum PowerType {
     public int getAbilityCooldown() {
         return switch (this) {
             case FIRE -> 40;
-            case AIR -> 200; // кд восстановления 1 заряда (10 сек)
+            case AIR -> 272;
             case WATER -> 280;
             case FLOWER -> 800;
             case ICE -> 440; // 22 сек

@@ -8,6 +8,7 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.occka.occkapowers.ability.PowerType;
 import com.occka.occkapowers.ability.PlayerPowerSync;
 import com.occka.occkapowers.event.AbilityEventHandler;
+import com.occka.occkapowers.event.SoulReaperAbility;
 import com.occka.occkapowers.form.FormRegistry;
 import com.occka.occkapowers.form.PlayerFormData;
 import com.occka.occkapowers.network.NetworkHandler;
@@ -22,6 +23,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.PacketDistributor;
+import com.occka.occkapowers.network.PacketSyncAlignment;
+import com.occka.occkapowers.alignment.PlayerAlignment;
+
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -41,6 +45,11 @@ public class OcckaCommand {
 
     private static final SuggestionProvider<CommandSourceStack> SUGGEST_FORMS = (ctx, builder) -> {
         FORM_IDS.forEach(builder::suggest);
+        return builder.buildFuture();
+    };
+
+    private static final SuggestionProvider<CommandSourceStack> SUGGEST_ALIGNMENT = (ctx, builder) -> {
+        List.of("hero", "villain", "none").forEach(builder::suggest);
         return builder.buildFuture();
     };
 
@@ -83,7 +92,11 @@ public class OcckaCommand {
                                 .then(Commands.argument("type", StringArgumentType.word())
                                         .suggests(SUGGEST_UNLOCK_TYPE)
                                         .executes(OcckaCommand::unlockAbility))))
-
+                .then(Commands.literal("alignment")
+                        .then(Commands.argument("target", EntityArgument.players())
+                                .then(Commands.argument("type", StringArgumentType.word())
+                                        .suggests(SUGGEST_ALIGNMENT)
+                                        .executes(OcckaCommand::setAlignment))))
                 // /occkapowers form give <target> <mob>
                 // /occkapowers form remove <target>
                 .then(Commands.literal("form")
@@ -181,6 +194,10 @@ public class OcckaCommand {
                     AbilityEventHandler.cleanupPowerState(player, data);
                     data.setPowerType(type);
                     player.refreshDimensions();
+
+                    if (type == PowerType.SOUL_REAPER) {
+                        player.getPersistentData().putInt(SoulReaperAbility.NBT_SOUL_CHARGE, 100);
+                    }
 
                     if (unlocked) {
                         data.setAbilityUnlocked(true);
@@ -283,6 +300,44 @@ public class OcckaCommand {
                         () -> msg("Unlocked " + type + " for " + player.getName().getString(),
                                 ChatFormatting.GREEN),
                         true);
+            }
+            return targets.size();
+        } catch (Exception e) {
+            ctx.getSource().sendFailure(msg("Error: " + e.getMessage(), ChatFormatting.RED));
+            return 0;
+        }
+    }
+
+    private static int setAlignment(CommandContext<CommandSourceStack> ctx) {
+        try {
+            Collection<ServerPlayer> targets = EntityArgument.getPlayers(ctx, "target");
+            String type = StringArgumentType.getString(ctx, "type").toLowerCase();
+
+            PlayerAlignment.Type alignType = switch (type) {
+                case "hero" -> PlayerAlignment.Type.HERO;
+                case "villain" -> PlayerAlignment.Type.VILLAIN;
+                default -> PlayerAlignment.Type.NONE;
+            };
+
+            for (ServerPlayer player : targets) {
+                PlayerAlignment.set(player, alignType);
+
+                NetworkHandler.CHANNEL.send(
+                        PacketDistributor.PLAYER.with(() -> player),
+                        new PacketSyncAlignment(type.equals("none") ? "" : type));
+
+                ChatFormatting color = alignType == PlayerAlignment.Type.HERO
+                        ? ChatFormatting.AQUA
+                        : alignType == PlayerAlignment.Type.VILLAIN
+                                ? ChatFormatting.DARK_RED
+                                : ChatFormatting.GRAY;
+                String label = alignType == PlayerAlignment.Type.NONE ? "none" : type;
+
+                player.sendSystemMessage(
+                        msg("Your alignment: " + label.toUpperCase(), color, ChatFormatting.BOLD));
+                ctx.getSource().sendSuccess(() -> msg(
+                        "Set alignment " + label + " for " + player.getName().getString(),
+                        ChatFormatting.GREEN), true);
             }
             return targets.size();
         } catch (Exception e) {

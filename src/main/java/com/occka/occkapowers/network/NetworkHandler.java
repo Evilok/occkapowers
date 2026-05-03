@@ -24,15 +24,17 @@ public class NetworkHandler {
                 CHANNEL.registerMessage(id++, PacketFireUltShoot.class, PacketFireUltShoot::encode,
                                 PacketFireUltShoot::decode,
                                 PacketFireUltShoot::handle);
-                // Laser ult channel: sent every tick while held, and once on release
                 CHANNEL.registerMessage(id++, PacketLaserUltChannel.class, PacketLaserUltChannel::encode,
                                 PacketLaserUltChannel::decode, PacketLaserUltChannel::handle);
                 CHANNEL.registerMessage(id++, PacketSyncAdeptPandaForm.class, PacketSyncAdeptPandaForm::encode,
                                 PacketSyncAdeptPandaForm::decode, PacketSyncAdeptPandaForm::handle);
-                // Admin form (mob skin override)
                 CHANNEL.registerMessage(id++, PacketSyncPlayerForm.class, PacketSyncPlayerForm::encode,
                                 PacketSyncPlayerForm::decode, PacketSyncPlayerForm::handle);
                 CHANNEL.registerMessage(id++, PacketSyncPlayerPowerType.class, PacketSyncPlayerPowerType::encode,
                                 PacketSyncPlayerPowerType::decode, PacketSyncPlayerPowerType::handle);
+                CHANNEL.registerMessage(id++, PacketSyncAlignment.class,
+                                PacketSyncAlignment::encode,
+                                PacketSyncAlignment::decode,
+                                PacketSyncAlignment::handle);
         }
 }

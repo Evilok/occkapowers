@@ -24,27 +24,28 @@ import org.joml.Vector3f;
 import java.util.List;
 
 public final class SoulReaperAbility {
-    private SoulReaperAbility() {}
+    private SoulReaperAbility() {
+    }
 
-    public static final String NBT_SOUL_CHARGE       = "occka_reaper_soul_charge";
-    public static final String NBT_FORM_ACTIVE       = "occka_reaper_form_active";
-    public static final String NBT_DRAIN_TARGET      = "occka_reaper_drain_target";
-    public static final String NBT_DRAIN_TICKS       = "occka_reaper_drain_ticks";
-    public static final String NBT_HORSE_DATA        = "occka_reaper_horse_data";
+    public static final String NBT_SOUL_CHARGE = "occka_reaper_soul_charge";
+    public static final String NBT_FORM_ACTIVE = "occka_reaper_form_active";
+    public static final String NBT_DRAIN_TARGET = "occka_reaper_drain_target";
+    public static final String NBT_DRAIN_TICKS = "occka_reaper_drain_ticks";
+    public static final String NBT_HORSE_DATA = "occka_reaper_horse_data";
 
-    public static final int SOUL_MAX              = 100;
-    public static final int FORM_DRAIN_INTERVAL   = 24; 
-    public static final int SOUL_PER_HIT          = 0;   
-    public static final int SOUL_DRAIN_ABILITY    = 20; 
-    public static final int SOUL_CHAIN_THRESHOLD  = 50; 
-    public static final int SOUL_CHAIN_COST       = 40;  
-    public static final int AURA_DAMAGE_INTERVAL  = 35;  
-    public static final float AURA_DAMAGE         = 1.5f;
-    public static final double AURA_RADIUS        = 5.0;
-    public static final int DRAIN_DURATION        = 40;  
+    public static final int SOUL_MAX = 100;
+    public static final int FORM_DRAIN_INTERVAL = 24;
+    public static final int SOUL_PER_HIT = 1;
+    public static final int SOUL_DRAIN_ABILITY = 20;
+    public static final int SOUL_CHAIN_THRESHOLD = 50;
+    public static final int SOUL_CHAIN_COST = 40;
+    public static final int AURA_DAMAGE_INTERVAL = 35;
+    public static final float AURA_DAMAGE = 1.5f;
+    public static final double AURA_RADIUS = 5.0;
+    public static final int DRAIN_DURATION = 40;
 
     public static final int PASSIVE_REGEN_INTERVAL_OUT = 10;
-    public static final int PASSIVE_REGEN_INTERVAL_IN  = 40;
+    public static final int PASSIVE_REGEN_INTERVAL_IN = 40;
 
     // ===== SOUL CHARGE UTIL =====
 
@@ -71,19 +72,13 @@ public final class SoulReaperAbility {
         player.getPersistentData().putInt(NBT_DRAIN_TICKS, 0);
     }
 
-    // Проверяем — является ли сущность нежитью (скелет, скелет-лошадь и т.п.)
     private static boolean isUndead(LivingEntity entity) {
         return entity instanceof AbstractSkeleton
                 || entity instanceof SkeletonHorse
-                || entity instanceof net.minecraft.world.entity.monster.Zombie
-                || entity instanceof net.minecraft.world.entity.monster.ZombieVillager
                 || entity instanceof net.minecraft.world.entity.monster.Drowned
                 || entity instanceof net.minecraft.world.entity.monster.Husk
                 || entity instanceof net.minecraft.world.entity.boss.wither.WitherBoss
-                || entity instanceof net.minecraft.world.entity.monster.WitherSkeleton
-                || entity instanceof net.minecraft.world.entity.monster.ZombifiedPiglin
-                || entity instanceof net.minecraft.world.entity.monster.Phantom
-                || entity instanceof net.minecraft.world.entity.monster.Stray;
+                || entity instanceof net.minecraft.world.entity.monster.WitherSkeleton;
     }
 
     // ===== SHIFT — Hellfire Form (переключатель) =====
@@ -100,9 +95,12 @@ public final class SoulReaperAbility {
     private static void enableForm(ServerPlayer player, ServerLevel level) {
 
         int currentSoul = getSoulCharge(player);
-        if (currentSoul <= 0) {
-            setSoulCharge(player, SOUL_MAX);
+        if (currentSoul < 5) {
+            player.sendSystemMessage(AbilityCommon.msg(
+                    "Not enough soul charge! Need 5", ChatFormatting.DARK_GRAY));
+            return;
         }
+        addSoulCharge(player, -5);
 
         player.getPersistentData().putBoolean(NBT_FORM_ACTIVE, true);
 
@@ -146,7 +144,8 @@ public final class SoulReaperAbility {
     // ===== TICK формы — аура урона + расход Soul Charge =====
 
     public static void tickForm(ServerPlayer player, ServerLevel level) {
-        if (!isFormActive(player)) return;
+        if (!isFormActive(player))
+            return;
 
         if (player.tickCount % FORM_DRAIN_INTERVAL == 0) {
             int soul = getSoulCharge(player);
@@ -175,7 +174,8 @@ public final class SoulReaperAbility {
                     LivingEntity.class, box, e -> e != player && e.isAlive());
 
             for (LivingEntity entity : nearby) {
-                if (isUndead(entity)) continue;
+                if (isUndead(entity))
+                    continue;
                 entity.hurt(player.damageSources().magic(), AURA_DAMAGE);
             }
 
@@ -202,7 +202,8 @@ public final class SoulReaperAbility {
     }
 
     public static void tickPassive(ServerPlayer player, ServerLevel level) {
-        if (isFormActive(player)) return; // в форме своя регенерация в tickForm
+        if (isFormActive(player))
+            return; // в форме своя регенерация в tickForm
 
         // Восстановление вне формы: +1 каждые PASSIVE_REGEN_INTERVAL_OUT тиков
         if (player.tickCount % PASSIVE_REGEN_INTERVAL_OUT == 0) {
@@ -226,9 +227,13 @@ public final class SoulReaperAbility {
         LivingEntity target = null;
         double minD = Double.MAX_VALUE;
         for (LivingEntity e : AbilityCommon.getNearbyEnemies(player, 3.5)) {
-            if (isUndead(e)) continue; // нежить пропускаем
+            if (isUndead(e))
+                continue; // нежить пропускаем
             double d = e.distanceTo(player);
-            if (d < minD) { minD = d; target = e; }
+            if (d < minD) {
+                minD = d;
+                target = e;
+            }
         }
 
         if (target == null) {
@@ -269,19 +274,22 @@ public final class SoulReaperAbility {
     public static void tickDrain(ServerPlayer player, ServerLevel level) {
         var nbt = player.getPersistentData();
         int ticks = nbt.getInt(NBT_DRAIN_TICKS);
-        if (ticks <= 0) return;
+        if (ticks <= 0)
+            return;
 
         ticks--;
         nbt.putInt(NBT_DRAIN_TICKS, ticks);
 
-        if (!nbt.hasUUID(NBT_DRAIN_TARGET)) return;
+        if (!nbt.hasUUID(NBT_DRAIN_TARGET))
+            return;
 
         java.util.UUID tid = nbt.getUUID(NBT_DRAIN_TARGET);
         LivingEntity target = null;
         for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class,
                 player.getBoundingBox().inflate(20),
                 e -> e.getUUID().equals(tid) && e.isAlive())) {
-            target = e; break;
+            target = e;
+            break;
         }
 
         if (target == null) {
@@ -297,8 +305,8 @@ public final class SoulReaperAbility {
         }
 
         Vec3 from = target.position().add(0, target.getBbHeight() * 0.7, 0);
-        Vec3 to   = player.position().add(0, player.getBbHeight() * 0.7, 0);
-        int steps = Math.max(4, (int)(from.distanceTo(to) / 0.4));
+        Vec3 to = player.position().add(0, player.getBbHeight() * 0.7, 0);
+        int steps = Math.max(4, (int) (from.distanceTo(to) / 0.4));
         for (int i = 0; i <= steps; i++) {
             double t = i / (double) steps;
             Vec3 p = from.lerp(to, t);
@@ -404,7 +412,7 @@ public final class SoulReaperAbility {
     }
 
     private static void drawChain(ServerLevel level, Vec3 from, Vec3 to) {
-        int steps = (int)(from.distanceTo(to) / 0.5);
+        int steps = (int) (from.distanceTo(to) / 0.5);
         for (int i = 0; i <= steps; i++) {
             double t = steps == 0 ? 0 : i / (double) steps;
             Vec3 p = from.lerp(to, t);
@@ -418,7 +426,7 @@ public final class SoulReaperAbility {
     }
 
     private static LivingEntity findTargetInBeam(ServerPlayer player, ServerLevel level,
-                                                   Vec3 eye, Vec3 dir, double range) {
+            Vec3 eye, Vec3 dir, double range) {
         AABB box = player.getBoundingBox().inflate(range + 2);
         java.util.List<LivingEntity> candidates = level.getEntitiesOfClass(
                 LivingEntity.class, box,

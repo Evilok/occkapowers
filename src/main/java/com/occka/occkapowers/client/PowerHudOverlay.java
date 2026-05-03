@@ -11,11 +11,15 @@ public class PowerHudOverlay {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null)
             return;
-        if (ClientPowerData.powerType == PowerType.NONE)
-            return;
 
         int sw = mc.getWindow().getGuiScaledWidth();
         int sh = mc.getWindow().getGuiScaledHeight();
+
+        renderAlignmentBadge(graphics, mc, sw, sh);
+
+        if (ClientPowerData.powerType == PowerType.NONE)
+            return;
+
         int barW = 52, gap = 6;
         int totalW = 3 * barW + 2 * gap;
         int bx = sw / 2 - totalW / 2;
@@ -148,7 +152,8 @@ public class PowerHudOverlay {
             }
         }
     }
-//
+
+    //
     private int getSlotColor(int slot) {
         int[][] colors = switch (ClientPowerData.powerType) {
             case FIRE -> new int[][] { { 0xFF4400 }, { 0xFF7700 }, { 0xFF0000 } };
@@ -345,5 +350,44 @@ public class PowerHudOverlay {
         int g = (int) (((color >> 8) & 0xFF) * f);
         int b = (int) ((color & 0xFF) * f);
         return (r << 16) | (g << 8) | b;
+    }
+
+    private void renderAlignmentBadge(GuiGraphics g, Minecraft mc, int sw, int sh) {
+        String alignment = com.occka.occkapowers.client.ClientAlignmentData.alignment;
+        if (alignment.isEmpty())
+            return;
+
+        boolean isHero = "hero".equals(alignment);
+        boolean isVillain = "villain".equals(alignment);
+        if (!isHero && !isVillain)
+            return;
+
+        boolean hasPower = com.occka.occkapowers.client.ClientPowerData.powerType != com.occka.occkapowers.ability.PowerType.NONE;
+
+        // Звезда как текст — ★
+        String star = "★";
+        int starColor = isHero ? 0xFF55FFFF : 0xFFFF4444;
+
+        if (hasPower) {
+            // Рядом с лейблом класса "[ FIRE ]" — чуть левее
+            int barW = 52, gap = 6;
+            int totalW = 3 * barW + 2 * gap;
+            int bx = sw / 2 - totalW / 2;
+            int by = sh - 65;
+
+            // Лейбл класса рисуется на sw/2, by-11
+            // Рисуем звезду левее текста класса
+            String label = "[ " + com.occka.occkapowers.client.ClientPowerData.powerType.getId().toUpperCase() + " ]";
+            int labelW = mc.font.width(label);
+            int starX = sw / 2 - labelW / 2 - mc.font.width(star) - 3;
+            int starY = by - 11;
+
+            g.drawString(mc.font, star, starX, starY, starColor | 0xFF000000, false);
+        } else {
+            // Нет класса — просто в центре над хотбаром
+            int cx = sw / 2;
+            int cy = sh - 52 - mc.font.lineHeight - 4;
+            g.drawCenteredString(mc.font, star, cx, cy, starColor | 0xFF000000);
+        }
     }
 }
