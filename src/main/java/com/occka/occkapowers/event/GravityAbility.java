@@ -17,6 +17,9 @@ import java.util.List;
 public final class GravityAbility {
     private GravityAbility() {}
 
+    // NBT-ключ: тики запрета полёта
+    private static final String NBT_NO_FLIGHT_TICKS = "occka_gravity_no_flight_ticks";
+
     // SHIFT (held): левитация на месте + частицы
     public static void activateShift(ServerPlayer player, ServerLevel level) {
         player.addEffect(AbilityCommon.fx(MobEffects.LEVITATION, 25, 0));
@@ -56,20 +59,30 @@ public final class GravityAbility {
         player.sendSystemMessage(AbilityCommon.msg("Gravity Vortex!", ChatFormatting.DARK_GRAY));
     }
 
-    // ULT: инверсия гравитации — всех подбрасывает вверх, через 3с резко бьёт вниз
-    // Таймер падения тикается в AbilityEventHandler.tickGravityUlt()
+    /**
+     * ULT: инверсия гравитации.
+     * Выключает полёт/левитацию у всех, подбрасывает вверх,
+     * через 3с резко бьёт вниз + накладывает запрет полёта на 5с.
+     */
     public static void activateUlt(ServerPlayer player, ServerLevel level) {
         AABB box = player.getBoundingBox().inflate(50);
         List<LivingEntity> entities = player.level().getEntitiesOfClass(
                 LivingEntity.class, box, e -> e != player);
 
         for (LivingEntity entity : entities) {
+            // --- Выключаем полёт и левитацию ДО броска ---
+            stripFlight(entity);
+
+            // Бросаем вверх
             entity.addEffect(AbilityCommon.fx(MobEffects.LEVITATION, 60, 0));
             entity.setDeltaMovement(entity.getDeltaMovement().add(0, 2.0, 0));
             entity.hurtMarked = true;
+
+            // Помечаем: после приземления (через 3с) выключить полёт на 5с
+            entity.getPersistentData().putInt(NBT_NO_FLIGHT_TICKS, 0); // будет выставлен в tickGravityUlt
         }
 
-        // Таймер: через 60 тиков (3 сек) всех швырнёт вниз (tickGravityUlt в handler)
+        // Таймер: через 60 тиков (3 сек) всех швырнёт вниз
         player.getPersistentData().putInt("occka_gravity_ult_ticks", 60);
         player.getPersistentData().putDouble("occka_gravity_ult_radius", 50.0);
 
@@ -85,5 +98,72 @@ public final class GravityAbility {
         }
         player.sendSystemMessage(
                 AbilityCommon.msg("GRAVITY INVERSION!", ChatFormatting.DARK_GRAY, ChatFormatting.BOLD));
+    }
+
+    /**
+     * Вызывается из AbilityEventHandler.tickGravityUlt() когда таймер = 0.
+     * Применяется к каждой цели: убираем levitation, бросаем вниз,
+     * накладываем запрет полёта на 5 секунд (100 тиков), замедление.
+     */
+    public static void onGravityUltCrash(LivingEntity entity, ServerLevel level) {
+        // Снимаем levitation и slow_falling
+        entity.removeEffect(MobEffects.LEVITATION);
+        entity.removeEffect(MobEffects.SLOW_FALLING);
+        entity.setNoGravity(false);
+
+        // Выключаем полёт
+        stripFlight(entity);
+
+        // Резкий бросок вниз
+        entity.setDeltaMovement(
+                entity.getDeltaMovement().x * 0.3,
+                -3.5,
+                entity.getDeltaMovement().z * 0.3);
+        entity.hurtMarked = true;
+
+        // Замедление
+        entity.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SLOWDOWN, 100, 1));
+
+        // Запрет полёта на 5 секунд (100 тиков) — тикается отдельно
+        entity.getPersistentData().putInt(NBT_NO_FLIGHT_TICKS, 100);
+    }
+
+    /**
+     * Тикает запрет полёта у всех помеченных сущностей в радиусе.
+     * Вызывается каждый тик из AbilityEventHandler.
+     */
+    public static void tickNoFlightDebuff(ServerPlayer player, ServerLevel level) {
+        AABB box = player.getBoundingBox().inflate(60);
+        level.getEntitiesOfClass(LivingEntity.class, box,
+                e -> e.getPersistentData().getInt(NBT_NO_FLIGHT_TICKS) > 0)
+        .forEach(e -> {
+            int ticks = e.getPersistentData().getInt(NBT_NO_FLIGHT_TICKS) - 1;
+            e.getPersistentData().putInt(NBT_NO_FLIGHT_TICKS, ticks);
+
+            // Каждый тик принудительно выключаем полёт
+            stripFlight(e);
+            e.removeEffect(MobEffects.LEVITATION);
+            e.setNoGravity(false);
+
+            if (ticks <= 0) {
+                e.getPersistentData().remove(NBT_NO_FLIGHT_TICKS);
+            }
+        });
+    }
+
+    // Вспомогательный метод: выключает полёт у игрока или снимает NoGravity у моба
+    private static void stripFlight(LivingEntity entity) {
+        if (entity instanceof ServerPlayer sp) {
+            if (sp.getAbilities().flying) {
+                sp.getAbilities().flying = false;
+                sp.onUpdateAbilities();
+            }
+            if (sp.getAbilities().mayfly && !sp.isCreative() && !sp.isSpectator()) {
+                sp.getAbilities().mayfly = false;
+                sp.onUpdateAbilities();
+            }
+        }
+        entity.removeEffect(MobEffects.LEVITATION);
+        entity.setNoGravity(false);
     }
 }

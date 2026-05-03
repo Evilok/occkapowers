@@ -69,6 +69,7 @@ public final class VaderAbility {
         // Дебаффы на себя (цена ауры)
         player.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SLOWDOWN, 25, 1)); // замедление II
         player.addEffect(AbilityCommon.fx(MobEffects.HUNGER, 25, 0)); // голод I
+        player.addEffect(AbilityCommon.fx(MobEffects.DARKNESS, 25, 0));
 
         // Эффекты на всех в радиусе 5 блоков каждые 20 тиков
         if (player.tickCount % 20 == 0) {

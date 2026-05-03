@@ -224,6 +224,10 @@ public class AbilityEventHandler {
                 DagathAbility.tick(player, level, data);
             }
 
+            if (type == PowerType.GRAVITY) {
+                GravityAbility.tickNoFlightDebuff(player, level);
+            }
+
             if (player.tickCount % 10 == 0) {
                 NetworkHandler.CHANNEL.send(
                         PacketDistributor.PLAYER.with(() -> player),
@@ -693,12 +697,8 @@ public class AbilityEventHandler {
                     box, e -> e != player);
 
             for (net.minecraft.world.entity.LivingEntity entity : targets) {
-                entity.removeEffect(MobEffects.LEVITATION);
-                entity.setDeltaMovement(
-                        entity.getDeltaMovement().x,
-                        -3.5,
-                        entity.getDeltaMovement().z);
-                entity.hurtMarked = true;
+                // Используем новый метод — он выключает полёт + бросает вниз + дебафф
+                GravityAbility.onGravityUltCrash(entity, level);
             }
 
             level.sendParticles(ParticleTypes.PORTAL,
@@ -706,7 +706,8 @@ public class AbilityEventHandler {
                     40, 10, 5, 10, 0.2);
 
             player.sendSystemMessage(
-                    Component.literal("Gravity restored!").withStyle(ChatFormatting.DARK_GRAY));
+                    Component.literal("Gravity restored! No flight for 5s!")
+                            .withStyle(ChatFormatting.DARK_GRAY));
         }
     }
 }
