@@ -19,6 +19,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -29,6 +32,7 @@ import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Team;
 import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -41,7 +45,8 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraftforge.common.ForgeMod;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import java.util.UUID;
-//
+import com.occka.occkapowers.alignment.PlayerAlignment;
+import com.occka.occkapowers.network.PacketSyncAlignment;
 import com.occka.occkapowers.event.GeoOrbitHandler;
 import java.util.List;
 import net.minecraft.world.level.block.Blocks;
@@ -51,6 +56,7 @@ import net.minecraftforge.event.entity.EntityEvent;
 @Mod.EventBusSubscriber(modid = OcckaPowers.MOD_ID)
 public class AbilityEventHandler {
     private static final UUID FLASH_STEP_UUID = UUID.fromString("6f986f4c-b79b-4d34-a01d-522768df6f3a");
+    private static final double VILLAIN_PASSIVE_RADIUS = 32.0;
 
     private static MobEffectInstance fx(net.minecraft.world.effect.MobEffect eff, int dur, int amp) {
         return new MobEffectInstance(eff, dur, amp, false, false);
@@ -109,6 +115,10 @@ public class AbilityEventHandler {
             PowerType type = data.getPowerType();
             if (type == PowerType.CHAOS) {
                 tickClones(player, level);
+            }
+
+            if (isVillain(player)) {
+                tickVillainPassive(player, level);
             }
 
             if (type == PowerType.LIGHTNING) {
@@ -538,6 +548,11 @@ public class AbilityEventHandler {
     @SubscribeEvent
     public static void onLivingHurt(LivingHurtEvent event) {
         if (event.getEntity() instanceof ServerPlayer victim) {
+            if (isVillain(victim) && isEvilMobDamage(event)) {
+                event.setCanceled(true);
+                return;
+            }
+
             victim.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
                 if (data.getPowerType() == PowerType.MERC) {
                     event.setAmount(MercAbility.onDamageEvent(victim, data, event.getAmount(), true, false));
@@ -555,6 +570,19 @@ public class AbilityEventHandler {
                     event.setAmount(MercAbility.onDamageEvent(attacker, data, event.getAmount(), false, isMelee));
                 }
             });
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLivingChangeTarget(LivingChangeTargetEvent event) {
+        if (!(event.getEntity() instanceof Mob mob) || !isEvilMob(mob)) {
+            return;
+        }
+
+        LivingEntity target = event.getNewTarget();
+        if (target instanceof ServerPlayer player && isVillain(player)) {
+            event.setNewTarget(null);
+            mob.setTarget(null);
         }
     }
 
@@ -649,6 +677,15 @@ public class AbilityEventHandler {
                 applyNickColor(player, data.getPowerType());
             }
         });
+
+        String al = switch (PlayerAlignment.get(player)) {
+            case HERO -> "hero";
+            case VILLAIN -> "villain";
+            default -> "";
+        };
+        NetworkHandler.CHANNEL.send(
+                PacketDistributor.PLAYER.with(() -> player),
+                new PacketSyncAlignment(al));
     }
 
     @SubscribeEvent
@@ -716,4 +753,36 @@ public class AbilityEventHandler {
                             .withStyle(ChatFormatting.DARK_GRAY));
         }
     }
+
+    private static boolean isVillain(ServerPlayer player) {
+        return PlayerAlignment.get(player) == PlayerAlignment.Type.VILLAIN;
+    }
+
+    private static boolean isEvilMob(LivingEntity entity) {
+        return entity instanceof Mob && entity instanceof Enemy;
+    }
+
+    private static boolean isEvilMobDamage(LivingHurtEvent event) {
+        return event.getSource().getEntity() instanceof LivingEntity source && isEvilMob(source)
+                || event.getSource().getDirectEntity() instanceof LivingEntity direct && isEvilMob(direct);
+    }
+
+    private static void tickVillainPassive(ServerPlayer player, ServerLevel level) {
+        AABB box = player.getBoundingBox().inflate(VILLAIN_PASSIVE_RADIUS);
+        List<Mob> mobs = level.getEntitiesOfClass(
+                Mob.class, box,
+                mob -> isEvilMob(mob)
+                        && mob.getTarget() instanceof ServerPlayer sp
+                        && sp.getUUID().equals(player.getUUID()));
+        for (Mob mob : mobs) {
+            mob.setTarget(null);
+            // Небольшие частицы чтобы игрок видел эффект
+            if (player.tickCount % 20 == 0) {
+                level.sendParticles(ParticleTypes.SMOKE,
+                        mob.getX(), mob.getY() + 1, mob.getZ(),
+                        3, 0.2, 0.2, 0.2, 0.01);
+            }
+        }
+    }
+
 }

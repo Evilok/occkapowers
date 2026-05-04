@@ -39,6 +39,7 @@ public final class BruteAbility {
     private static final String NBT_SLAM_DIR_Z = "occka_brute_slam_dir_z";
 
     private static final double ZONE_HALF = 3.0;
+    private static final double ZONE_RADIUS = 7.0;
 
     public static void activateShift(ServerPlayer player, ServerLevel level) {
         if (player.getPersistentData().getBoolean(NBT_SLAM_ACTIVE)) {
@@ -68,40 +69,64 @@ public final class BruteAbility {
     }
 
     public static void tickShiftSlam(ServerPlayer player, ServerLevel level) {
-        if (!player.getPersistentData().getBoolean(NBT_SLAM_ACTIVE)) {
-            return;
-        }
+    if (!player.getPersistentData().getBoolean(NBT_SLAM_ACTIVE)) {
+        return;
+    }
 
-        int ticks = player.getPersistentData().getInt(NBT_SLAM_TICKS) + 1;
-        player.getPersistentData().putInt(NBT_SLAM_TICKS, ticks);
+    int ticks = player.getPersistentData().getInt(NBT_SLAM_TICKS) + 1;
+    player.getPersistentData().putInt(NBT_SLAM_TICKS, ticks);
 
-        //double dx = player.getPersistentData().getDouble(NBT_SLAM_DIR_X);
-        //double dz = player.getPersistentData().getDouble(NBT_SLAM_DIR_Z);
-        //Vec3 dir = horizontalDirection(new Vec3(dx, 0, dz), player.getYRot());
-        Vec3 velocity = player.getDeltaMovement();
-        //double horizontalSpeed = 0.75 + Math.min(0.4, ticks * 0.02);
-        double downwardSpeed = ticks < 4 ? velocity.y - 0.08 : Math.max(velocity.y - 0.38, -2.4);
+    double dx = player.getPersistentData().getDouble(NBT_SLAM_DIR_X);
+    double dz = player.getPersistentData().getDouble(NBT_SLAM_DIR_Z);
+    Vec3 dir = horizontalDirection(new Vec3(dx, 0, dz), player.getYRot());
 
-        player.setDeltaMovement(0, downwardSpeed, 0);
+    if (ticks <= 10) {
+        double riseSpeed = 0.8 - ticks * 0.06; // замедляем подъём
+        player.setDeltaMovement(
+            dir.x * 0.18,
+            riseSpeed,
+            dir.z * 0.18
+        );
         player.hurtMarked = true;
         player.resetFallDistance();
         player.fallDistance = 0.0f;
 
+        // Частицы подъёма
         if (ticks % 2 == 0) {
             level.sendParticles(new DustParticleOptions(new Vector3f(0.85f, 0.12f, 0.08f), 0.9f),
                     player.getX(), player.getY() + 0.5, player.getZ(),
                     3, 0.25, 0.25, 0.25, 0.04);
         }
-
-        if (player.onGround() && ticks > 4) {
-            finishShiftSlam(player, level);
-            return;
-        }
-
-        if (ticks > 45) {
-            finishShiftSlam(player, level);
-        }
+        return;
     }
+
+    Vec3 velocity = player.getDeltaMovement();
+    double downwardSpeed = Math.max(velocity.y - 0.38, -2.4);
+
+    player.setDeltaMovement(
+        dir.x * 0.30,
+        downwardSpeed,
+        dir.z * 0.30
+    );
+    player.hurtMarked = true;
+    player.resetFallDistance();
+    player.fallDistance = 0.0f;
+
+    if (ticks % 2 == 0) {
+        level.sendParticles(new DustParticleOptions(new Vector3f(0.85f, 0.12f, 0.08f), 0.9f),
+                player.getX(), player.getY() + 0.5, player.getZ(),
+                3, 0.25, 0.25, 0.25, 0.04);
+    }
+
+    if (player.onGround() && ticks > 12) {
+        finishShiftSlam(player, level);
+        return;
+    }
+
+    if (ticks > 60) {
+        finishShiftSlam(player, level);
+    }
+}
 
     private static void finishShiftSlam(ServerPlayer player, ServerLevel level) {
         player.getPersistentData().putBoolean(NBT_SLAM_ACTIVE, false);
@@ -149,92 +174,114 @@ public final class BruteAbility {
                 6 + Mth.floor(bonus * 4.0), 1.5 + bonus * 0.5, 0.1, 1.5 + bonus * 0.5, 0.05);
     }
 
-    public static void activateAbility(ServerPlayer player, ServerLevel level) {
-        if (player.getPersistentData().getBoolean(NBT_ZONE_ACTIVE)) {
-            player.sendSystemMessage(
-                    AbilityCommon.msg("Zone already active! Leave it to cancel.", ChatFormatting.YELLOW));
-            return;
-        }
-        Vec3 pos = player.position();
-        player.getPersistentData().putBoolean(NBT_ZONE_ACTIVE, true);
-        player.getPersistentData().putDouble(NBT_ZONE_X, pos.x);
-        player.getPersistentData().putDouble(NBT_ZONE_Y, pos.y);
-        player.getPersistentData().putDouble(NBT_ZONE_Z, pos.z);
-        level.sendParticles(ParticleTypes.FLASH, pos.x, pos.y + 1, pos.z, 1, 0, 0, 0, 0);
-        for (int i = 0; i < 40; i++) {
-            double a = Math.random() * Math.PI * 2;
-            double r = Math.random() * ZONE_HALF;
-            level.sendParticles(new DustParticleOptions(new Vector3f(0.8f, 0.1f, 0.1f), 1.2f), pos.x + r * Math.cos(a),
-                    pos.y + Math.random() * ZONE_HALF * 2, pos.z + r * Math.sin(a), 1, 0, 0, 0, 0);
-        }
-        player.sendSystemMessage(AbilityCommon.msg("FORTIFIED ZONE active! Resistance V inside.",
-                ChatFormatting.DARK_RED, ChatFormatting.BOLD));
+public static void activateAbility(ServerPlayer player, ServerLevel level) {
+    if (player.getPersistentData().getBoolean(NBT_ZONE_ACTIVE)) {
+        player.sendSystemMessage(
+                AbilityCommon.msg("Zone already active! Leave it to cancel.", ChatFormatting.YELLOW));
+        return;
+    }
+    Vec3 pos = player.position();
+    player.getPersistentData().putBoolean(NBT_ZONE_ACTIVE, true);
+    player.getPersistentData().putDouble(NBT_ZONE_X, pos.x);
+    player.getPersistentData().putDouble(NBT_ZONE_Y, pos.y);
+    player.getPersistentData().putDouble(NBT_ZONE_Z, pos.z);
+
+    level.sendParticles(ParticleTypes.FLASH, pos.x, pos.y + 1, pos.z, 1, 0, 0, 0, 0);
+
+    int steps = 60;
+    for (int i = 0; i < steps; i++) {
+        double angle = (2 * Math.PI / steps) * i;
+        double px = pos.x + ZONE_RADIUS * Math.cos(angle);
+        double pz = pos.z + ZONE_RADIUS * Math.sin(angle);
+        level.sendParticles(
+            new DustParticleOptions(new Vector3f(0.9f, 0.05f, 0.05f), 1.5f),
+            px, pos.y + 0.05, pz, 1, 0, 0, 0, 0);
     }
 
-    public static void tickZone(ServerPlayer player, ServerLevel level,
-            com.occka.occkapowers.ability.PlayerPowerData data) {
-        if (!player.getPersistentData().getBoolean(NBT_ZONE_ACTIVE))
-            return;
-        double cx = player.getPersistentData().getDouble(NBT_ZONE_X);
-        double cy = player.getPersistentData().getDouble(NBT_ZONE_Y);
-        double cz = player.getPersistentData().getDouble(NBT_ZONE_Z);
-        boolean inside = Math.abs(player.getX() - cx) <= ZONE_HALF && player.getY() >= cy - 0.5
-                && player.getY() <= cy + ZONE_HALF * 2 + 0.5 && Math.abs(player.getZ() - cz) <= ZONE_HALF;
-        if (inside)
-            player.addEffect(AbilityCommon.fx(MobEffects.DAMAGE_RESISTANCE, 5, 4));
-        else {
-            deactivateZone(player, level, data);
-            return;
-        }
-        if (player.tickCount % 4 == 0) {
-            for (int i = 0; i < 4; i++) {
-                double px = cx + (Math.random() * 2 - 1) * ZONE_HALF;
-                double py = cy + Math.random() * ZONE_HALF * 2;
-                double pz = cz + (Math.random() * 2 - 1) * ZONE_HALF;
-                level.sendParticles(new DustParticleOptions(new Vector3f(0.9f, 0.15f, 0.15f), 0.8f), px, py, pz, 1, 0,
-                        0, 0, 0);
-            }
-        }
-        if (player.tickCount % 20 == 0)
-            spawnZoneBorderParticles(level, cx, cy, cz);
+    player.sendSystemMessage(AbilityCommon.msg("FORTIFIED ZONE active! Resistance IV inside.",
+            ChatFormatting.DARK_RED, ChatFormatting.BOLD));
+}
+
+public static void tickZone(ServerPlayer player, ServerLevel level,
+        com.occka.occkapowers.ability.PlayerPowerData data) {
+    if (!player.getPersistentData().getBoolean(NBT_ZONE_ACTIVE))
+        return;
+
+    double cx = player.getPersistentData().getDouble(NBT_ZONE_X);
+    double cy = player.getPersistentData().getDouble(NBT_ZONE_Y);
+    double cz = player.getPersistentData().getDouble(NBT_ZONE_Z);
+
+    double dx = player.getX() - cx;
+    double dz = player.getZ() - cz;
+    double distXZ = Math.sqrt(dx * dx + dz * dz);
+
+    boolean inside = distXZ <= ZONE_RADIUS;
+
+    if (inside) {
+        player.addEffect(AbilityCommon.fx(MobEffects.DAMAGE_RESISTANCE, 5, 3));
+    } else {
+        deactivateZone(player, level, data);
+        return;
     }
 
-    private static void deactivateZone(ServerPlayer player, ServerLevel level,
-            com.occka.occkapowers.ability.PlayerPowerData data) {
-        player.getPersistentData().putBoolean(NBT_ZONE_ACTIVE, false);
-        player.removeEffect(MobEffects.DAMAGE_RESISTANCE);
-        double cx = player.getPersistentData().getDouble(NBT_ZONE_X);
-        double cy = player.getPersistentData().getDouble(NBT_ZONE_Y);
-        double cz = player.getPersistentData().getDouble(NBT_ZONE_Z);
-        level.sendParticles(ParticleTypes.POOF, cx, cy + ZONE_HALF, cz, 20, ZONE_HALF * 0.8, ZONE_HALF * 0.8,
-                ZONE_HALF * 0.8, 0.05);
-        data.setAbilityCooldown(800);
-        AbilityActivator.syncToClient(player, data);
-        player.sendSystemMessage(AbilityCommon.msg("Zone left — Cooldown 40s.", ChatFormatting.GRAY));
+    if (player.tickCount % 4 == 0) {
+        spawnZoneBorderParticles(level, cx, cy, cz);
+    }
+}
+
+private static void deactivateZone(ServerPlayer player, ServerLevel level,
+        com.occka.occkapowers.ability.PlayerPowerData data) {
+    player.getPersistentData().putBoolean(NBT_ZONE_ACTIVE, false);
+    player.removeEffect(MobEffects.DAMAGE_RESISTANCE);
+
+    double cx = player.getPersistentData().getDouble(NBT_ZONE_X);
+    double cy = player.getPersistentData().getDouble(NBT_ZONE_Y);
+    double cz = player.getPersistentData().getDouble(NBT_ZONE_Z);
+
+    int steps = 40;
+    for (int i = 0; i < steps; i++) {
+        double angle = (2 * Math.PI / steps) * i;
+        double px = cx + ZONE_RADIUS * Math.cos(angle);
+        double pz = cz + ZONE_RADIUS * Math.sin(angle);
+        level.sendParticles(ParticleTypes.POOF, px, cy + 0.1, pz, 2,
+                0.2, 0.1, 0.2, 0.02);
     }
 
-    private static void spawnZoneBorderParticles(ServerLevel level, double cx, double cy, double cz) {
-        double h = ZONE_HALF, top = cy + h * 2;
-        for (double t = 0; t <= 1; t += 0.25) {
-            double y = cy + t * h * 2;
-            for (int sx : new int[] { -1, 1 })
-                for (int sz : new int[] { -1, 1 })
-                    level.sendParticles(new DustParticleOptions(new Vector3f(1f, 0.3f, 0.3f), 0.6f), cx + sx * h, y,
-                            cz + sz * h, 1, 0, 0, 0, 0);
-        }
-        for (double t = -1; t <= 1; t += 0.5) {
-            for (double[] ry : new double[][] { { cy }, { top } }) {
-                level.sendParticles(new DustParticleOptions(new Vector3f(1f, 0.3f, 0.3f), 0.6f), cx + t * h, ry[0],
-                        cz - h, 1, 0, 0, 0, 0);
-                level.sendParticles(new DustParticleOptions(new Vector3f(1f, 0.3f, 0.3f), 0.6f), cx + t * h, ry[0],
-                        cz + h, 1, 0, 0, 0, 0);
-                level.sendParticles(new DustParticleOptions(new Vector3f(1f, 0.3f, 0.3f), 0.6f), cx - h, ry[0],
-                        cz + t * h, 1, 0, 0, 0, 0);
-                level.sendParticles(new DustParticleOptions(new Vector3f(1f, 0.3f, 0.3f), 0.6f), cx + h, ry[0],
-                        cz + t * h, 1, 0, 0, 0, 0);
-            }
+    data.setAbilityCooldown(800);
+    AbilityActivator.syncToClient(player, data);
+    player.sendSystemMessage(AbilityCommon.msg("Zone left — Cooldown 40s.", ChatFormatting.GRAY));
+}
+
+private static void spawnZoneBorderParticles(ServerLevel level, double cx, double cy, double cz) {
+    int steps = 48;
+    for (int i = 0; i < steps; i++) {
+        double angle = (2 * Math.PI / steps) * i;
+        double px = cx + ZONE_RADIUS * Math.cos(angle);
+        double pz = cz + ZONE_RADIUS * Math.sin(angle);
+
+        // Внешняя граница — ярко-красная
+        level.sendParticles(
+            new DustParticleOptions(new Vector3f(1.0f, 0.05f, 0.05f), 1.2f),
+            px, cy + 0.05, pz, 1, 0, 0, 0, 0);
+
+        if (i % 2 == 0) {
+            double innerPx = cx + (ZONE_RADIUS - 0.4) * Math.cos(angle);
+            double innerPz = cz + (ZONE_RADIUS - 0.4) * Math.sin(angle);
+            level.sendParticles(
+                new DustParticleOptions(new Vector3f(0.7f, 0.02f, 0.02f), 0.9f),
+                innerPx, cy + 0.05, innerPz, 1, 0, 0, 0, 0);
         }
     }
+
+    for (int i = 0; i < 3; i++) {
+        double angle = Math.random() * Math.PI * 2;
+        double r = Math.random() * ZONE_RADIUS * 0.85;
+        level.sendParticles(
+            new DustParticleOptions(new Vector3f(0.6f, 0.0f, 0.0f), 0.7f),
+            cx + r * Math.cos(angle), cy + 0.05, cz + r * Math.sin(angle),
+            1, 0, 0, 0, 0);
+    }
+}
 
     public static void activateUlt(ServerPlayer player, ServerLevel level) {
         player.getPersistentData().putBoolean(NBT_CHARGING, true);
