@@ -187,6 +187,7 @@ public final class SpiderAbility {
         tickWebCleanup(player, level);
 
         boolean touchingWall = isTouchingWall(player, level);
+        boolean grounded = AbilityCommon.isGrounded(player, level);
 
         if (isInWeb(player)) {
 
@@ -210,7 +211,7 @@ public final class SpiderAbility {
         }
 
         // ===== ЛАЗАНИЕ =====
-        if (touchingWall && !player.onGround()) {
+        if (touchingWall && !grounded) {
             Vec3 m = player.getDeltaMovement();
 
             player.setDeltaMovement(
@@ -223,7 +224,7 @@ public final class SpiderAbility {
         }
 
         // ===== ПРИЛИПАНИЕ =====
-        if (touchingWall && player.getDeltaMovement().y < 0) {
+        if (touchingWall && !grounded && player.getDeltaMovement().y < 0) {
             player.setDeltaMovement(player.getDeltaMovement().x, 0, player.getDeltaMovement().z);
             player.fallDistance = 0;
         }
@@ -380,9 +381,17 @@ public final class SpiderAbility {
 
         double r = 0.35; // радиус проверки
 
-        return level.getBlockState(BlockPos.containing(pos.x + r, pos.y, pos.z)).isSolid()
-                || level.getBlockState(BlockPos.containing(pos.x - r, pos.y, pos.z)).isSolid()
-                || level.getBlockState(BlockPos.containing(pos.x, pos.y, pos.z + r)).isSolid()
-                || level.getBlockState(BlockPos.containing(pos.x, pos.y, pos.z - r)).isSolid();
+        return isSolidAt(level, pos.x + r, pos.y + 0.6, pos.z)
+                || isSolidAt(level, pos.x - r, pos.y + 0.6, pos.z)
+                || isSolidAt(level, pos.x, pos.y + 0.6, pos.z + r)
+                || isSolidAt(level, pos.x, pos.y + 0.6, pos.z - r)
+                || isSolidAt(level, pos.x + r, pos.y + 1.4, pos.z)
+                || isSolidAt(level, pos.x - r, pos.y + 1.4, pos.z)
+                || isSolidAt(level, pos.x, pos.y + 1.4, pos.z + r)
+                || isSolidAt(level, pos.x, pos.y + 1.4, pos.z - r);
+    }
+
+    private static boolean isSolidAt(ServerLevel level, double x, double y, double z) {
+        return level.getBlockState(BlockPos.containing(x, y, z)).isSolid();
     }
 }

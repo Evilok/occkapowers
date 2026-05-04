@@ -118,7 +118,7 @@ public final class BruteAbility {
                 3, 0.25, 0.25, 0.25, 0.04);
     }
 
-    if (player.onGround() && ticks > 12) {
+    if (AbilityCommon.isGrounded(player, level) && ticks > 12) {
         finishShiftSlam(player, level);
         return;
     }
