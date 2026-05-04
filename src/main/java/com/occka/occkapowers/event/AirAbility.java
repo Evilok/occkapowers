@@ -188,12 +188,30 @@ public final class AirAbility {
                 e -> e.getPersistentData().getBoolean("occka_tornado_gripped"));
 
         for (LivingEntity e : gripped) {
+            // Для мобов — снимаем NoGravity и бросаем вниз
             e.setNoGravity(false);
             e.getPersistentData().remove("occka_tornado_gripped");
-            // Небольшой начальный импульс вниз чтобы сразу начали падать
+
+            // Сбрасываем горизонтальную скорость и даём импульс вниз
             Vec3 cur = e.getDeltaMovement();
-            e.setDeltaMovement(cur.x * 0.3, -0.3, cur.z * 0.3);
-            e.hurtMarked = true;
+            double downForce = -2.5;
+
+            if (e instanceof ServerPlayer sp) {
+                // Для игроков setNoGravity не работает так же как для мобов,
+                // поэтому просто принудительно задаём скорость падения
+                sp.setDeltaMovement(cur.x * 0.2, downForce, cur.z * 0.2);
+                sp.hurtMarked = true;
+                // Убираем slow_falling если он был от торнадо
+                sp.removeEffect(MobEffects.SLOW_FALLING);
+                sp.removeEffect(MobEffects.LEVITATION);
+                // Добавляем небольшой debuff чтобы гарантировать падение
+                sp.addEffect(AbilityCommon.fx(MobEffects.SLOW_FALLING, 1, 0)); // 1 тик — сброс
+                sp.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                        MobEffects.MOVEMENT_SLOWDOWN, 40, 0, false, false));
+            } else {
+                e.setDeltaMovement(cur.x * 0.2, downForce, cur.z * 0.2);
+                e.hurtMarked = true;
+            }
         }
     }
 
@@ -287,7 +305,15 @@ public final class AirAbility {
                 cur.y * 0.15 + vy, // сильное гашение вертикальной инерции
                 cur.z * 0.40 + tangZ + nz * pullStrength);
 
-        entity.setNoGravity(true);
+        // Для игроков не используем setNoGravity — управляем движением напрямую
+        if (!(entity instanceof Player)) {
+            entity.setNoGravity(true);
+        } else {
+            // Для игроков добавляем levitation чтобы противодействовать гравитации
+            entity.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                    MobEffects.LEVITATION, 3, 0, false, false));
+        }
+
         entity.hurtMarked = true;
         entity.fallDistance = 0;
     }

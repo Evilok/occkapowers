@@ -69,6 +69,7 @@ public final class VaderAbility {
         // Дебаффы на себя (цена ауры)
         player.addEffect(AbilityCommon.fx(MobEffects.MOVEMENT_SLOWDOWN, 25, 1)); // замедление II
         player.addEffect(AbilityCommon.fx(MobEffects.HUNGER, 25, 0)); // голод I
+        player.addEffect(AbilityCommon.fx(MobEffects.DARKNESS, 25, 0));
 
         // Эффекты на всех в радиусе 5 блоков каждые 20 тиков
         if (player.tickCount % 20 == 0) {
@@ -79,7 +80,8 @@ public final class VaderAbility {
             for (LivingEntity entity : nearby) {
                 entity.addEffect(AbilityCommon.fx(MobEffects.WEAKNESS, 25, 0));
                 entity.addEffect(AbilityCommon.fx(MobEffects.DIG_SLOWDOWN, 25, 2));
-                entity.addEffect(AbilityCommon.fx(MobEffects.CONFUSION, 25, 0));
+                entity.addEffect(AbilityCommon.fx(MobEffects.CONFUSION, 100, 0));
+                entity.addEffect(AbilityCommon.fx(MobEffects.DARKNESS, 25, 0));
             }
 
             // Частицы ауры каждую секунду
@@ -195,7 +197,7 @@ public final class VaderAbility {
 
         // Урон от удушения каждые 15 тиков (~0.75 сек)
         if (ticks % 15 == 0) {
-            target.hurt(player.damageSources().magic(), 2.5f);
+            target.hurt(player.damageSources().magic(), 1.5f);
             level.sendParticles(ParticleTypes.DAMAGE_INDICATOR,
                     target.getX(), target.getY() + 1, target.getZ(),
                     5, 0.2, 0.2, 0.2, 0.1);
