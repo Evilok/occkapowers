@@ -1,9 +1,0 @@
-Manifest-Version: 1.0
-Specification-Title: occkapowers
-Specification-Vendor: occka
-Specification-Version: 1
-Implementation-Title: occkapowers
-Implementation-Version: 1.0.0
-Implementation-Vendor: occka
-Implementation-Timestamp: 2026-05-04T12:24:32+0200
-

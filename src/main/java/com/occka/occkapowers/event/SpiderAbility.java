@@ -165,6 +165,7 @@ public final class SpiderAbility {
         tickNoFlightEntities(player, level);
 
         boolean touchingWall = isTouchingWall(player, level);
+        boolean grounded = AbilityCommon.isGrounded(player, level);
 
         if (isInWeb(player)) {
             Vec3 m = player.getDeltaMovement();
@@ -176,14 +177,16 @@ public final class SpiderAbility {
             player.makeStuckInBlock(Blocks.AIR.defaultBlockState(), new Vec3(1, 1, 1));
         }
 
-        if (touchingWall && !player.onGround()) {
+        // ===== ЛАЗАНИЕ =====
+        if (touchingWall && !grounded) {
             Vec3 m = player.getDeltaMovement();
             player.setDeltaMovement(m.x * 0.95, Math.max(m.y, 0.1), m.z * 0.95);
             player.fallDistance = 0;
             player.hurtMarked = true;
         }
 
-        if (touchingWall && player.getDeltaMovement().y < 0) {
+        // ===== ПРИЛИПАНИЕ =====
+        if (touchingWall && !grounded && player.getDeltaMovement().y < 0) {
             player.setDeltaMovement(player.getDeltaMovement().x, 0, player.getDeltaMovement().z);
             player.fallDistance = 0;
         }
@@ -416,10 +419,20 @@ public final class SpiderAbility {
 
     private static boolean isTouchingWall(ServerPlayer player, ServerLevel level) {
         Vec3 pos = player.position();
-        double r = 0.35;
-        return level.getBlockState(BlockPos.containing(pos.x + r, pos.y, pos.z)).isSolid()
-                || level.getBlockState(BlockPos.containing(pos.x - r, pos.y, pos.z)).isSolid()
-                || level.getBlockState(BlockPos.containing(pos.x, pos.y, pos.z + r)).isSolid()
-                || level.getBlockState(BlockPos.containing(pos.x, pos.y, pos.z - r)).isSolid();
+
+        double r = 0.35; // радиус проверки
+
+        return isSolidAt(level, pos.x + r, pos.y + 0.6, pos.z)
+                || isSolidAt(level, pos.x - r, pos.y + 0.6, pos.z)
+                || isSolidAt(level, pos.x, pos.y + 0.6, pos.z + r)
+                || isSolidAt(level, pos.x, pos.y + 0.6, pos.z - r)
+                || isSolidAt(level, pos.x + r, pos.y + 1.4, pos.z)
+                || isSolidAt(level, pos.x - r, pos.y + 1.4, pos.z)
+                || isSolidAt(level, pos.x, pos.y + 1.4, pos.z + r)
+                || isSolidAt(level, pos.x, pos.y + 1.4, pos.z - r);
+    }
+
+    private static boolean isSolidAt(ServerLevel level, double x, double y, double z) {
+        return level.getBlockState(BlockPos.containing(x, y, z)).isSolid();
     }
 }
