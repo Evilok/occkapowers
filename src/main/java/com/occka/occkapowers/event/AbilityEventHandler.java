@@ -45,6 +45,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraftforge.common.ForgeMod;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import java.util.UUID;
+import java.util.Locale;
 import com.occka.occkapowers.alignment.PlayerAlignment;
 import com.occka.occkapowers.network.PacketSyncAlignment;
 import com.occka.occkapowers.event.GeoOrbitHandler;
@@ -57,6 +58,8 @@ import net.minecraftforge.event.entity.EntityEvent;
 public class AbilityEventHandler {
     private static final UUID FLASH_STEP_UUID = UUID.fromString("6f986f4c-b79b-4d34-a01d-522768df6f3a");
     private static final double VILLAIN_PASSIVE_RADIUS = 32.0;
+    private static final float NONE_TO_POWERED_DAMAGE_MULTIPLIER = 0.5f;
+    private static final float TACZ_DAMAGE_MULTIPLIER = 1.0f / 3.0f;
 
     private static MobEffectInstance fx(net.minecraft.world.effect.MobEffect eff, int dur, int amp) {
         return new MobEffectInstance(eff, dur, amp, false, false);
@@ -547,11 +550,13 @@ public class AbilityEventHandler {
 
     @SubscribeEvent
     public static void onLivingHurt(LivingHurtEvent event) {
+        applyTaczDamageReduction(event);
         if (event.getEntity() instanceof ServerPlayer victim) {
             if (isVillain(victim) && isEvilMobDamage(event)) {
                 event.setCanceled(true);
                 return;
             }
+            applyNoneToPoweredDamageReduction(event, victim);
 
             victim.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
                 if (data.getPowerType() == PowerType.MERC) {
@@ -571,6 +576,72 @@ public class AbilityEventHandler {
                 }
             });
         }
+    }
+
+    private static void applyNoneToPoweredDamageReduction(LivingHurtEvent event, ServerPlayer victim) {
+        if (!(event.getSource().getEntity() instanceof ServerPlayer attacker) || attacker == victim) {
+            return;
+        }
+
+        victim.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(victimData -> {
+            if (victimData.getPowerType() == PowerType.NONE) {
+                return;
+            }
+
+            attacker.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(attackerData -> {
+                if (attackerData.getPowerType() == PowerType.NONE) {
+                    event.setAmount(event.getAmount() * NONE_TO_POWERED_DAMAGE_MULTIPLIER);
+                }
+            });
+        });
+    }
+
+    private static void applyTaczDamageReduction(LivingHurtEvent event) {
+        if (isTaczDamage(event)) {
+            event.setAmount(event.getAmount() * TACZ_DAMAGE_MULTIPLIER);
+        }
+    }
+
+    private static boolean isTaczDamage(LivingHurtEvent event) {
+        String msgId = event.getSource().getMsgId();
+        if (msgId != null && msgId.toLowerCase(Locale.ROOT).contains("tacz")) {
+            return true;
+        }
+
+        return isTaczEntity(event.getSource().getDirectEntity())
+                || isTaczEntity(event.getSource().getEntity())
+                || isTaczWeaponHolder(event.getSource().getEntity());
+    }
+
+    private static boolean isTaczEntity(net.minecraft.world.entity.Entity entity) {
+        if (entity == null) {
+            return false;
+        }
+
+        var entityId = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
+        if ("tacz".equals(entityId.getNamespace())) {
+            return true;
+        }
+
+        String className = entity.getClass().getName().toLowerCase(Locale.ROOT);
+        return className.contains(".tacz.") || className.contains("tacz");
+    }
+
+    private static boolean isTaczWeaponHolder(net.minecraft.world.entity.Entity entity) {
+        if (!(entity instanceof LivingEntity living)) {
+            return false;
+        }
+
+        return isTaczItem(living.getMainHandItem()) || isTaczItem(living.getOffhandItem());
+    }
+
+    private static boolean isTaczItem(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return false;
+        }
+
+        var itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+        return "tacz".equals(itemId.getNamespace());
     }
 
     @SubscribeEvent
