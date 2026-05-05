@@ -6,6 +6,7 @@ import com.occka.occkapowers.event.AbilityEventHandler;
 import com.occka.occkapowers.network.NetworkHandler;
 import com.occka.occkapowers.registry.ModCapabilities;
 import com.occka.occkapowers.registry.ModEntities;
+import com.occka.occkapowers.taczlock.TaczRecipeLock;
 //import com.occka.occkapowers.registry.ModItems;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
@@ -33,6 +34,7 @@ public class OcckaPowers {
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(new AbilityEventHandler());
         // MinecraftForge.EVENT_BUS.register(new ItemEventHandler());
+        TaczRecipeLock.register();
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
