@@ -134,8 +134,8 @@ Adding Libraries to Inheritance
 Reading Input: D:\occkapowers\occkapowers\build\libs\occkapowers-1.0.0.jar
 Adding input to inheritance map
 Processing entries
-Conflicting propagated mapping for net/minecraft/world/entity/LivingEntity/lambda$addAdditionalSaveData$3(Lnet/minecraft/nbt/CompoundTag;Lnet/minecraft/nbt/Tag;)V from net/minecraft/world/entity/player/Player/lambda$addAdditionalSaveData$3(Lnet/minecraft/nbt/CompoundTag;Lnet/minecraft/nbt/Tag;)V: lambda$addAdditionalSaveData$3 -> m_219754_
 Conflicting propagated mapping for net/minecraftforge/client/gui/overlay/ForgeGui/clearCache()V from net/minecraft/client/gui/Gui/clearCache()V: clearCache -> m_93091_
+Conflicting propagated mapping for net/minecraft/world/entity/LivingEntity/lambda$addAdditionalSaveData$3(Lnet/minecraft/nbt/CompoundTag;Lnet/minecraft/nbt/Tag;)V from net/minecraft/world/entity/player/Player/lambda$addAdditionalSaveData$3(Lnet/minecraft/nbt/CompoundTag;Lnet/minecraft/nbt/Tag;)V: lambda$addAdditionalSaveData$3 -> m_219754_
 Conflicting propagated mapping for net/minecraftforge/client/gui/overlay/ForgeGui/render(Lnet/minecraft/client/gui/GuiGraphics;F)V from net/minecraft/client/gui/Gui/render(Lnet/minecraft/client/gui/GuiGraphics;F)V: render -> m_280421_
 Conflicting propagated mapping for net/minecraftforge/client/gui/overlay/ForgeGui/renderPortalOverlay(Lnet/minecraft/client/gui/GuiGraphics;F)V from net/minecraft/client/gui/Gui/renderPortalOverlay(Lnet/minecraft/client/gui/GuiGraphics;F)V: renderPortalOverlay -> m_280379_
 Conflicting propagated mapping for net/minecraftforge/client/gui/overlay/ForgeGui/renderJumpMeter(Lnet/minecraft/world/entity/PlayerRideableJumping;Lnet/minecraft/client/gui/GuiGraphics;I)V from net/minecraft/client/gui/Gui/renderJumpMeter(Lnet/minecraft/world/entity/PlayerRideableJumping;Lnet/minecraft/client/gui/GuiGraphics;I)V: renderJumpMeter -> m_280069_
@@ -155,10 +155,15 @@ Writing Output: D:\occkapowers\occkapowers\build\reobfJar\output.jar
   com/occka/occkapowers/ability/PlayerPowerSync.class
   com/occka/occkapowers/ability/PowerType$1.class
   com/occka/occkapowers/ability/PowerType.class
+  com/occka/occkapowers/alignment/
+  com/occka/occkapowers/alignment/PlayerAlignment$1.class
+  com/occka/occkapowers/alignment/PlayerAlignment$Type.class
+  com/occka/occkapowers/alignment/PlayerAlignment.class
   com/occka/occkapowers/client/
   com/occka/occkapowers/client/AdeptPandaRenderHandler.class
   com/occka/occkapowers/client/BruteRenderHandler.class
   com/occka/occkapowers/client/ClientAdeptPandaForms.class
+  com/occka/occkapowers/client/ClientAlignmentData.class
   com/occka/occkapowers/client/ClientEventHandler.class
   com/occka/occkapowers/client/ClientFormData.class
   com/occka/occkapowers/client/ClientPlayerPowerData.class
@@ -213,6 +218,7 @@ Writing Output: D:\occkapowers\occkapowers\build\reobfJar\output.jar
   com/occka/occkapowers/network/PacketLaserUltChannel.class
   com/occka/occkapowers/network/PacketShiftHeld.class
   com/occka/occkapowers/network/PacketSyncAdeptPandaForm.class
+  com/occka/occkapowers/network/PacketSyncAlignment.class
   com/occka/occkapowers/network/PacketSyncPlayerForm.class
   com/occka/occkapowers/network/PacketSyncPlayerPowerType.class
   com/occka/occkapowers/network/PacketSyncPowerData.class
