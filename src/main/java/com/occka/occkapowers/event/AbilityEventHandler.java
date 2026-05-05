@@ -60,6 +60,7 @@ public class AbilityEventHandler {
     private static final double VILLAIN_PASSIVE_RADIUS = 32.0;
     private static final float NONE_TO_POWERED_DAMAGE_MULTIPLIER = 0.5f;
     private static final float TACZ_DAMAGE_MULTIPLIER = 1.0f / 3.0f;
+    private static final float TACZ_NONE_DAMAGE_MULTIPLIER = 1.0f / 1.6f;
 
     private static MobEffectInstance fx(net.minecraft.world.effect.MobEffect eff, int dur, int amp) {
         return new MobEffectInstance(eff, dur, amp, false, false);
@@ -597,9 +598,16 @@ public class AbilityEventHandler {
     }
 
     private static void applyTaczDamageReduction(LivingHurtEvent event) {
-        if (isTaczDamage(event)) {
-            event.setAmount(event.getAmount() * TACZ_DAMAGE_MULTIPLIER);
+        if (!isTaczDamage(event) || !(event.getEntity() instanceof ServerPlayer victim)) {
+            return;
         }
+
+        victim.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
+            float multiplier = data.getPowerType() == PowerType.NONE
+                    ? TACZ_NONE_DAMAGE_MULTIPLIER
+                    : TACZ_DAMAGE_MULTIPLIER;
+            event.setAmount(event.getAmount() * multiplier);
+        });
     }
 
     private static boolean isTaczDamage(LivingHurtEvent event) {

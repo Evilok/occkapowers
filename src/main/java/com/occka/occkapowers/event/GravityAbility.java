@@ -15,10 +15,12 @@ import net.minecraft.world.phys.Vec3;
 import java.util.List;
 
 public final class GravityAbility {
-    private GravityAbility() {}
+    private GravityAbility() {
+    }
 
     // NBT-ключ: тики запрета полёта
     private static final String NBT_NO_FLIGHT_TICKS = "occka_gravity_no_flight_ticks";
+    private static final float GRAVITY_VORTEX_DAMAGE = 6.0f;
 
     // SHIFT (held): левитация на месте + частицы
     public static void activateShift(ServerPlayer player, ServerLevel level) {
@@ -45,6 +47,7 @@ public final class GravityAbility {
         for (LivingEntity entity : AbilityCommon.getNearbyEnemies(player, 12)) {
             Vec3 pull = center.subtract(entity.position()).normalize().scale(1.8);
             entity.setDeltaMovement(entity.getDeltaMovement().add(pull.x * 1.5, pull.y * 0.5, pull.z * 1.5));
+            entity.hurt(player.damageSources().magic(), GRAVITY_VORTEX_DAMAGE);
             entity.hurtMarked = true;
         }
 
@@ -136,19 +139,19 @@ public final class GravityAbility {
         AABB box = player.getBoundingBox().inflate(60);
         level.getEntitiesOfClass(LivingEntity.class, box,
                 e -> e.getPersistentData().getInt(NBT_NO_FLIGHT_TICKS) > 0)
-        .forEach(e -> {
-            int ticks = e.getPersistentData().getInt(NBT_NO_FLIGHT_TICKS) - 1;
-            e.getPersistentData().putInt(NBT_NO_FLIGHT_TICKS, ticks);
+                .forEach(e -> {
+                    int ticks = e.getPersistentData().getInt(NBT_NO_FLIGHT_TICKS) - 1;
+                    e.getPersistentData().putInt(NBT_NO_FLIGHT_TICKS, ticks);
 
-            // Каждый тик принудительно выключаем полёт
-            stripFlight(e);
-            e.removeEffect(MobEffects.LEVITATION);
-            e.setNoGravity(false);
+                    // Каждый тик принудительно выключаем полёт
+                    stripFlight(e);
+                    e.removeEffect(MobEffects.LEVITATION);
+                    e.setNoGravity(false);
 
-            if (ticks <= 0) {
-                e.getPersistentData().remove(NBT_NO_FLIGHT_TICKS);
-            }
-        });
+                    if (ticks <= 0) {
+                        e.getPersistentData().remove(NBT_NO_FLIGHT_TICKS);
+                    }
+                });
     }
 
     // Вспомогательный метод: выключает полёт у игрока или снимает NoGravity у моба
