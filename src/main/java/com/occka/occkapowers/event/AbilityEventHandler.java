@@ -53,6 +53,9 @@ import java.util.List;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.event.entity.living.LivingFallEvent;
 import net.minecraftforge.event.entity.EntityEvent;
+import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.tags.TagKey;
+import net.minecraft.resources.ResourceLocation;
 
 @Mod.EventBusSubscriber(modid = OcckaPowers.MOD_ID)
 public class AbilityEventHandler {
@@ -60,7 +63,9 @@ public class AbilityEventHandler {
     private static final double VILLAIN_PASSIVE_RADIUS = 32.0;
     private static final float NONE_TO_POWERED_DAMAGE_MULTIPLIER = 0.5f;
     private static final float TACZ_DAMAGE_MULTIPLIER = 1.0f / 3.0f;
-    private static final float TACZ_NONE_DAMAGE_MULTIPLIER = 1.0f / 1.6f;
+    private static final float TACZ_NONE_DAMAGE_MULTIPLIER = 1.0f / 1.5f;
+    private static final TagKey<DamageType> TACZ_BULLETS_DAMAGE_TAG = TagKey.create(
+            net.minecraft.core.registries.Registries.DAMAGE_TYPE, new ResourceLocation("tacz", "bullets"));
 
     private static MobEffectInstance fx(net.minecraft.world.effect.MobEffect eff, int dur, int amp) {
         return new MobEffectInstance(eff, dur, amp, false, false);
@@ -598,22 +603,37 @@ public class AbilityEventHandler {
     }
 
     private static void applyTaczDamageReduction(LivingHurtEvent event) {
-        if (!isTaczDamage(event) || !(event.getEntity() instanceof ServerPlayer victim)) {
+        if (!isTaczDamage(event)) {
             return;
         }
 
-        victim.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
-            float multiplier = data.getPowerType() == PowerType.NONE
-                    ? TACZ_NONE_DAMAGE_MULTIPLIER
-                    : TACZ_DAMAGE_MULTIPLIER;
-            event.setAmount(event.getAmount() * multiplier);
-        });
+        float multiplier = isPoweredPlayer(event.getEntity())
+                ? TACZ_DAMAGE_MULTIPLIER
+                : TACZ_NONE_DAMAGE_MULTIPLIER;
+        event.setAmount(event.getAmount() * multiplier);
+    }
+
+    private static boolean isPoweredPlayer(LivingEntity entity) {
+        if (!(entity instanceof ServerPlayer player)) {
+            return false;
+        }
+
+        return player.getCapability(ModCapabilities.PLAYER_POWER)
+                .map(data -> data.getPowerType() != PowerType.NONE)
+                .orElse(false);
     }
 
     private static boolean isTaczDamage(LivingHurtEvent event) {
-        String msgId = event.getSource().getMsgId();
-        if (msgId != null && msgId.toLowerCase(Locale.ROOT).contains("tacz")) {
+        if (event.getSource().is(TACZ_BULLETS_DAMAGE_TAG)) {
             return true;
+        }
+
+        String msgId = event.getSource().getMsgId();
+        if (msgId != null) {
+            String normalizedMsgId = msgId.toLowerCase(Locale.ROOT);
+            if (normalizedMsgId.contains("tacz") || normalizedMsgId.startsWith("bullet")) {
+                return true;
+            }
         }
 
         return isTaczEntity(event.getSource().getDirectEntity())
