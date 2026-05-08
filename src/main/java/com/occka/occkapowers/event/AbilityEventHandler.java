@@ -23,6 +23,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
@@ -34,6 +35,7 @@ import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -189,6 +191,10 @@ public class AbilityEventHandler {
                 SuperforceAbility.tickUlt(player, level); // ульт только у superforce
             }
 
+            if (type != PowerType.NONE) {
+                removePoweredArmor(player);
+            }
+
             if (type == PowerType.SPIDER) {
                 SpiderAbility.tick(player, level);
                 player.fallDistance = 0.0f;
@@ -279,6 +285,52 @@ public class AbilityEventHandler {
                 player.setHealth((float) maxHealth);
             }
         }
+    }
+
+    @SubscribeEvent
+    public static void onLivingEquipmentChange(LivingEquipmentChangeEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        if (!isArmorSlot(event.getSlot()) || !isArmor(event.getTo())) {
+            return;
+        }
+
+        player.getCapability(ModCapabilities.PLAYER_POWER).ifPresent(data -> {
+            if (data.getPowerType() != PowerType.NONE) {
+                unequipPoweredArmor(player, event.getSlot(), event.getTo());
+            }
+        });
+    }
+
+    private static void removePoweredArmor(ServerPlayer player) {
+        unequipPoweredArmor(player, EquipmentSlot.HEAD, player.getItemBySlot(EquipmentSlot.HEAD));
+        unequipPoweredArmor(player, EquipmentSlot.CHEST, player.getItemBySlot(EquipmentSlot.CHEST));
+        unequipPoweredArmor(player, EquipmentSlot.LEGS, player.getItemBySlot(EquipmentSlot.LEGS));
+        unequipPoweredArmor(player, EquipmentSlot.FEET, player.getItemBySlot(EquipmentSlot.FEET));
+    }
+
+    private static void unequipPoweredArmor(ServerPlayer player, EquipmentSlot slot, ItemStack stack) {
+        if (!isArmorSlot(slot) || !isArmor(stack)) {
+            return;
+        }
+
+        ItemStack armor = stack.copy();
+        player.setItemSlot(slot, ItemStack.EMPTY);
+        if (!player.getInventory().add(armor)) {
+            player.drop(armor, false);
+        }
+    }
+
+    private static boolean isArmorSlot(EquipmentSlot slot) {
+        return slot == EquipmentSlot.HEAD
+                || slot == EquipmentSlot.CHEST
+                || slot == EquipmentSlot.LEGS
+                || slot == EquipmentSlot.FEET;
+    }
+
+    private static boolean isArmor(ItemStack stack) {
+        return !stack.isEmpty() && stack.getItem() instanceof ArmorItem;
     }
 
     public static void cleanupPowerState(ServerPlayer player, PlayerPowerData data) {
