@@ -198,7 +198,7 @@ public final class TaczRecipeLock {
 
     @SubscribeEvent
     public static void onServerStarted(ServerStartedEvent event) {
-        filterRecipeManager(event.getServer().getRecipeManager(), "server started");
+        filterTaczRecipeManager(event.getServer().getRecipeManager(), "server started");
     }
 
     @SubscribeEvent
@@ -206,14 +206,14 @@ public final class TaczRecipeLock {
         if (event.getUpdateCause() == TagsUpdatedEvent.UpdateCause.SERVER_DATA_LOAD) {
             var server = ServerLifecycleHooks.getCurrentServer();
             if (server != null) {
-                filterRecipeManager(server.getRecipeManager(), "tags updated");
+                filterTaczRecipeManager(server.getRecipeManager(), "tags updated");
             }
         }
     }
 
     @SubscribeEvent
     public static void onRecipesUpdated(RecipesUpdatedEvent event) {
-        filterRecipeManager(event.getRecipeManager(), "client recipes updated");
+        filterTaczRecipeManager(event.getRecipeManager(), "client recipes updated");
     }
 
     private static void apply() {
@@ -362,7 +362,7 @@ public final class TaczRecipeLock {
         }
     }
 
-    private static void filterRecipeManager(RecipeManager recipeManager, String reason) {
+    private static void filterTaczRecipeManager(RecipeManager recipeManager, String reason) {
         RecipeType<?> recipeType = ForgeRegistries.RECIPE_TYPES.getValue(TACZ_RECIPE_TYPE_ID);
         if (recipeType == null) {
             OcckaPowers.LOGGER.info("TaCZ recipe type was not registered yet while filtering recipes for {}", reason);

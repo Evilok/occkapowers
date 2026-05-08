@@ -1,6 +1,7 @@
 package com.occka.occkapowers;
 
 import com.occka.occkapowers.command.OcckaCommand;
+import com.occka.occkapowers.cuffslock.CuffsRecipeLock;
 import com.occka.occkapowers.event.AbilityEventHandler;
 //import com.occka.occkapowers.event.ItemEventHandler;
 import com.occka.occkapowers.network.NetworkHandler;
@@ -35,6 +36,7 @@ public class OcckaPowers {
         MinecraftForge.EVENT_BUS.register(new AbilityEventHandler());
         // MinecraftForge.EVENT_BUS.register(new ItemEventHandler());
         TaczRecipeLock.register();
+        CuffsRecipeLock.register();
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
