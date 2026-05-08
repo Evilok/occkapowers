@@ -98,7 +98,7 @@ public final class CuffsRecipeLock {
 
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || event.player.level().isClientSide()) {
+        if (event.phase != TickEvent.Phase.END || event.player.level().isClientSide() || event.player.tickCount % 10 != 0) {
             return;
         }
 
@@ -106,11 +106,6 @@ public final class CuffsRecipeLock {
             int removedCount = removeBlockedCuffedItems(player);
             if (removedCount > 0) {
                 player.containerMenu.broadcastChanges();
-                OcckaPowers.LOGGER.info(
-                        "Removed {} blocked Cuffed item(s) from {}",
-                        removedCount,
-                        player.getGameProfile().getName()
-                );
             }
         }
     }
@@ -222,16 +217,6 @@ public final class CuffsRecipeLock {
         if (isBlockedCuffedItem(carriedStack)) {
             removedCount += carriedStack.getCount();
             player.containerMenu.setCarried(ItemStack.EMPTY);
-        }
-
-        for (int slotIndex = 0; slotIndex < player.containerMenu.slots.size(); slotIndex++) {
-            ItemStack stack = player.containerMenu.slots.get(slotIndex).getItem();
-            if (!isBlockedCuffedItem(stack)) {
-                continue;
-            }
-
-            removedCount += stack.getCount();
-            player.containerMenu.slots.get(slotIndex).set(ItemStack.EMPTY);
         }
 
         for (int slotIndex = 0; slotIndex < player.getInventory().getContainerSize(); slotIndex++) {
