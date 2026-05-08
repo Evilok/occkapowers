@@ -2,32 +2,21 @@ package com.occka.occkapowers.taczlock;
 
 import com.occka.occkapowers.OcckaPowers;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.client.event.RecipesUpdatedEvent;
 import net.minecraftforge.event.server.ServerAboutToStartEvent;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.event.TagsUpdatedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.loading.FMLPaths;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.server.ServerLifecycleHooks;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeManager;
-import net.minecraft.world.item.crafting.RecipeType;
 
 public final class TaczRecipeLock {
     private static final ResourceLocation TACZ_RECIPE_TYPE_ID = new ResourceLocation("tacz", "gun_smith_table_crafting");
@@ -196,26 +185,6 @@ public final class TaczRecipeLock {
         apply();
     }
 
-    @SubscribeEvent
-    public static void onServerStarted(ServerStartedEvent event) {
-        filterTaczRecipeManager(event.getServer().getRecipeManager(), "server started");
-    }
-
-    @SubscribeEvent
-    public static void onTagsUpdated(TagsUpdatedEvent event) {
-        if (event.getUpdateCause() == TagsUpdatedEvent.UpdateCause.SERVER_DATA_LOAD) {
-            var server = ServerLifecycleHooks.getCurrentServer();
-            if (server != null) {
-                filterTaczRecipeManager(server.getRecipeManager(), "tags updated");
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public static void onRecipesUpdated(RecipesUpdatedEvent event) {
-        filterTaczRecipeManager(event.getRecipeManager(), "client recipes updated");
-    }
-
     private static void apply() {
         Path taczRoot = FMLPaths.GAMEDIR.get().resolve("tacz");
         Path taczPackRoot = taczRoot.resolve("tacz_default_gun");
@@ -359,64 +328,6 @@ public final class TaczRecipeLock {
             OcckaPowers.LOGGER.info("TaCZ gun smith table data written to {}", tableDataFile);
         } catch (IOException exception) {
             OcckaPowers.LOGGER.error("Failed to write TaCZ gun smith table data to {}", tableDataFile, exception);
-        }
-    }
-
-    private static void filterTaczRecipeManager(RecipeManager recipeManager, String reason) {
-        RecipeType<?> recipeType = ForgeRegistries.RECIPE_TYPES.getValue(TACZ_RECIPE_TYPE_ID);
-        if (recipeType == null) {
-            OcckaPowers.LOGGER.info("TaCZ recipe type was not registered yet while filtering recipes for {}", reason);
-            return;
-        }
-
-        try {
-            Field recipesField = RecipeManager.class.getDeclaredField("recipes");
-            Field byNameField = RecipeManager.class.getDeclaredField("byName");
-            recipesField.setAccessible(true);
-            byNameField.setAccessible(true);
-
-            Map<?, ?> originalRecipesByType = (Map<?, ?>) recipesField.get(recipeManager);
-            Map<?, ?> originalRecipesByName = (Map<?, ?>) byNameField.get(recipeManager);
-            Object originalTaczRecipes = originalRecipesByType.get(recipeType);
-
-            if (!(originalTaczRecipes instanceof Map<?, ?> taczRecipesById)) {
-                OcckaPowers.LOGGER.info("No TaCZ gun smith table recipes found while filtering recipes for {}", reason);
-                return;
-            }
-
-            Map<Object, Object> filteredTaczRecipes = new LinkedHashMap<>();
-            for (Map.Entry<?, ?> entry : taczRecipesById.entrySet()) {
-                if (entry.getKey() instanceof ResourceLocation recipeId && ALLOWED_GUN_RECIPE_IDS.contains(recipeId)) {
-                    filteredTaczRecipes.put(entry.getKey(), entry.getValue());
-                }
-            }
-
-            Map<Object, Object> filteredRecipesByType = new HashMap<>(originalRecipesByType);
-            filteredRecipesByType.put(recipeType, Map.copyOf(filteredTaczRecipes));
-
-            Map<Object, Object> filteredRecipesByName = new HashMap<>();
-            for (Map.Entry<?, ?> entry : originalRecipesByName.entrySet()) {
-                Object value = entry.getValue();
-                if (value instanceof Recipe<?> recipe && recipe.getType() == recipeType) {
-                    if (entry.getKey() instanceof ResourceLocation recipeId && ALLOWED_GUN_RECIPE_IDS.contains(recipeId)) {
-                        filteredRecipesByName.put(entry.getKey(), value);
-                    }
-                } else {
-                    filteredRecipesByName.put(entry.getKey(), value);
-                }
-            }
-
-            recipesField.set(recipeManager, Map.copyOf(filteredRecipesByType));
-            byNameField.set(recipeManager, Map.copyOf(filteredRecipesByName));
-
-            OcckaPowers.LOGGER.info(
-                    "Locked TaCZ gun smith recipes for {}: {} -> {}",
-                    reason,
-                    taczRecipesById.size(),
-                    filteredTaczRecipes.size()
-            );
-        } catch (ReflectiveOperationException | ClassCastException exception) {
-            OcckaPowers.LOGGER.error("Failed to filter TaCZ gun smith recipes for {}", reason, exception);
         }
     }
 

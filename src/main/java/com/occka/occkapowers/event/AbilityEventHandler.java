@@ -58,6 +58,7 @@ import net.minecraftforge.event.entity.EntityEvent;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.tags.TagKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.eventbus.api.EventPriority;
 
 @Mod.EventBusSubscriber(modid = OcckaPowers.MOD_ID)
 public class AbilityEventHandler {
@@ -606,9 +607,8 @@ public class AbilityEventHandler {
         }
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onLivingHurt(LivingHurtEvent event) {
-        applyTaczDamageReduction(event);
         if (event.getEntity() instanceof ServerPlayer victim) {
             if (isVillain(victim) && isEvilMobDamage(event)) {
                 event.setCanceled(true);
@@ -634,6 +634,8 @@ public class AbilityEventHandler {
                 }
             });
         }
+
+        applyTaczDamageReduction(event);
     }
 
     private static void applyNoneToPoweredDamageReduction(LivingHurtEvent event, ServerPlayer victim) {
