@@ -64,8 +64,8 @@ import net.minecraftforge.eventbus.api.EventPriority;
 public class AbilityEventHandler {
     private static final UUID FLASH_STEP_UUID = UUID.fromString("6f986f4c-b79b-4d34-a01d-522768df6f3a");
     private static final double VILLAIN_PASSIVE_RADIUS = 32.0;
-    private static final float NONE_TO_POWERED_DAMAGE_MULTIPLIER = 0.5f;
-    private static final float TACZ_DAMAGE_MULTIPLIER = 1.0f / 3.0f;
+    private static final float NONE_TO_POWERED_DAMAGE_MULTIPLIER = 0.1f;
+    private static final float TACZ_DAMAGE_MULTIPLIER = 1.0f / 7.0f;
     private static final float TACZ_NONE_DAMAGE_MULTIPLIER = 1.0f / 1.5f;
     private static final TagKey<DamageType> TACZ_BULLETS_DAMAGE_TAG = TagKey.create(
             net.minecraft.core.registries.Registries.DAMAGE_TYPE, new ResourceLocation("tacz", "bullets"));
