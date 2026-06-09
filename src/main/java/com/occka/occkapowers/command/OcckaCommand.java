@@ -2,11 +2,13 @@ package com.occka.occkapowers.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.occka.occkapowers.ability.PowerType;
 import com.occka.occkapowers.ability.PlayerPowerSync;
+import com.occka.occkapowers.border.BorderGrowthData;
 import com.occka.occkapowers.event.AbilityEventHandler;
 import com.occka.occkapowers.event.SoulReaperAbility;
 import com.occka.occkapowers.form.FormRegistry;
@@ -22,6 +24,7 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.border.WorldBorder;
 import net.minecraftforge.network.PacketDistributor;
 import com.occka.occkapowers.network.PacketSyncAlignment;
 import com.occka.occkapowers.alignment.PlayerAlignment;
@@ -66,6 +69,8 @@ public class OcckaCommand {
     }
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(borderCommand());
+
         dispatcher.register(Commands.literal("occkapowers")
                 .requires(src -> src.hasPermission(2))
 
@@ -97,6 +102,11 @@ public class OcckaCommand {
                                 .then(Commands.argument("type", StringArgumentType.word())
                                         .suggests(SUGGEST_ALIGNMENT)
                                         .executes(OcckaCommand::setAlignment))))
+
+                // /occkapowers border [blocks]
+                // /occkapowers border reset
+                .then(borderCommand())
+
                 // /occkapowers form give <target> <mob>
                 // /occkapowers form remove <target>
                 .then(Commands.literal("form")
@@ -108,6 +118,61 @@ public class OcckaCommand {
                         .then(Commands.literal("remove")
                                 .then(Commands.argument("target", EntityArgument.players())
                                         .executes(OcckaCommand::removeForm)))));
+    }
+
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> borderCommand() {
+        return Commands.literal("border")
+                .requires(src -> src.hasPermission(2))
+                .executes(OcckaCommand::getBorderGrowthInfo)
+                .then(Commands.argument("blocks", IntegerArgumentType.integer(0))
+                        .executes(OcckaCommand::setBorderGrowth))
+                .then(Commands.literal("reset")
+                        .executes(OcckaCommand::resetBorderGrowth));
+    }
+
+    private static int getBorderGrowthInfo(CommandContext<CommandSourceStack> ctx) {
+        try {
+            int blocks = BorderGrowthData.get(ctx.getSource().getServer()).getBlocksPerAdvancement();
+            WorldBorder border = ctx.getSource().getLevel().getWorldBorder();
+            ctx.getSource().sendSuccess(() -> msg(
+                    "World border grows by " + blocks + " block(s) per announced advancement. Current size: "
+                            + String.format(java.util.Locale.ROOT, "%.1f", border.getSize()),
+                    ChatFormatting.YELLOW), false);
+            return blocks;
+        } catch (Exception e) {
+            ctx.getSource().sendFailure(msg("Error: " + e.getMessage(), ChatFormatting.RED));
+            return 0;
+        }
+    }
+
+    private static int setBorderGrowth(CommandContext<CommandSourceStack> ctx) {
+        try {
+            int blocks = IntegerArgumentType.getInteger(ctx, "blocks");
+            BorderGrowthData.get(ctx.getSource().getServer()).setBlocksPerAdvancement(blocks);
+            ctx.getSource().sendSuccess(() -> msg(
+                    "World border growth set to " + blocks + " block(s) per announced advancement.",
+                    ChatFormatting.GREEN), true);
+            return blocks;
+        } catch (Exception e) {
+            ctx.getSource().sendFailure(msg("Error: " + e.getMessage(), ChatFormatting.RED));
+            return 0;
+        }
+    }
+
+    private static int resetBorderGrowth(CommandContext<CommandSourceStack> ctx) {
+        try {
+            BorderGrowthData data = BorderGrowthData.get(ctx.getSource().getServer());
+            data.resetBlocksPerAdvancement();
+            int blocks = data.getBlocksPerAdvancement();
+            ctx.getSource().sendSuccess(() -> msg(
+                    "World border growth reset to " + blocks + " block(s) per announced advancement.",
+                    ChatFormatting.GREEN), true);
+            return blocks;
+        } catch (Exception e) {
+            ctx.getSource().sendFailure(msg("Error: " + e.getMessage(), ChatFormatting.RED));
+            return 0;
+        }
     }
 
     // ==================== form give ====================

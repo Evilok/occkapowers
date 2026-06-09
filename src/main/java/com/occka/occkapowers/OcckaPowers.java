@@ -1,6 +1,7 @@
 package com.occka.occkapowers;
 
 import com.occka.occkapowers.command.OcckaCommand;
+import com.occka.occkapowers.border.BorderGrowthHandler;
 import com.occka.occkapowers.cuffslock.CuffedRecipePack;
 import com.occka.occkapowers.event.AbilityEventHandler;
 //import com.occka.occkapowers.event.ItemEventHandler;
@@ -35,6 +36,7 @@ public class OcckaPowers {
 
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(new AbilityEventHandler());
+        MinecraftForge.EVENT_BUS.register(new BorderGrowthHandler());
         // MinecraftForge.EVENT_BUS.register(new ItemEventHandler());
         TaczRecipeLock.register();
     }
